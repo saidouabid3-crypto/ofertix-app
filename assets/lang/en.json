@@ -1,0 +1,14 @@
+{
+  "app_name": "Ofertix",
+  "home": "Home",
+  "search": "Search",
+  "profile": "Profile",
+  "settings": "Settings",
+  "favorites": "Favorites",
+  "trending": "Trending",
+  "ai_assistant": "AI Assistant",
+  "change_language": "Change language",
+  "change_country": "Change country",
+  "search_hint": "Search products...",
+  "hot_deals": "Hot deals"
+}
