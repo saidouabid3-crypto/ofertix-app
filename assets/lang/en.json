@@ -703,5 +703,20 @@
   "product.favorite.removed": "Removed from favorites",
   "product.favorite.error": "Could not update favorites",
   "product.share.error": "Could not share this product",
-  "product.offer.openError": "Could not open this offer"
+  "product.offer.openError": "Could not open this offer",
+  "product.watchlist.add": "Watch price",
+  "product.watchlist.added": "Watching",
+  "product.watchlist.removed": "Removed from watchlist",
+  "product.watchlist.error": "Could not update watchlist",
+  "watchlist.error": "Could not load watchlist",
+  "watchlist.remove": "Remove from watchlist",
+  "product.priceAlert.create": "Price alert",
+  "product.priceAlert.created": "Price alert created",
+  "product.priceAlert.error": "Could not create price alert",
+  "product.priceAlert.priceDrop": "Alert me when price drops",
+  "product.priceAlert.targetPrice": "Target price",
+  "product.priceAlert.invalidPrice": "Enter a valid price below the current price",
+  "product.priceAlert.setAlert": "Set alert",
+  "product.priceAlert.cancel": "Cancel",
+  "product.priceAlert.currentPrice": "Current price"
 }

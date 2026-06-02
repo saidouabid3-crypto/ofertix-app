@@ -703,5 +703,20 @@
   "product.favorite.removed": "تمت الإزالة من المفضلة",
   "product.favorite.error": "تعذر تحديث المفضلة",
   "product.share.error": "تعذر مشاركة هذا المنتج",
-  "product.offer.openError": "تعذر فتح هذا العرض"
+  "product.offer.openError": "تعذر فتح هذا العرض",
+  "product.watchlist.add": "مراقبة السعر",
+  "product.watchlist.added": "تتم المراقبة",
+  "product.watchlist.removed": "تمت الإزالة من القائمة",
+  "product.watchlist.error": "تعذر تحديث القائمة",
+  "watchlist.error": "تعذر تحميل قائمة المراقبة",
+  "watchlist.remove": "إزالة من القائمة",
+  "product.priceAlert.create": "تنبيه السعر",
+  "product.priceAlert.created": "تم إنشاء التنبيه",
+  "product.priceAlert.error": "تعذر إنشاء التنبيه",
+  "product.priceAlert.priceDrop": "أخبرني عند انخفاض السعر",
+  "product.priceAlert.targetPrice": "السعر المستهدف",
+  "product.priceAlert.invalidPrice": "أدخل سعراً صحيحاً أقل من السعر الحالي",
+  "product.priceAlert.setAlert": "إنشاء تنبيه",
+  "product.priceAlert.cancel": "إلغاء",
+  "product.priceAlert.currentPrice": "السعر الحالي"
 }

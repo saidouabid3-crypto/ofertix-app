@@ -7,8 +7,10 @@ import '../../models/ai_deal_brain_result.dart';
 import '../../models/product.dart';
 import '../../services/affiliate_service.dart';
 import '../../services/ai_service.dart';
+import '../../services/alert_service.dart';
 import '../../services/favorite_service.dart';
 import '../../services/settings_service.dart';
+import '../../services/watchlist_service.dart';
 
 class ProductDetailsScreen extends StatefulWidget {
   final Product product;
@@ -30,6 +32,8 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
 
   bool isFavorite = false;
   bool _isFavoriteLoading = false;
+  bool _isWatching = false;
+  bool _isWatchLoading = false;
   bool isLoadingAi = false;
   AiDealBrainResult? aiResult;
   String? aiErrorKey;
@@ -40,6 +44,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
     super.initState();
     _loadAiAnalysis();
     _loadFavoriteState();
+    _loadWatchState();
   }
 
   Future<void> _loadFavoriteState() async {
@@ -105,6 +110,64 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
         ),
       );
     }
+  }
+
+  Future<void> _loadWatchState() async {
+    final watching = await WatchlistService.instance.isWatching(
+      widget.product.id,
+    );
+    if (!mounted) return;
+    setState(() => _isWatching = watching);
+  }
+
+  Future<void> _toggleWatch() async {
+    if (_isWatchLoading) return;
+    setState(() => _isWatchLoading = true);
+    try {
+      final nowWatching = await WatchlistService.instance.toggleWatch(
+        widget.product,
+      );
+      if (!mounted) return;
+      setState(() {
+        _isWatching = nowWatching;
+        _isWatchLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            nowWatching
+                ? 'product.watchlist.added'.tr()
+                : 'product.watchlist.removed'.tr(),
+          ),
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _isWatchLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('product.watchlist.error'.tr()),
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  Future<void> _showPriceAlertSheet() async {
+    final product = widget.product;
+    if (!mounted) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _PriceAlertSheet(
+        product: product,
+        settingsService: _settingsService,
+      ),
+    );
   }
 
   Future<void> _loadAiAnalysis() async {
@@ -637,6 +700,82 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                     ],
                   ),
 
+                  const SizedBox(height: 12),
+
+                  /// WATCHLIST + PRICE ALERT
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: _isWatching
+                                ? AppColors.orange
+                                : AppColors.gray,
+                            side: BorderSide(
+                              color: _isWatching
+                                  ? AppColors.orange
+                                  : AppColors.gray.withValues(alpha: 0.4),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                          ),
+                          onPressed: _isWatchLoading ? null : _toggleWatch,
+                          icon: _isWatchLoading
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: AppColors.orange,
+                                  ),
+                                )
+                              : Icon(
+                                  _isWatching
+                                      ? Icons.visibility_rounded
+                                      : Icons.visibility_outlined,
+                                ),
+                          label: Text(
+                            _isWatching
+                                ? 'product.watchlist.added'.tr()
+                                : 'product.watchlist.add'.tr(),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(width: 12),
+
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.orange,
+                            side: BorderSide(
+                              color: AppColors.orange.withValues(alpha: 0.55),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                          ),
+                          onPressed: _showPriceAlertSheet,
+                          icon: const Icon(Icons.notifications_rounded),
+                          label: Text(
+                            'product.priceAlert.create'.tr(),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+
                   const SizedBox(height: 40),
                 ],
               ),
@@ -856,6 +995,271 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
             style: const TextStyle(color: AppColors.gray, fontSize: 12),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ─── Price Alert Bottom Sheet ────────────────────────────────────────────────
+
+class _PriceAlertSheet extends StatefulWidget {
+  final Product product;
+  final SettingsService settingsService;
+
+  const _PriceAlertSheet({
+    required this.product,
+    required this.settingsService,
+  });
+
+  @override
+  State<_PriceAlertSheet> createState() => _PriceAlertSheetState();
+}
+
+class _PriceAlertSheetState extends State<_PriceAlertSheet> {
+  late final TextEditingController _priceController;
+  bool _isSubmitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Pre-fill with current price as suggestion; user can lower it.
+    final suggestion = widget.product.newPrice > 0
+        ? widget.product.newPrice.toStringAsFixed(2)
+        : '';
+    _priceController = TextEditingController(text: suggestion);
+  }
+
+  @override
+  void dispose() {
+    _priceController.dispose();
+    super.dispose();
+  }
+
+  String get _currency {
+    final c = widget.product.currency.trim().toUpperCase();
+    return c.isEmpty ? 'EUR' : c;
+  }
+
+  Future<void> _submit() async {
+    final raw = _priceController.text
+        .replaceAll('€', '')
+        .replaceAll(r'$', '')
+        .replaceAll(',', '.')
+        .trim();
+    final targetPrice = double.tryParse(raw);
+
+    if (targetPrice == null || targetPrice <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('product.priceAlert.invalidPrice'.tr()),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
+
+    try {
+      final country = await widget.settingsService.getCountry();
+      final currency = await widget.settingsService.getCurrency();
+
+      final alertId = await AlertService.instance.createProductAlert(
+        product: widget.product,
+        targetPrice: targetPrice,
+        countryCode: country,
+        currency: currency,
+      );
+
+      if (!mounted) return;
+
+      if (alertId != null) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('product.priceAlert.created'.tr()),
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      } else {
+        setState(() => _isSubmitting = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('product.priceAlert.error'.tr()),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _isSubmitting = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('product.priceAlert.error'.tr()),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final currentPrice = widget.product.newPrice;
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: Container(
+        decoration: const BoxDecoration(
+          color: AppColors.card,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        padding: const EdgeInsets.fromLTRB(22, 20, 22, 28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Handle bar
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(99),
+                ),
+              ),
+            ),
+            const SizedBox(height: 18),
+
+            // Header
+            Row(
+              children: [
+                const Icon(
+                  Icons.notifications_rounded,
+                  color: AppColors.orange,
+                  size: 26,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'product.priceAlert.create'.tr(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 16),
+
+            // Current price info
+            if (currentPrice > 0)
+              Text(
+                '${'product.priceAlert.currentPrice'.tr()}: '
+                '${currentPrice.toStringAsFixed(2)} $_currency',
+                style: const TextStyle(
+                  color: AppColors.gray,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+
+            const SizedBox(height: 14),
+
+            // Target price input
+            TextField(
+              controller: _priceController,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              style: const TextStyle(color: Colors.white, fontSize: 16),
+              decoration: InputDecoration(
+                labelText: 'product.priceAlert.targetPrice'.tr(),
+                labelStyle: const TextStyle(color: AppColors.gray),
+                suffixText: _currency,
+                suffixStyle: const TextStyle(
+                  color: AppColors.orange,
+                  fontWeight: FontWeight.w900,
+                ),
+                filled: true,
+                fillColor: AppColors.background,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(18),
+                  borderSide: BorderSide.none,
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(18),
+                  borderSide: const BorderSide(color: AppColors.orange, width: 1.4),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 8),
+
+            Text(
+              'product.priceAlert.priceDrop'.tr(),
+              style: const TextStyle(
+                color: AppColors.gray,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            // Action buttons
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.gray,
+                      side: BorderSide(
+                        color: AppColors.gray.withValues(alpha: 0.3),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                    ),
+                    child: Text('product.priceAlert.cancel'.tr()),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: _isSubmitting ? null : _submit,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.orange,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                    ),
+                    child: _isSubmitting
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : Text(
+                            'product.priceAlert.setAlert'.tr(),
+                            style: const TextStyle(fontWeight: FontWeight.w900),
+                          ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

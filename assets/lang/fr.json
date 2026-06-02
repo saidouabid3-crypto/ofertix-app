@@ -703,5 +703,20 @@
   "product.favorite.removed": "Retiré des favoris",
   "product.favorite.error": "Impossible de mettre à jour les favoris",
   "product.share.error": "Impossible de partager ce produit",
-  "product.offer.openError": "Impossible d'ouvrir cette offre"
+  "product.offer.openError": "Impossible d'ouvrir cette offre",
+  "product.watchlist.add": "Surveiller le prix",
+  "product.watchlist.added": "Surveillance active",
+  "product.watchlist.removed": "Retiré de la liste",
+  "product.watchlist.error": "Impossible de mettre à jour la liste",
+  "watchlist.error": "Impossible de charger la liste de suivi",
+  "watchlist.remove": "Retirer de la liste",
+  "product.priceAlert.create": "Alerte prix",
+  "product.priceAlert.created": "Alerte créée",
+  "product.priceAlert.error": "Impossible de créer l'alerte",
+  "product.priceAlert.priceDrop": "M'alerter quand le prix baisse",
+  "product.priceAlert.targetPrice": "Prix cible",
+  "product.priceAlert.invalidPrice": "Entrez un prix valide inférieur au prix actuel",
+  "product.priceAlert.setAlert": "Créer l'alerte",
+  "product.priceAlert.cancel": "Annuler",
+  "product.priceAlert.currentPrice": "Prix actuel"
 }
