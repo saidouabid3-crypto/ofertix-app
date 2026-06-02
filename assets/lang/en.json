@@ -698,5 +698,10 @@
   "ai.badge.hiddenGem": "Hidden Gem",
   "ai.badge.watchPrice": "Watch Price",
   "ai.badge.betterAlternative": "Alternative",
-  "ai.badge.score": "Score"
+  "ai.badge.score": "Score",
+  "product.favorite.added": "Added to favorites",
+  "product.favorite.removed": "Removed from favorites",
+  "product.favorite.error": "Could not update favorites",
+  "product.share.error": "Could not share this product",
+  "product.offer.openError": "Could not open this offer"
 }

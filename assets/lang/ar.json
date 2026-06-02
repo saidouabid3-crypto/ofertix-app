@@ -698,5 +698,10 @@
   "ai.badge.hiddenGem": "جوهرة خفية",
   "ai.badge.watchPrice": "مراقبة السعر",
   "ai.badge.betterAlternative": "بديل أفضل",
-  "ai.badge.score": "النقاط"
+  "ai.badge.score": "النقاط",
+  "product.favorite.added": "تمت الإضافة إلى المفضلة",
+  "product.favorite.removed": "تمت الإزالة من المفضلة",
+  "product.favorite.error": "تعذر تحديث المفضلة",
+  "product.share.error": "تعذر مشاركة هذا المنتج",
+  "product.offer.openError": "تعذر فتح هذا العرض"
 }

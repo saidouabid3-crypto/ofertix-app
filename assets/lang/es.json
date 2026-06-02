@@ -698,5 +698,10 @@
   "ai.badge.hiddenGem": "Joya oculta",
   "ai.badge.watchPrice": "Vigilar precio",
   "ai.badge.betterAlternative": "Alternativa",
-  "ai.badge.score": "Puntuación"
+  "ai.badge.score": "Puntuación",
+  "product.favorite.added": "Añadido a favoritos",
+  "product.favorite.removed": "Eliminado de favoritos",
+  "product.favorite.error": "No se pudo actualizar favoritos",
+  "product.share.error": "No se pudo compartir este producto",
+  "product.offer.openError": "No se pudo abrir esta oferta"
 }

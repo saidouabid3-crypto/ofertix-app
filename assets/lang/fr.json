@@ -698,5 +698,10 @@
   "ai.badge.hiddenGem": "Perle rare",
   "ai.badge.watchPrice": "Surveiller",
   "ai.badge.betterAlternative": "Alternative",
-  "ai.badge.score": "Score"
+  "ai.badge.score": "Score",
+  "product.favorite.added": "Ajouté aux favoris",
+  "product.favorite.removed": "Retiré des favoris",
+  "product.favorite.error": "Impossible de mettre à jour les favoris",
+  "product.share.error": "Impossible de partager ce produit",
+  "product.offer.openError": "Impossible d'ouvrir cette offre"
 }

@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../models/ai_deal_brain_result.dart';
 import '../../models/product.dart';
+import '../../services/affiliate_service.dart';
 import '../../services/ai_service.dart';
+import '../../services/favorite_service.dart';
 import '../../services/settings_service.dart';
 
 class ProductDetailsScreen extends StatefulWidget {
@@ -27,6 +29,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
   final SettingsService _settingsService = SettingsService.instance;
 
   bool isFavorite = false;
+  bool _isFavoriteLoading = false;
   bool isLoadingAi = false;
   AiDealBrainResult? aiResult;
   String? aiErrorKey;
@@ -36,6 +39,72 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
   void initState() {
     super.initState();
     _loadAiAnalysis();
+    _loadFavoriteState();
+  }
+
+  Future<void> _loadFavoriteState() async {
+    final saved = await FavoriteService.instance.isFavorite(widget.product.id);
+    if (!mounted) return;
+    setState(() => isFavorite = saved);
+  }
+
+  Future<void> _toggleFavorite() async {
+    if (_isFavoriteLoading) return;
+    setState(() => _isFavoriteLoading = true);
+    try {
+      final nowSaved = await FavoriteService.instance.toggleFavorite(
+        widget.product,
+      );
+      if (!mounted) return;
+      setState(() {
+        isFavorite = nowSaved;
+        _isFavoriteLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            nowSaved
+                ? 'product.favorite.added'.tr()
+                : 'product.favorite.removed'.tr(),
+          ),
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _isFavoriteLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('product.favorite.error'.tr()),
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  Future<void> _shareProduct() async {
+    final product = widget.product;
+    final price = _formatPrice(product.newPrice);
+    final buffer = StringBuffer(product.name);
+    if (price.isNotEmpty) buffer.write('\n$price');
+    if (product.affiliateUrl.trim().isNotEmpty) {
+      buffer.write('\n${product.affiliateUrl.trim()}');
+    }
+    buffer.write('\n\nOfertix');
+    try {
+      await SharePlus.instance.share(ShareParams(text: buffer.toString()));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('product.share.error'.tr()),
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   Future<void> _loadAiAnalysis() async {
@@ -83,13 +152,29 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
     }
   }
 
+  /// Opens affiliate URL via AffiliateService which tracks the click first.
+  /// If no URL exists the button is already disabled by [hasBuyLink].
   Future<void> openLink() async {
-    final urlStr = widget.product.affiliateUrl.trim();
+    final product = widget.product;
+    final urlStr = product.affiliateUrl.trim();
     if (urlStr.isEmpty) return;
-    final url = Uri.tryParse(urlStr);
-    if (url == null) return;
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.externalApplication);
+    final country = await _settingsService.getCountry();
+    try {
+      await AffiliateService.instance.openProduct(
+        url: urlStr,
+        productId: product.id,
+        countryCode: country,
+        store: product.store,
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('product.offer.openError'.tr()),
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     }
   }
 
@@ -136,19 +221,24 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
 
             actions: [
               IconButton(
-                onPressed: () {
-                  setState(() {
-                    isFavorite = !isFavorite;
-                  });
-                },
+                onPressed: _isFavoriteLoading ? null : _toggleFavorite,
 
-                icon: Icon(
-                  isFavorite
-                      ? Icons.favorite_rounded
-                      : Icons.favorite_border_rounded,
+                icon: _isFavoriteLoading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : Icon(
+                        isFavorite
+                            ? Icons.favorite_rounded
+                            : Icons.favorite_border_rounded,
 
-                  color: isFavorite ? AppColors.red : Colors.white,
-                ),
+                        color: isFavorite ? AppColors.red : Colors.white,
+                      ),
               ),
 
               const SizedBox(width: 8),
@@ -535,7 +625,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                         ),
 
                         child: IconButton(
-                          onPressed: () {},
+                          onPressed: _shareProduct,
 
                           icon: const Icon(
                             Icons.share_rounded,
