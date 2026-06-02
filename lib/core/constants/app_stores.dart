@@ -1,7 +1,6 @@
 class AppStores {
   static const List<String> supported = [
     'Amazon',
-    'AliExpress',
     'PcComponentes',
     'MediaMarkt',
     'Carrefour',
