@@ -1,37 +1,110 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../core/localization/language_config.dart';
+
 class SettingsService {
-  static Future<String> language() async {
+  SettingsService._();
+  static final SettingsService instance = SettingsService._();
+
+  static const String _countryKey = 'selected_country';
+  static const String _currencyKey = 'selected_currency';
+  static const String _languageKey = 'selected_language';
+  static const String _themeKey = 'selected_theme';
+  static const String _firstLaunchKey = 'first_launch';
+  static const String _marketConfirmedKey = 'market_confirmed';
+  static const String _marketSourceKey = 'market_source';
+  static const String _marketConfidenceKey = 'market_confidence';
+
+  Future<void> setCountry(String countryCode) async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('language') ?? 'es';
+    await prefs.setString(_countryKey, countryCode.trim().toLowerCase());
   }
 
-  static Future<String> country() async {
+  Future<String> getCountry() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('country') ?? 'ES';
+    return (prefs.getString(_countryKey) ?? 'es').trim().toLowerCase();
   }
 
-  static Future<String> currency() async {
+  Future<void> setCurrency(String currency) async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('currency') ?? 'EUR';
+    await prefs.setString(_currencyKey, currency.trim().toUpperCase());
   }
 
-  static Future<void> saveLanguage(String value) async {
+  Future<String> getCurrency() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('language', value);
+    return prefs.getString(_currencyKey) ?? 'EUR';
   }
 
-  static Future<void> saveCountry({
-    required String country,
-    required String currency,
-  }) async {
+  Future<void> setLanguage(String languageCode) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('country', country);
-    await prefs.setString('currency', currency);
+    final cleanCode = LanguageConfig.normalize(languageCode);
+    await prefs.setString(_languageKey, cleanCode);
   }
 
-  static Future<void> saveTheme(bool dark) async {
+  Future<String> getLanguage() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('theme_mode', dark ? 'dark' : 'light');
+    final savedCode = prefs.getString(_languageKey);
+    return LanguageConfig.normalize(savedCode);
+  }
+
+  Future<bool> hasSavedLanguage() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedCode = prefs.getString(_languageKey);
+    return savedCode != null && savedCode.trim().isNotEmpty;
+  }
+
+  Future<void> setDarkMode(bool enabled) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_themeKey, enabled);
+  }
+
+  Future<bool> isDarkMode() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_themeKey) ?? false;
+  }
+
+  Future<void> setFirstLaunchDone() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_firstLaunchKey, false);
+  }
+
+  Future<bool> isFirstLaunch() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_firstLaunchKey) ?? true;
+  }
+
+  Future<void> setMarketConfirmed(bool confirmed) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_marketConfirmedKey, confirmed);
+  }
+
+  Future<bool> isMarketConfirmed() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_marketConfirmedKey) ?? false;
+  }
+
+  Future<void> setMarketSource(String source) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_marketSourceKey, source);
+  }
+
+  Future<String> getMarketSource() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_marketSourceKey) ?? 'unknown';
+  }
+
+  Future<void> setMarketConfidence(double confidence) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble(_marketConfidenceKey, confidence);
+  }
+
+  Future<double> getMarketConfidence() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getDouble(_marketConfidenceKey) ?? 0;
+  }
+
+  Future<void> clearAll() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
   }
 }

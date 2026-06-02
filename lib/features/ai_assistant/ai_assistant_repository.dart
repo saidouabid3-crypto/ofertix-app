@@ -1,9 +1,35 @@
+import '../../models/product.dart';
+
 import '../../repositories/ai_repository.dart';
 
 class AIAssistantRepository {
-  final AiRepository _repository = AiRepository();
+  AIAssistantRepository._();
 
-  Future<dynamic> search({required String message, String country = 'ES'}) {
-    return _repository.search(message: message, country: country);
+  static final AIAssistantRepository instance = AIAssistantRepository._();
+
+  final AiRepository _repository = AiRepository.instance;
+
+  Future<List<Product>> search({
+    required String query,
+    String countryCode = 'global',
+    String currency = 'EUR',
+  }) {
+    return _repository.searchProducts(
+      query: query,
+      countryCode: countryCode,
+      currency: currency,
+    );
+  }
+
+  Future<List<Product>> recommendations({
+    required String query,
+    String countryCode = 'global',
+    String currency = 'EUR',
+  }) {
+    return _repository.getRecommendations(
+      query: query,
+      countryCode: countryCode,
+      currency: currency,
+    );
   }
 }

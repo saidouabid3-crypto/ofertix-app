@@ -1,24 +1,93 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../../models/ai_deal_brain_result.dart';
 import '../../models/product.dart';
+import '../../services/ai_service.dart';
+import '../../services/settings_service.dart';
 
 class ProductDetailsScreen extends StatefulWidget {
   final Product product;
+  final String currencySymbol;
 
-  const ProductDetailsScreen({super.key, required this.product});
+  const ProductDetailsScreen({
+    super.key,
+    required this.product,
+    this.currencySymbol = '€',
+  });
 
   @override
   State<ProductDetailsScreen> createState() => _ProductDetailsScreenState();
 }
 
 class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
+  final AiService _aiService = AiService.instance;
+  final SettingsService _settingsService = SettingsService.instance;
+
   bool isFavorite = false;
+  bool isLoadingAi = false;
+  AiDealBrainResult? aiResult;
+  String? aiErrorKey;
+  int _imageIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAiAnalysis();
+  }
+
+  Future<void> _loadAiAnalysis() async {
+    if (isLoadingAi) return;
+    setState(() {
+      isLoadingAi = true;
+      aiErrorKey = null;
+    });
+    try {
+      final country = await _settingsService.getCountry();
+      final currency = await _settingsService.getCurrency();
+      final language = await _settingsService.getLanguage();
+      final result = await _aiService.analyzeProductDealBrain(
+        product: widget.product,
+        countryCode: country,
+        currency: currency,
+        language: language,
+      );
+      if (!mounted) return;
+      setState(() => aiResult = result);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => aiErrorKey = 'ai.error.notConfigured');
+    } finally {
+      if (mounted) setState(() => isLoadingAi = false);
+    }
+  }
+
+  /// Format price using the product's own currency field.
+  String _formatPrice(double price) {
+    if (price <= 0) return '';
+    final c = widget.product.currency.trim().toUpperCase();
+    final f = price.toStringAsFixed(2);
+    switch (c) {
+      case 'EUR':
+        return '$f€';
+      case 'USD':
+        return '\$$f';
+      case 'GBP':
+        return '£$f';
+      case 'JPY':
+        return '¥${price.toStringAsFixed(0)}';
+      default:
+        return c.isEmpty ? '$f€' : '$f $c';
+    }
+  }
 
   Future<void> openLink() async {
-    final url = Uri.parse(widget.product.affiliateUrl);
-
+    final urlStr = widget.product.affiliateUrl.trim();
+    if (urlStr.isEmpty) return;
+    final url = Uri.tryParse(urlStr);
+    if (url == null) return;
     if (await canLaunchUrl(url)) {
       await launchUrl(url, mode: LaunchMode.externalApplication);
     }
@@ -27,9 +96,20 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
   @override
   Widget build(BuildContext context) {
     final product = widget.product;
-
     final hasDiscount =
         product.discount > 0 && product.oldPrice > product.newPrice;
+    final images =
+        product.images.isNotEmpty ? product.images : [product.image];
+    final hasMultipleImages = images.length > 1;
+    final hasDescription = product.description.isNotEmpty &&
+        product.description != product.name &&
+        product.description != product.fullTitle;
+    final hasCategory = product.category.isNotEmpty &&
+        product.category.toLowerCase() != 'general';
+    final hasRating = product.rating > 0;
+    final hasDealScore = product.dealScore > 0;
+    final hasStats = hasRating || hasDealScore;
+    final hasBuyLink = product.affiliateUrl.trim().isNotEmpty;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -79,28 +159,23 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                 fit: StackFit.expand,
 
                 children: [
-                  Hero(
-                    tag: product.id,
-
-                    child: Image.network(
-                      product.image,
-
-                      fit: BoxFit.cover,
-
-                      errorBuilder: (c, e, s) => Container(
-                        color: AppColors.card,
-
-                        child: const Icon(
-                          Icons.image_not_supported_rounded,
-
-                          color: Colors.white54,
-
-                          size: 80,
-                        ),
+                  // Image: carousel when multiple images, single hero otherwise
+                  if (hasMultipleImages)
+                    PageView.builder(
+                      itemCount: images.length,
+                      onPageChanged: (i) => setState(() => _imageIndex = i),
+                      itemBuilder: (_, i) => _buildImage(
+                        images[i],
+                        heroTag: i == 0 ? product.id : null,
                       ),
+                    )
+                  else
+                    Hero(
+                      tag: product.id,
+                      child: _buildImage(images.first),
                     ),
-                  ),
 
+                  // Gradient overlay
                   Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
@@ -117,6 +192,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                     ),
                   ),
 
+                  // Discount badge
                   if (hasDiscount)
                     Positioned(
                       top: 110,
@@ -146,6 +222,33 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                       ),
                     ),
 
+                  // Carousel dots indicator
+                  if (hasMultipleImages)
+                    Positioned(
+                      bottom: 76,
+                      left: 0,
+                      right: 0,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: List.generate(
+                          images.length.clamp(0, 8),
+                          (i) => AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            width: _imageIndex == i ? 18 : 6,
+                            height: 6,
+                            margin: const EdgeInsets.symmetric(horizontal: 3),
+                            decoration: BoxDecoration(
+                              color: _imageIndex == i
+                                  ? AppColors.orange
+                                  : Colors.white.withValues(alpha: 0.5),
+                              borderRadius: BorderRadius.circular(99),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+
+                  // Title / store overlay
                   Positioned(
                     bottom: 28,
                     left: 22,
@@ -226,11 +329,11 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
 
                 children: [
-                  /// PRICE
+                  /// PRICE ROW
                   Row(
                     children: [
                       Text(
-                        '${product.newPrice.toStringAsFixed(2)}€',
+                        _formatPrice(product.newPrice),
 
                         style: const TextStyle(
                           color: AppColors.orange,
@@ -245,7 +348,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
 
                       if (hasDiscount)
                         Text(
-                          '${product.oldPrice.toStringAsFixed(2)}€',
+                          _formatPrice(product.oldPrice),
 
                           style: const TextStyle(
                             color: AppColors.gray,
@@ -258,164 +361,132 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
 
                       const Spacer(),
 
-                      Container(
+                      // HOT badge only when product is actually hot
+                      if (product.isHot)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 10,
+                          ),
+
+                          decoration: BoxDecoration(
+                            color: AppColors.green.withValues(alpha: 0.14),
+
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+
+                          child: const Text(
+                            'HOT',
+
+                            style: TextStyle(
+                              color: AppColors.green,
+
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+
+                  // Category chip (only when real category exists)
+                  if (hasCategory) ...[
+                    const SizedBox(height: 12),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 10,
+                          horizontal: 12,
+                          vertical: 6,
                         ),
-
                         decoration: BoxDecoration(
-                          color: AppColors.green.withValues(alpha: 0.14),
-
-                          borderRadius: BorderRadius.circular(18),
+                          color: AppColors.card,
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.08),
+                          ),
                         ),
-
-                        child: const Text(
-                          'HOT DEAL',
-
-                          style: TextStyle(
-                            color: AppColors.green,
-
-                            fontWeight: FontWeight.w900,
+                        child: Text(
+                          product.category,
+                          style: const TextStyle(
+                            color: AppColors.gray,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
 
                   const SizedBox(height: 28),
 
-                  /// AI ANALYSIS
-                  Container(
-                    width: double.infinity,
-
-                    padding: const EdgeInsets.all(22),
-
-                    decoration: BoxDecoration(
-                      color: AppColors.card,
-
-                      borderRadius: BorderRadius.circular(30),
-
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.06),
-                      ),
-                    ),
-
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-
-                      children: [
-                        const Row(
-                          children: [
-                            Icon(
-                              Icons.psychology_alt_rounded,
-
-                              color: AppColors.orange,
-
-                              size: 34,
-                            ),
-
-                            SizedBox(width: 12),
-
-                            Text(
-                              'AI Analysis',
-
-                              style: TextStyle(
-                                color: Colors.white,
-
-                                fontSize: 24,
-
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 20),
-
-                        _analysisItem(
-                          '🔥 Great price compared to market average.',
-                        ),
-
-                        _analysisItem('📈 Trending product this week.'),
-
-                        _analysisItem(
-                          '💸 Cashback available on selected stores.',
-                        ),
-
-                        _analysisItem('⚡ Limited stock detected.'),
-                      ],
-                    ),
-                  ),
+                  /// AI ANALYSIS CARD (real backend — preserved from Batch 2B)
+                  _realAiAnalysisCard(),
 
                   const SizedBox(height: 26),
 
-                  /// STATS
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _statCard(
-                          '4.9',
-                          'Rating',
-                          Icons.star,
-                          AppColors.orange,
-                        ),
-                      ),
-
-                      const SizedBox(width: 14),
-
-                      Expanded(
-                        child: _statCard(
-                          '92%',
-                          'Hot Score',
-                          Icons.local_fire_department_rounded,
-                          AppColors.red,
-                        ),
-                      ),
-
-                      const SizedBox(width: 14),
-
-                      Expanded(
-                        child: _statCard(
-                          '12%',
-                          'Cashback',
-                          Icons.payments_rounded,
-                          AppColors.green,
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 30),
-
-                  /// DESCRIPTION
-                  const Text(
-                    'Description',
-
-                    style: TextStyle(
-                      color: Colors.white,
-
-                      fontSize: 28,
-
-                      fontWeight: FontWeight.w900,
+                  /// REAL STATS ROW (hidden when no data)
+                  if (hasStats) ...[
+                    Row(
+                      children: [
+                        if (hasRating)
+                          Expanded(
+                            child: _statCard(
+                              product.ratingLabel,
+                              'product.rating'.tr(),
+                              Icons.star,
+                              AppColors.orange,
+                              subtitle: product.reviewCount > 0
+                                  ? '(${product.reviewLabel})'
+                                  : null,
+                            ),
+                          ),
+                        if (hasRating && hasDealScore)
+                          const SizedBox(width: 14),
+                        if (hasDealScore)
+                          Expanded(
+                            child: _statCard(
+                              '${product.dealScore}',
+                              'product.dealScore'.tr(),
+                              Icons.local_fire_department_rounded,
+                              AppColors.red,
+                            ),
+                          ),
+                      ],
                     ),
-                  ),
+                    const SizedBox(height: 30),
+                  ],
 
-                  const SizedBox(height: 16),
+                  /// DESCRIPTION (only when real text available)
+                  if (hasDescription) ...[
+                    Text(
+                      'product.description'.tr(),
 
-                  const Text(
-                    'Smart AI powered product recommendation selected from multiple stores and marketplaces. Optimized for best value, price and popularity.',
+                      style: const TextStyle(
+                        color: Colors.white,
 
-                    style: TextStyle(
-                      color: AppColors.gray,
+                        fontSize: 28,
 
-                      fontSize: 15,
-
-                      height: 1.7,
+                        fontWeight: FontWeight.w900,
+                      ),
                     ),
-                  ),
 
-                  const SizedBox(height: 38),
+                    const SizedBox(height: 16),
+
+                    Text(
+                      product.description,
+
+                      style: const TextStyle(
+                        color: AppColors.gray,
+
+                        fontSize: 15,
+
+                        height: 1.7,
+                      ),
+                    ),
+
+                    const SizedBox(height: 38),
+                  ] else
+                    const SizedBox(height: 10),
 
                   /// BUTTONS
                   Row(
@@ -423,7 +494,9 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                       Expanded(
                         child: ElevatedButton.icon(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.orange,
+                            backgroundColor: hasBuyLink
+                                ? AppColors.orange
+                                : AppColors.card,
 
                             foregroundColor: Colors.white,
 
@@ -434,14 +507,16 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                             ),
                           ),
 
-                          onPressed: openLink,
+                          onPressed: hasBuyLink ? openLink : null,
 
                           icon: const Icon(Icons.shopping_bag_rounded),
 
-                          label: const Text(
-                            'Buy Now',
+                          label: Text(
+                            hasBuyLink
+                                ? 'common.open_offer'.tr()
+                                : 'product.noBuyLink'.tr(),
 
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontWeight: FontWeight.w900,
 
                               fontSize: 16,
@@ -477,6 +552,125 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildImage(String imageUrl, {String? heroTag}) {
+    final img = Image.network(
+      imageUrl,
+      fit: BoxFit.cover,
+      errorBuilder: (c, e, s) => Container(
+        color: AppColors.card,
+        child: const Icon(
+          Icons.image_not_supported_rounded,
+          color: Colors.white54,
+          size: 80,
+        ),
+      ),
+    );
+    if (heroTag != null) {
+      return Hero(tag: heroTag, child: img);
+    }
+    return img;
+  }
+
+  Widget _realAiAnalysisCard() {
+    final result = aiResult;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.psychology_alt_rounded,
+                color: AppColors.orange,
+                size: 34,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'product.aiAnalysis'.tr(),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              if (result != null)
+                Text(
+                  '${result.score}',
+                  style: const TextStyle(
+                    color: AppColors.orange,
+                    fontSize: 24,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          if (isLoadingAi)
+            Row(
+              children: [
+                const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: AppColors.orange,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'ai.analysis.loading'.tr(),
+                    style: const TextStyle(color: AppColors.gray),
+                  ),
+                ),
+              ],
+            )
+          else if (aiErrorKey != null)
+            Row(
+              children: [
+                const Icon(Icons.info_rounded, color: AppColors.orange),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    aiErrorKey!.tr(),
+                    style: const TextStyle(color: AppColors.gray, height: 1.4),
+                  ),
+                ),
+                TextButton(
+                  onPressed: _loadAiAnalysis,
+                  child: Text('common.retry'.tr()),
+                ),
+              ],
+            )
+          else if (result != null) ...[
+            _analysisItem(result.verdict.replaceAll('_', ' ').toUpperCase()),
+            if (result.brutalTruth.isNotEmpty)
+              _analysisItem(result.brutalTruth),
+            if (result.summary.isNotEmpty) _analysisItem(result.summary),
+            ...result.reasons.take(3).map(_analysisItem),
+            ...result.risks.take(3).map(_analysisItem),
+            if (result.priceAdvice.recommendation.isNotEmpty)
+              _analysisItem(result.priceAdvice.recommendation),
+            if (result.antiImpulseAdvice.message.isNotEmpty)
+              _analysisItem(result.antiImpulseAdvice.message),
+            _analysisItem(
+              '${'ai.confidence'.tr()}: ${(result.confidence * 100).round()}%',
+            ),
+          ],
         ],
       ),
     );
@@ -522,7 +716,13 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
     );
   }
 
-  Widget _statCard(String value, String title, IconData icon, Color color) {
+  Widget _statCard(
+    String value,
+    String title,
+    IconData icon,
+    Color color, {
+    String? subtitle,
+  }) {
     return Container(
       padding: const EdgeInsets.all(18),
 
@@ -549,6 +749,14 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
               fontWeight: FontWeight.w900,
             ),
           ),
+
+          if (subtitle != null) ...[
+            const SizedBox(height: 2),
+            Text(
+              subtitle,
+              style: const TextStyle(color: AppColors.gray, fontSize: 10),
+            ),
+          ],
 
           const SizedBox(height: 4),
 
