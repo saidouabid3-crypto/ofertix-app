@@ -718,5 +718,21 @@
   "product.priceAlert.invalidPrice": "أدخل سعراً صحيحاً أقل من السعر الحالي",
   "product.priceAlert.setAlert": "إنشاء تنبيه",
   "product.priceAlert.cancel": "إلغاء",
-  "product.priceAlert.currentPrice": "السعر الحالي"
+  "product.priceAlert.currentPrice": "السعر الحالي",
+  "priceTruth.title": "حقيقة السعر",
+  "priceTruth.realDeal": "صفقة حقيقية",
+  "priceTruth.suspicious": "خصم مشبوه",
+  "priceTruth.normal": "سعر عادي",
+  "priceTruth.noHistory": "غير موثق",
+  "priceTruth.unknown": "غير معروف",
+  "priceTruth.confidence": "الثقة",
+  "priceTruth.bestPrice": "أفضل سعر شوهد",
+  "priceTruth.averagePrice": "متوسط السعر",
+  "priceTruth.discountUnverified": "الخصم لم يُتحقق منه بعد",
+  "priceTruth.notEnoughHistory": "لا يوجد تاريخ كافٍ للأسعار للتحقق من هذا الخصم",
+  "priceTruth.reason.oldPriceInflated": "قد يكون السعر الأصلي مبالغاً فيه — الخصم يبدو مشبوهاً",
+  "priceTruth.reason.nearAverage": "السعر قريب من المتوسط التاريخي — ليست تخفيضات حقيقية",
+  "priceTruth.reason.nearLowest": "السعر قريب أو أقل من أدنى سعر تاريخي — تبدو صفقة حقيقية",
+  "priceTruth.reason.noHistory": "لا يوجد تاريخ أسعار متاح بعد",
+  "priceTruth.reason.noDiscount": "لا يوجد خصم مقارنةً بالسعر الأصلي"
 }

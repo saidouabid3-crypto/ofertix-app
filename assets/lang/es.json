@@ -718,5 +718,21 @@
   "product.priceAlert.invalidPrice": "Introduce un precio válido por debajo del actual",
   "product.priceAlert.setAlert": "Crear alerta",
   "product.priceAlert.cancel": "Cancelar",
-  "product.priceAlert.currentPrice": "Precio actual"
+  "product.priceAlert.currentPrice": "Precio actual",
+  "priceTruth.title": "Precio Real",
+  "priceTruth.realDeal": "Oferta Real",
+  "priceTruth.suspicious": "Descuento Sospechoso",
+  "priceTruth.normal": "Precio Normal",
+  "priceTruth.noHistory": "Sin Verificar",
+  "priceTruth.unknown": "Desconocido",
+  "priceTruth.confidence": "Confianza",
+  "priceTruth.bestPrice": "Mejor precio visto",
+  "priceTruth.averagePrice": "Precio promedio",
+  "priceTruth.discountUnverified": "Descuento aún no verificado",
+  "priceTruth.notEnoughHistory": "Historial de precios insuficiente para verificar este descuento",
+  "priceTruth.reason.oldPriceInflated": "El precio original puede estar inflado — el descuento parece sospechoso",
+  "priceTruth.reason.nearAverage": "El precio está cerca del promedio histórico — no es una oferta real",
+  "priceTruth.reason.nearLowest": "El precio está cerca o por debajo del mínimo histórico — parece una oferta real",
+  "priceTruth.reason.noHistory": "Aún no hay historial de precios disponible",
+  "priceTruth.reason.noDiscount": "Sin descuento respecto al precio original"
 }

@@ -4,13 +4,16 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../models/ai_deal_brain_result.dart';
+import '../../models/price_truth_result.dart';
 import '../../models/product.dart';
 import '../../services/affiliate_service.dart';
 import '../../services/ai_service.dart';
 import '../../services/alert_service.dart';
 import '../../services/favorite_service.dart';
+import '../../services/price_truth_service.dart';
 import '../../services/settings_service.dart';
 import '../../services/watchlist_service.dart';
+import '../../widgets/price_truth_card.dart';
 
 class ProductDetailsScreen extends StatefulWidget {
   final Product product;
@@ -38,6 +41,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
   AiDealBrainResult? aiResult;
   String? aiErrorKey;
   int _imageIndex = 0;
+  PriceTruthResult? _priceTruth;
 
   @override
   void initState() {
@@ -45,6 +49,17 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
     _loadAiAnalysis();
     _loadFavoriteState();
     _loadWatchState();
+    _loadPriceTruth();
+  }
+
+  Future<void> _loadPriceTruth() async {
+    try {
+      final result = await PriceTruthService.instance.analyze(widget.product);
+      if (!mounted) return;
+      setState(() => _priceTruth = result);
+    } catch (_) {
+      // silent — card simply stays hidden
+    }
   }
 
   Future<void> _loadFavoriteState() async {
@@ -575,7 +590,15 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                   /// AI ANALYSIS CARD (real backend — preserved from Batch 2B)
                   _realAiAnalysisCard(),
 
-                  const SizedBox(height: 26),
+                  const SizedBox(height: 20),
+
+                  /// PRICE TRUTH CARD
+                  if (_priceTruth != null) ...[
+                    PriceTruthCard(result: _priceTruth!),
+                    const SizedBox(height: 20),
+                  ],
+
+                  const SizedBox(height: 6),
 
                   /// REAL STATS ROW (hidden when no data)
                   if (hasStats) ...[
