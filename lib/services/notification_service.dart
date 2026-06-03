@@ -1,157 +1,127 @@
-import 'package:flutter/foundation.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+
+import 'fcm_token_service.dart';
+import 'firebase_service.dart';
 
 class NotificationService {
-  static final FirebaseMessaging messaging = FirebaseMessaging.instance;
+  NotificationService._();
 
-  static final FlutterLocalNotificationsPlugin local =
+  static final NotificationService instance = NotificationService._();
+
+  final FirebaseMessaging _messaging = FirebaseService.instance.messaging;
+
+  final FlutterLocalNotificationsPlugin _local =
       FlutterLocalNotificationsPlugin();
 
-  static const AndroidNotificationChannel channel = AndroidNotificationChannel(
+  static const AndroidNotificationChannel _channel = AndroidNotificationChannel(
     'ofertix_channel',
     'Ofertix Notifications',
-
-    description: 'AI deals and smart alerts',
-
-    importance: Importance.max,
+    description: 'Smart shopping alerts and AI deal notifications',
+    importance: Importance.high,
   );
 
-  /// INIT
-  static Future<void> init() async {
-    /// PERMISSIONS
-    await messaging.requestPermission(alert: true, badge: true, sound: true);
+  Future<void> initialize() async {
+    await _messaging.requestPermission(alert: true, badge: true, sound: true);
 
-    /// LOCAL INIT
-    const android = AndroidInitializationSettings('@mipmap/ic_launcher');
-
-    const settings = InitializationSettings(android: android);
-
-    await local.initialize(
-      settings,
-
-      onDidReceiveNotificationResponse: (details) {
-        debugPrint('Notification tapped');
-      },
+    const androidSettings = AndroidInitializationSettings(
+      '@mipmap/ic_launcher',
     );
 
-    /// CHANNEL
-    await local
+    const settings = InitializationSettings(android: androidSettings);
+
+    await _local.initialize(settings);
+
+    await _local
         .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin
         >()
-        ?.createNotificationChannel(channel);
+        ?.createNotificationChannel(_channel);
 
-    /// FOREGROUND
-    FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
-
-    /// CLICK
-    FirebaseMessaging.onMessageOpenedApp.listen((message) {
-      debugPrint('Opened notification');
+    FirebaseMessaging.onMessage.listen((message) {
+      showLocalNotification(
+        title: message.notification?.title ?? 'Ofertix',
+        body: message.notification?.body ?? 'New smart deal available',
+      );
     });
 
-    /// BACKGROUND CLICK
-    final initialMessage = await messaging.getInitialMessage();
-
-    if (initialMessage != null) {
-      debugPrint('App opened from terminated notification');
+    // Start token-refresh listener once and register token for any user
+    // who is already logged in when the app starts.
+    FcmTokenService.instance.startRefreshListener();
+    final uid = FirebaseService.instance.currentUserId;
+    if (uid != null && uid.isNotEmpty) {
+      // Fire-and-forget — do not block notification setup.
+      FcmTokenService.instance.registerForUser(uid);
     }
-
-    /// TOKEN
-    final token = await messaging.getToken();
-
-    debugPrint('🔥 FCM TOKEN: $token');
   }
 
-  /// FOREGROUND MESSAGE
-  static Future<void> _handleForegroundMessage(RemoteMessage message) async {
-    final title = message.notification?.title ?? 'Ofertix';
-
-    final body = message.notification?.body ?? 'New notification';
-
-    await showNotification(title: title, body: body);
+  Future<String?> getToken() async {
+    try {
+      return await _messaging.getToken();
+    } catch (_) {
+      return null;
+    }
   }
 
-  /// LOCAL NOTIFICATION
-  static Future<void> showNotification({
+  Future<void> showLocalNotification({
     required String title,
     required String body,
   }) async {
     const androidDetails = AndroidNotificationDetails(
       'ofertix_channel',
       'Ofertix Notifications',
-
-      channelDescription: 'AI deals and alerts',
-
-      importance: Importance.max,
-
+      channelDescription: 'Smart shopping alerts and AI deal notifications',
+      importance: Importance.high,
       priority: Priority.high,
-
       playSound: true,
-
       enableVibration: true,
-
-      visibility: NotificationVisibility.public,
     );
 
     const details = NotificationDetails(android: androidDetails);
 
-    await local.show(
+    await _local.show(
       DateTime.now().millisecondsSinceEpoch ~/ 1000,
-
       title,
       body,
       details,
     );
   }
 
-  /// HOT DEAL
-  static Future<void> showHotDealNotification({
-    required String product,
+  Future<void> notifyHotDeal({
+    required String productName,
     required String price,
   }) async {
-    await showNotification(
-      title: '🔥 Hot Deal Detected',
-      body: '$product now for $price',
+    await showLocalNotification(
+      title: '🔥 Hot Deal',
+      body: '$productName now for $price',
     );
   }
 
-  /// PRICE DROP
-  static Future<void> showPriceDropNotification({
-    required String product,
+  Future<void> notifyPriceDrop({
+    required String productName,
     required String oldPrice,
     required String newPrice,
   }) async {
-    await showNotification(
-      title: '📉 Price Drop Alert',
-      body: '$product dropped from $oldPrice to $newPrice',
+    await showLocalNotification(
+      title: '📉 Price Drop',
+      body: '$productName dropped from $oldPrice to $newPrice',
     );
   }
 
-  /// CASHBACK
-  static Future<void> showCashbackNotification({
-    required String product,
+  Future<void> notifyAiRecommendation({required String productName}) async {
+    await showLocalNotification(
+      title: '🧠 AI Recommendation',
+      body: 'AI found a smart deal: $productName',
+    );
+  }
+
+  Future<void> notifyCashback({
+    required String productName,
     required String cashback,
   }) async {
-    await showNotification(
-      title: '💸 Cashback Available',
-      body: '$cashback cashback on $product',
-    );
-  }
-
-  /// AI PICK
-  static Future<void> showAiRecommendation({required String product}) async {
-    await showNotification(
-      title: '🧠 AI Recommendation',
-      body: 'AI found a smart deal: $product',
-    );
-  }
-
-  /// TEST
-  static Future<void> testNotification() async {
-    await showNotification(
-      title: '🚀 Ofertix',
-      body: 'Your AI shopping system is active.',
+    await showLocalNotification(
+      title: '💸 Cashback',
+      body: '$cashback cashback available on $productName',
     );
   }
 }
