@@ -734,5 +734,20 @@
   "priceTruth.reason.nearAverage": "Price is close to the historical average — not a real sale",
   "priceTruth.reason.nearLowest": "Price is near or below the historical low — looks like a real deal",
   "priceTruth.reason.noHistory": "No price history available yet",
-  "priceTruth.reason.noDiscount": "No discount compared to original price"
+  "priceTruth.reason.noDiscount": "No discount compared to original price",
+  "notifications.title": "Notifications",
+  "notifications.emptyTitle": "No notifications yet",
+  "notifications.emptyMessage": "Price drops and deal alerts will appear here",
+  "notifications.markAllRead": "Mark all as read",
+  "notifications.unread": "unread",
+  "notifications.delete": "Delete",
+  "notifications.retry": "Retry",
+  "notifications.loginRequired": "Sign in to see your notifications",
+  "notifications.priceDrop": "Price drop",
+  "notifications.aiAlert": "AI alert",
+  "notifications.watchlistUpdate": "Watchlist update",
+  "notifications.openProduct": "Open product",
+  "notifications.markedRead": "Marked as read",
+  "notifications.deleted": "Notification deleted",
+  "notifications.errorLoad": "Could not load notifications"
 }

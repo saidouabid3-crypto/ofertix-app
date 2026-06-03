@@ -734,5 +734,20 @@
   "priceTruth.reason.nearAverage": "El precio está cerca del promedio histórico — no es una oferta real",
   "priceTruth.reason.nearLowest": "El precio está cerca o por debajo del mínimo histórico — parece una oferta real",
   "priceTruth.reason.noHistory": "Aún no hay historial de precios disponible",
-  "priceTruth.reason.noDiscount": "Sin descuento respecto al precio original"
+  "priceTruth.reason.noDiscount": "Sin descuento respecto al precio original",
+  "notifications.title": "Notificaciones",
+  "notifications.emptyTitle": "Aún no hay notificaciones",
+  "notifications.emptyMessage": "Las bajadas de precio y alertas de ofertas aparecerán aquí",
+  "notifications.markAllRead": "Marcar todo como leído",
+  "notifications.unread": "sin leer",
+  "notifications.delete": "Eliminar",
+  "notifications.retry": "Reintentar",
+  "notifications.loginRequired": "Inicia sesión para ver tus notificaciones",
+  "notifications.priceDrop": "Bajada de precio",
+  "notifications.aiAlert": "Alerta IA",
+  "notifications.watchlistUpdate": "Actualización de lista",
+  "notifications.openProduct": "Ver producto",
+  "notifications.markedRead": "Marcado como leído",
+  "notifications.deleted": "Notificación eliminada",
+  "notifications.errorLoad": "No se pudieron cargar las notificaciones"
 }

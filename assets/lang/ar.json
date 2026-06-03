@@ -734,5 +734,20 @@
   "priceTruth.reason.nearAverage": "السعر قريب من المتوسط التاريخي — ليست تخفيضات حقيقية",
   "priceTruth.reason.nearLowest": "السعر قريب أو أقل من أدنى سعر تاريخي — تبدو صفقة حقيقية",
   "priceTruth.reason.noHistory": "لا يوجد تاريخ أسعار متاح بعد",
-  "priceTruth.reason.noDiscount": "لا يوجد خصم مقارنةً بالسعر الأصلي"
+  "priceTruth.reason.noDiscount": "لا يوجد خصم مقارنةً بالسعر الأصلي",
+  "notifications.title": "الإشعارات",
+  "notifications.emptyTitle": "لا توجد إشعارات بعد",
+  "notifications.emptyMessage": "ستظهر هنا تنبيهات انخفاض الأسعار والعروض",
+  "notifications.markAllRead": "تحديد الكل كمقروء",
+  "notifications.unread": "غير مقروء",
+  "notifications.delete": "حذف",
+  "notifications.retry": "إعادة المحاولة",
+  "notifications.loginRequired": "سجّل دخولك لرؤية إشعاراتك",
+  "notifications.priceDrop": "انخفاض السعر",
+  "notifications.aiAlert": "تنبيه ذكاء اصطناعي",
+  "notifications.watchlistUpdate": "تحديث قائمة المراقبة",
+  "notifications.openProduct": "فتح المنتج",
+  "notifications.markedRead": "تم التحديد كمقروء",
+  "notifications.deleted": "تم حذف الإشعار",
+  "notifications.errorLoad": "تعذّر تحميل الإشعارات"
 }

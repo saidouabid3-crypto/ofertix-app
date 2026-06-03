@@ -96,7 +96,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         delegate: SliverChildListDelegate([
                           _Header(
                             onAlerts: () =>
-                                Navigator.pushNamed(context, '/alerts'),
+                                Navigator.pushNamed(context, '/notifications'),
                             onProfile: () =>
                                 Navigator.pushNamed(context, '/profile'),
                           ),
