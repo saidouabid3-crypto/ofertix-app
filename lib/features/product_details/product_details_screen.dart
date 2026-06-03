@@ -241,7 +241,17 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
   Future<void> openLink() async {
     final product = widget.product;
     final urlStr = product.affiliateUrl.trim();
-    if (urlStr.isEmpty) return;
+    if (urlStr.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('product.offer.noLink'.tr()),
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
     final country = await _settingsService.getCountry();
     try {
       await AffiliateService.instance.openProduct(
@@ -279,8 +289,6 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
     final hasRating = product.rating > 0;
     final hasDealScore = product.dealScore > 0;
     final hasStats = hasRating || hasDealScore;
-    final hasBuyLink = product.affiliateUrl.trim().isNotEmpty;
-
     return Scaffold(
       backgroundColor: AppColors.background,
 
@@ -703,9 +711,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                       Expanded(
                         child: ElevatedButton.icon(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: hasBuyLink
-                                ? AppColors.orange
-                                : AppColors.card,
+                            backgroundColor: AppColors.orange,
 
                             foregroundColor: Colors.white,
 
@@ -716,14 +722,12 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                             ),
                           ),
 
-                          onPressed: hasBuyLink ? openLink : null,
+                          onPressed: openLink,
 
                           icon: const Icon(Icons.shopping_bag_rounded),
 
                           label: Text(
-                            hasBuyLink
-                                ? 'common.open_offer'.tr()
-                                : 'product.noBuyLink'.tr(),
+                            'common.open_offer'.tr(),
 
                             style: const TextStyle(
                               fontWeight: FontWeight.w900,

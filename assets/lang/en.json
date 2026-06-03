@@ -708,6 +708,7 @@
   "product.favorite.error": "Could not update favorites",
   "product.share.error": "Could not share this product",
   "product.offer.openError": "Could not open this offer",
+  "product.offer.noLink": "No offer link available",
   "product.watchlist.add": "Watch price",
   "product.watchlist.added": "Watching",
   "product.watchlist.removed": "Removed from watchlist",

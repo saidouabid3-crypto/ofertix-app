@@ -708,6 +708,7 @@
   "product.favorite.error": "Impossible de mettre à jour les favoris",
   "product.share.error": "Impossible de partager ce produit",
   "product.offer.openError": "Impossible d'ouvrir cette offre",
+  "product.offer.noLink": "Aucun lien disponible pour cette offre",
   "product.watchlist.add": "Surveiller le prix",
   "product.watchlist.added": "Surveillance active",
   "product.watchlist.removed": "Retiré de la liste",

@@ -708,6 +708,7 @@
   "product.favorite.error": "تعذر تحديث المفضلة",
   "product.share.error": "تعذر مشاركة هذا المنتج",
   "product.offer.openError": "تعذر فتح هذا العرض",
+  "product.offer.noLink": "لا يوجد رابط متاح لهذا العرض",
   "product.watchlist.add": "مراقبة السعر",
   "product.watchlist.added": "تتم المراقبة",
   "product.watchlist.removed": "تمت الإزالة من القائمة",

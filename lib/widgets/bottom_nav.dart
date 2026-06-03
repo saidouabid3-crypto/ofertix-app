@@ -34,7 +34,9 @@ class BottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
+    return ColoredBox(
+      color: Colors.white,
+      child: SafeArea(
       top: false,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
@@ -104,6 +106,7 @@ class BottomNav extends StatelessWidget {
           ),
         ),
       ),
+    ),
     );
   }
 }

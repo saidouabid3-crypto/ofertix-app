@@ -44,8 +44,18 @@ class NotificationCenterProvider extends ChangeNotifier {
         notifyListeners();
       },
       onError: (e) {
-        errorMessage = e.toString();
-        state = NotificationCenterState.error;
+        final msg = e.toString().toLowerCase();
+        final isPermissionDenied =
+            msg.contains('permission-denied') ||
+            msg.contains('permission_denied') ||
+            msg.contains('insufficient permissions');
+        if (isPermissionDenied) {
+          state = NotificationCenterState.loginRequired;
+          errorMessage = null;
+        } else {
+          state = NotificationCenterState.error;
+          errorMessage = null; // never expose raw Firebase exceptions to UI
+        }
         notifyListeners();
       },
     );

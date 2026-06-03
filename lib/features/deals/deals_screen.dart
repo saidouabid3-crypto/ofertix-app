@@ -45,7 +45,7 @@ class DealsScreen extends StatelessWidget {
                           crossAxisCount: 2,
                           mainAxisSpacing: 16,
                           crossAxisSpacing: 16,
-                          childAspectRatio: 0.68,
+                          childAspectRatio: 0.56,
                         ),
                     itemBuilder: (context, index) {
                       final product = provider.deals[index];
