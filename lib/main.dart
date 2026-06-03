@@ -1,90 +1,100 @@
 import 'package:flutter/material.dart';
+
 import 'package:firebase_core/firebase_core.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+
+import 'package:provider/provider.dart';
+
+import 'package:easy_localization/easy_localization.dart';
 
 import 'firebase_options.dart';
 
-import 'screens/country_selection_screen.dart';
-import 'screens/home_screen.dart';
-import 'theme/app_theme.dart';
-import 'services/coin_service.dart';
-import 'services/notification_service.dart';
+import 'core/navigation/app_router.dart';
+import 'core/navigation/app_routes.dart';
+
+import 'core/theme/app_theme.dart';
+
+import 'providers/theme_provider.dart';
+import 'providers/locale_provider.dart';
+import 'providers/country_provider.dart';
+import 'providers/currency_provider.dart';
+import 'providers/favorites_provider.dart';
+import 'providers/watchlist_provider.dart';
+import 'providers/notification_provider.dart';
+import 'providers/rewards_provider.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await dotenv.load(fileName: ".env");
+  await EasyLocalization.ensureInitialized();
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  await CoinService.loadCoins();
-  await NotificationService.init();
+  runApp(
+    EasyLocalization(
+      supportedLocales: const [
+        Locale('es'),
+        Locale('en'),
+        Locale('fr'),
+        Locale('ar'),
+        Locale('de'),
+        Locale('it'),
+        Locale('pt'),
+      ],
 
-  runApp(const OfertixApp());
+      path: 'assets/lang',
+
+      fallbackLocale: const Locale('es'),
+
+      child: const OfertixApp(),
+    ),
+  );
 }
 
-class OfertixApp extends StatefulWidget {
+class OfertixApp extends StatelessWidget {
   const OfertixApp({super.key});
-
-  static _OfertixAppState? of(BuildContext context) {
-    return context.findAncestorStateOfType<_OfertixAppState>();
-  }
-
-  @override
-  State<OfertixApp> createState() => _OfertixAppState();
-}
-
-class _OfertixAppState extends State<OfertixApp> {
-  ThemeMode _themeMode = ThemeMode.dark;
-  late Future<bool> _startFuture;
-
-  @override
-  void initState() {
-    super.initState();
-    _startFuture = _loadUserSettings();
-  }
-
-  Future<bool> _loadUserSettings() async {
-    final prefs = await SharedPreferences.getInstance();
-
-    final savedTheme = prefs.getString('theme_mode') ?? 'dark';
-    _themeMode = savedTheme == 'light' ? ThemeMode.light : ThemeMode.dark;
-
-    final country = prefs.getString('country');
-    return country != null;
-  }
-
-  Future<void> changeTheme(bool isDark) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('theme_mode', isDark ? 'dark' : 'light');
-
-    setState(() {
-      _themeMode = isDark ? ThemeMode.dark : ThemeMode.light;
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      themeMode: _themeMode,
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      home: FutureBuilder<bool>(
-        future: _startFuture,
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return const Scaffold(
-              body: Center(child: CircularProgressIndicator(strokeWidth: 3)),
-            );
-          }
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
 
-          if (snapshot.data == true) {
-            return const HomeScreen();
-          }
+        ChangeNotifierProvider(create: (_) => LocaleProvider()),
 
-          return const CountrySelectionScreen();
+        ChangeNotifierProvider(create: (_) => CountryProvider()),
+
+        ChangeNotifierProvider(create: (_) => CurrencyProvider()),
+
+        ChangeNotifierProvider(create: (_) => FavoritesProvider()),
+
+        ChangeNotifierProvider(create: (_) => WatchlistProvider()),
+
+        ChangeNotifierProvider(create: (_) => NotificationProvider()),
+
+        ChangeNotifierProvider(create: (_) => RewardsProvider()),
+      ],
+
+      child: Consumer<ThemeProvider>(
+        builder: (context, themeProvider, child) {
+          return MaterialApp(
+            title: 'Ofertix',
+
+            debugShowCheckedModeBanner: false,
+
+            locale: context.locale,
+
+            supportedLocales: context.supportedLocales,
+
+            localizationsDelegates: context.localizationDelegates,
+
+            theme: themeProvider.isDark
+                ? AppTheme.darkTheme
+                : AppTheme.lightTheme,
+
+            initialRoute: AppRoutes.splash,
+
+            onGenerateRoute: AppRouter.onGenerateRoute,
+          );
         },
       ),
     );

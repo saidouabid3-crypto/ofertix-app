@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "231408503047",
+    "firebase_url": "https://ofertix-435a6-default-rtdb.europe-west1.firebasedatabase.app",
+    "project_id": "ofertix-435a6",
+    "storage_bucket": "ofertix-435a6.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:231408503047:android:0a1368845d41eca6205da2",
+        "android_client_info": {
+          "package_name": "com.ofertix.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyABuw8E5KmjP8UTFpRyT5wVqCwuwTlkms0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
