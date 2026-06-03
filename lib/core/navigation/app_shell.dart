@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
 
+import '../../core/config/api_config.dart';
 import '../../widgets/bottom_nav.dart';
 
 import '../../features/home/home_screen.dart';
 
-import '../../features/search/search_screen.dart';
+import '../../features/ai_assistant/ai_assistant_screen.dart';
 
-import '../../features/deals/deals_screen.dart';
+import '../../features/scan/scan_screen.dart';
 
-import '../../features/profile/profile_screen.dart';
+import '../../features/sell/sell_screen.dart';
+
+import '../../features/smart_reels/smart_reels_screen.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -29,11 +32,13 @@ class _AppShellState extends State<AppShell> {
     pages = [
       HomeScreen(),
 
-      const SearchScreen(),
+      const ScanScreen(),
 
-      const DealsScreen(),
+      SmartReelsScreen(baseUrl: ApiConfig.baseUrl),
 
-      const ProfileScreen(),
+      SellScreen(),
+
+      AIAssistantScreen(),
     ];
   }
 

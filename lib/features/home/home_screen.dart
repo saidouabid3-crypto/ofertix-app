@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import 'package:easy_localization/easy_localization.dart';
 
 import '../../core/theme/app_theme.dart';
-import '../../core/navigation/app_routes.dart';
 import '../../models/product.dart';
 import '../../models/ofertix_ad_model.dart';
 import '../../widgets/daily_ai_hunt_section.dart';
@@ -122,25 +121,6 @@ class _HomeScreenState extends State<HomeScreen> {
                             productCount: products.length,
                             onViewDeals: () =>
                                 Navigator.pushNamed(context, '/deals'),
-                          ),
-
-                          SizedBox(height: 14),
-
-                          _QuickActions(
-                            onBlindBox: () =>
-                                Navigator.pushNamed(context, '/mystery-box'),
-                            onHot: () =>
-                                Navigator.pushNamed(context, '/trending'),
-                            onAiBrain: () =>
-                                Navigator.pushNamed(context, '/ai-deal-brain'),
-                            onNearMe: () => Navigator.pushNamed(
-                              context,
-                              AppRoutes.localNearby,
-                            ),
-                            onRadar: () => Navigator.pushNamed(
-                              context,
-                              AppRoutes.localNearby,
-                            ),
                           ),
 
                           SizedBox(height: 14),
@@ -307,12 +287,12 @@ class _Header extends StatelessWidget {
             height: 42,
             padding: EdgeInsets.symmetric(horizontal: 10),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Color(0xFFFFF3E6),
               borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: Color(0xFFE7EBEF)),
+              border: Border.all(color: Color(0xFFFFD6A8)),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.06),
+                  color: AppColors.orange.withValues(alpha: 0.12),
                   blurRadius: 12,
                   offset: Offset(0, 5),
                 ),
@@ -321,24 +301,12 @@ class _Header extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Container(
-                  width: 28,
-                  height: 28,
-                  decoration: BoxDecoration(
-                    gradient: AppColors.orangeGradient,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.person_rounded,
-                    color: Colors.white,
-                    size: 17,
-                  ),
-                ),
-                SizedBox(width: 7),
+                Icon(Icons.stars_rounded, color: AppColors.orange, size: 18),
+                SizedBox(width: 5),
                 Text(
-                  'common.profile'.tr(),
+                  'home.points'.tr(args: ['320']),
                   style: TextStyle(
-                    color: Color(0xFF1E2022),
+                    color: Color(0xFF9A4A00),
                     fontSize: 12,
                     fontWeight: FontWeight.w900,
                   ),
@@ -502,6 +470,7 @@ class HomeCategory {
     final haystack = [
       product.category,
       product.categoryGroup,
+      product.store,
       product.name,
       product.fullTitle,
       product.description,
@@ -539,7 +508,15 @@ class _CategoryCirclesRow extends StatelessWidget {
       query: 'cars coche auto car accessories',
       icon: Icons.directions_car_filled_rounded,
       color: Color(0xFF111827),
-      aliases: ['cars', 'car', 'coche', 'auto', 'automovil', 'automóvil', 'vehicle'],
+      aliases: [
+        'cars',
+        'car',
+        'coche',
+        'auto',
+        'automovil',
+        'automóvil',
+        'vehicle',
+      ],
     ),
     HomeCategory(
       key: 'home',
@@ -555,7 +532,14 @@ class _CategoryCirclesRow extends StatelessWidget {
       query: 'beauty belleza skincare perfume',
       icon: Icons.spa_rounded,
       color: Color(0xFFDB2777),
-      aliases: ['beauty', 'belleza', 'skincare', 'makeup', 'perfume', 'cosmetic'],
+      aliases: [
+        'beauty',
+        'belleza',
+        'skincare',
+        'makeup',
+        'perfume',
+        'cosmetic',
+      ],
     ),
     HomeCategory(
       key: 'sports',
@@ -571,7 +555,16 @@ class _CategoryCirclesRow extends StatelessWidget {
       query: 'kids niños juguetes baby',
       icon: Icons.child_care_rounded,
       color: Color(0xFF7C3AED),
-      aliases: ['kids', 'niños', 'ninos', 'baby', 'bebé', 'bebe', 'toys', 'juguetes'],
+      aliases: [
+        'kids',
+        'niños',
+        'ninos',
+        'baby',
+        'bebé',
+        'bebe',
+        'toys',
+        'juguetes',
+      ],
     ),
     HomeCategory(
       key: 'gaming',
@@ -635,7 +628,14 @@ class _CategoryCirclesRow extends StatelessWidget {
       query: 'computers laptop pc portátil',
       icon: Icons.laptop_mac_rounded,
       color: Color(0xFF4F46E5),
-      aliases: ['computer', 'computers', 'laptop', 'pc', 'portatil', 'portátil'],
+      aliases: [
+        'computer',
+        'computers',
+        'laptop',
+        'pc',
+        'portatil',
+        'portátil',
+      ],
     ),
     HomeCategory(
       key: 'pets',
@@ -835,6 +835,8 @@ class _HeroBanner extends StatelessWidget {
               SizedBox(height: 8),
               Text(
                 'home.heroTitle'.tr(),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 20,
@@ -846,30 +848,36 @@ class _HeroBanner extends StatelessWidget {
               Spacer(),
               GestureDetector(
                 onTap: onViewDeals,
-                child: Container(
-                  padding: EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: Color(0xFF1E2022),
-                    borderRadius: BorderRadius.circular(25),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'home.viewDeals'.tr(),
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w900,
-                        ),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: 158),
+                  child: Container(
+                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: Color(0xFF1E2022),
+                      borderRadius: BorderRadius.circular(25),
+                    ),
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'home.viewDeals'.tr(),
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          SizedBox(width: 6),
+                          Icon(
+                            Icons.arrow_forward_rounded,
+                            color: Colors.white,
+                            size: 15,
+                          ),
+                        ],
                       ),
-                      SizedBox(width: 6),
-                      Icon(
-                        Icons.arrow_forward_rounded,
-                        color: Colors.white,
-                        size: 15,
-                      ),
-                    ],
+                    ),
                   ),
                 ),
               ),
@@ -884,119 +892,6 @@ class _HeroBanner extends StatelessWidget {
 // ============================================================
 // ✅ QUICK ACTIONS - 5 أيقونات
 // ============================================================
-class _QuickActions extends StatelessWidget {
-  final VoidCallback onBlindBox;
-  final VoidCallback onHot;
-  final VoidCallback onAiBrain;
-  final VoidCallback onNearMe;
-  final VoidCallback onRadar;
-
-  _QuickActions({
-    required this.onBlindBox,
-    required this.onHot,
-    required this.onAiBrain,
-    required this.onNearMe,
-    required this.onRadar,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Color(0xFFE8ECEF)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 12,
-            offset: Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _ActionItem(
-            label: 'home.blindBox'.tr(),
-            icon: Icons.inventory_2_rounded,
-            color: Color(0xFF6C63FF),
-            onTap: onBlindBox,
-          ),
-          _ActionItem(
-            label: 'home.hot'.tr(),
-            icon: Icons.local_fire_department_rounded,
-            color: Color(0xFFFF4500),
-            onTap: onHot,
-          ),
-          _ActionItem(
-            label: 'home.aiBrain'.tr(),
-            icon: Icons.psychology_rounded,
-            color: Color(0xFFFF6B9D),
-            onTap: onAiBrain,
-          ),
-          _ActionItem(
-            label: 'home.nearMe'.tr(),
-            icon: Icons.location_on_rounded,
-            color: Color(0xFF00C853),
-            onTap: onNearMe,
-          ),
-          _ActionItem(
-            label: 'local.radarTitle'.tr(),
-            icon: Icons.radar_rounded,
-            color: Color(0xFF2196F3),
-            onTap: onRadar,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ActionItem extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final Color color;
-  final VoidCallback onTap;
-
-  _ActionItem({
-    required this.label,
-    required this.icon,
-    required this.color,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Column(
-        children: [
-          Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Icon(icon, color: color, size: 24),
-          ),
-          SizedBox(height: 6),
-          Text(
-            label,
-            style: TextStyle(
-              color: Color(0xFF1E2022),
-              fontSize: 10.5,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 // ============================================================
 // ✅ CASHBACK BANNER
 // ============================================================
@@ -1037,7 +932,7 @@ class _CashbackBanner extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Extra Cashback.\nExtra Savings.',
+                    'home.extraSavingsTitle'.tr(),
                     style: TextStyle(
                       color: Color(0xFF1E2022),
                       fontSize: 14,
@@ -1047,7 +942,7 @@ class _CashbackBanner extends StatelessWidget {
                   ),
                   SizedBox(height: 3),
                   Text(
-                    'Collect extra cashback on top deals & save more!',
+                    'home.extraSavingsSubtitle'.tr(),
                     style: TextStyle(
                       color: Color(0xFF7C848E),
                       fontSize: 11,
@@ -1065,7 +960,7 @@ class _CashbackBanner extends StatelessWidget {
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Text(
-                'Collect\nNow',
+                'home.extraSavingsAction'.tr(),
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: Colors.white,
@@ -1100,7 +995,7 @@ class _AdSlot extends StatelessWidget {
       child: Row(
         children: [
           Text(
-            'SPONSORED',
+            'common.sponsored'.tr().toUpperCase(),
             style: TextStyle(
               color: Color(0xFF9AA1AA),
               fontSize: 9,
@@ -1110,7 +1005,7 @@ class _AdSlot extends StatelessWidget {
           ),
           Spacer(),
           Text(
-            'Your ad here',
+            'home.yourAdHere'.tr(),
             style: TextStyle(
               color: Color(0xFF6E7580),
               fontSize: 10.5,

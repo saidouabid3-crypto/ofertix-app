@@ -240,7 +240,7 @@ class CashbackScreen extends StatelessWidget {
 
                         const SizedBox(height: 18),
 
-                        _cashbackItem('AliExpress Order', '+4.25€', true),
+                        _cashbackItem('Amazon Order', '+4.25€', true),
 
                         _cashbackItem('MediaMarkt Purchase', '+8.90€', true),
 

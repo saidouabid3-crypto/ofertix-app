@@ -167,7 +167,8 @@ class _AddSmartReelScreenState extends State<AddSmartReelScreen> {
     return Scaffold(
       backgroundColor: Color(0xFF050505),
       appBar: AppBar(
-        title: Text('auto.smart_reels_add_smart_reel_screen.anadir_smart_reel'.tr(),
+        title: Text(
+          'auto.smart_reels_add_smart_reel_screen.anadir_smart_reel'.tr(),
           style: TextStyle(fontWeight: FontWeight.w900),
         ),
         backgroundColor: Color(0xFF050505),
@@ -222,7 +223,7 @@ class _AddSmartReelScreenState extends State<AddSmartReelScreen> {
                       style: TextStyle(color: Colors.white),
                       decoration: _inputDecoration(
                         label: 'Tienda',
-                        hint: 'Amazon, AliExpress, MediaMarkt...',
+                        hint: 'Amazon, Zara, MediaMarkt...',
                         icon: Icons.storefront_rounded,
                       ),
                       validator: (value) {
@@ -389,7 +390,9 @@ class _HeroUploadCard extends StatelessWidget {
                 ),
               ),
               SizedBox(height: 6),
-              Text('auto.smart_reels_add_smart_reel_screen.recomendado_vertical_maximo_60_segundo'.tr()
+              Text(
+                'auto.smart_reels_add_smart_reel_screen.recomendado_vertical_maximo_60_segundo'
+                    .tr()
                     .tr(),
                 style: TextStyle(
                   color: Colors.white60,

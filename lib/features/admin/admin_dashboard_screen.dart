@@ -293,7 +293,7 @@ class AdminDashboardScreen extends StatelessWidget {
                           const TopProductTile(
                             name: 'AirPods Pro',
 
-                            store: 'AliExpress',
+                            store: 'Amazon',
 
                             clicks: '5.6K',
 
