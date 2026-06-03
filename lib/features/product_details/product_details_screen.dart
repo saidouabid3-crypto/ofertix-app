@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../core/errors/app_exception.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/ai_deal_brain_result.dart';
 import '../../models/price_truth_result.dart';
@@ -178,10 +179,8 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _PriceAlertSheet(
-        product: product,
-        settingsService: _settingsService,
-      ),
+      builder: (_) =>
+          _PriceAlertSheet(product: product, settingsService: _settingsService),
     );
   }
 
@@ -203,9 +202,16 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
       );
       if (!mounted) return;
       setState(() => aiResult = result);
+    } on AppException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        aiErrorKey = e.code == 'AI_NOT_CONFIGURED'
+            ? 'ai.error.notConfigured'
+            : 'ai.error.unavailable';
+      });
     } catch (_) {
       if (!mounted) return;
-      setState(() => aiErrorKey = 'ai.error.notConfigured');
+      setState(() => aiErrorKey = 'ai.error.unavailable');
     } finally {
       if (mounted) setState(() => isLoadingAi = false);
     }
@@ -261,13 +267,14 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
     final product = widget.product;
     final hasDiscount =
         product.discount > 0 && product.oldPrice > product.newPrice;
-    final images =
-        product.images.isNotEmpty ? product.images : [product.image];
+    final images = product.images.isNotEmpty ? product.images : [product.image];
     final hasMultipleImages = images.length > 1;
-    final hasDescription = product.description.isNotEmpty &&
+    final hasDescription =
+        product.description.isNotEmpty &&
         product.description != product.name &&
         product.description != product.fullTitle;
-    final hasCategory = product.category.isNotEmpty &&
+    final hasCategory =
+        product.category.isNotEmpty &&
         product.category.toLowerCase() != 'general';
     final hasRating = product.rating > 0;
     final hasDealScore = product.dealScore > 0;
@@ -338,10 +345,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                       ),
                     )
                   else
-                    Hero(
-                      tag: product.id,
-                      child: _buildImage(images.first),
-                    ),
+                    Hero(tag: product.id, child: _buildImage(images.first)),
 
                   // Gradient overlay
                   Container(
@@ -575,6 +579,35 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                         ),
                         child: Text(
                           product.category,
+                          style: const TextStyle(
+                            color: AppColors.gray,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+
+                  if (product.countryCode.isNotEmpty &&
+                      product.countryCode.toLowerCase() != 'global') ...[
+                    const SizedBox(height: 10),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.card,
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.08),
+                          ),
+                        ),
+                        child: Text(
+                          '${'product.country'.tr()}: ${product.countryCode.toUpperCase()}',
                           style: const TextStyle(
                             color: AppColors.gray,
                             fontSize: 12,
@@ -1197,7 +1230,9 @@ class _PriceAlertSheetState extends State<_PriceAlertSheet> {
             // Target price input
             TextField(
               controller: _priceController,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
               style: const TextStyle(color: Colors.white, fontSize: 16),
               decoration: InputDecoration(
                 labelText: 'product.priceAlert.targetPrice'.tr(),
@@ -1215,7 +1250,10 @@ class _PriceAlertSheetState extends State<_PriceAlertSheet> {
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(18),
-                  borderSide: const BorderSide(color: AppColors.orange, width: 1.4),
+                  borderSide: const BorderSide(
+                    color: AppColors.orange,
+                    width: 1.4,
+                  ),
                 ),
               ),
             ),

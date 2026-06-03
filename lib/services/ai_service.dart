@@ -9,6 +9,8 @@ class AiService {
 
   static final AiService instance = AiService._();
 
+  factory AiService() => instance;
+
   final ApiService _api = ApiService.instance;
 
   Future<AiShoppingResult> analyzeShoppingQuery({
@@ -143,6 +145,13 @@ class AiService {
     );
 
     return result.products;
+  }
+
+  Future<dynamic> search({
+    required String message,
+    String country = 'ES',
+  }) {
+    return analyzeShoppingQuery(query: message, countryCode: country);
   }
 
   Future<List<Product>> recommendations({

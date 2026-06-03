@@ -107,4 +107,24 @@ class SettingsService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();
   }
+
+  static Future<String> language() => instance.getLanguage();
+
+  static Future<String> country() => instance.getCountry();
+
+  static Future<String> currency() => instance.getCurrency();
+
+  static Future<void> saveLanguage(String language) {
+    return instance.setLanguage(language);
+  }
+
+  static Future<void> saveCountry({
+    required String country,
+    required String currency,
+  }) async {
+    await instance.setCountry(country);
+    await instance.setCurrency(currency);
+  }
+
+  static Future<void> saveTheme(bool dark) => instance.setDarkMode(dark);
 }

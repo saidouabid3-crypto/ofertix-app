@@ -5,9 +5,12 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 
 import '../core/config/api_config.dart';
+import '../core/config/api_endpoints.dart';
 import '../core/errors/app_exception.dart';
 import '../core/network/api_response.dart';
 import '../core/network/locale_resolver.dart';
+import '../models/product.dart';
+import '../models/products_page.dart';
 
 /// Single HTTP transport for Ofertix Elite — locale headers, envelope parsing,
 /// typed errors, AI streaming, and payment-required (402) handling.
@@ -15,6 +18,8 @@ class ApiService {
   ApiService._({http.Client? client}) : _client = client ?? http.Client();
 
   static final ApiService instance = ApiService._();
+
+  factory ApiService() => instance;
 
   factory ApiService.withClient(http.Client client) =>
       ApiService._(client: client);
@@ -137,6 +142,74 @@ class ApiService {
       ),
       timeout: timeout,
     );
+  }
+
+  Future<ProductsPage> getProductsPage({
+    required int page,
+    int limit = 20,
+    String countryCode = 'es',
+  }) async {
+    final response = await get(
+      ApiEndpoints.products,
+      queryParameters: {
+        'page': page,
+        'limit': limit,
+        'country': countryCode,
+      },
+    );
+
+    final rawItems = response is Map ? response['products'] ?? response['items'] : response;
+    final products = rawItems is List
+        ? rawItems.whereType<Map>().map((item) {
+            final data = Map<String, dynamic>.from(item);
+            return Product.fromMap(data, data['id']?.toString() ?? '');
+          }).toList()
+        : <Product>[];
+
+    final total = response is Map
+        ? int.tryParse('${response['count'] ?? response['total'] ?? products.length}') ??
+            products.length
+        : products.length;
+    final hasMore = response is Map
+        ? response['hasMore'] == true || response['has_more'] == true
+        : products.length >= limit;
+
+    return ProductsPage(products: products, count: total, hasMore: hasMore);
+  }
+
+  Future<void> trackClick({
+    required String productId,
+    String store = '',
+  }) async {
+    await post(
+      ApiEndpoints.eventOfferClick,
+      body: {
+        'productId': productId,
+        'store': store,
+      },
+    );
+  }
+
+  Future<String?> createAffiliateLink({
+    required String productId,
+    required String originalUrl,
+    String store = '',
+  }) async {
+    final response = await post(
+      ApiEndpoints.eventOfferClick,
+      body: {
+        'productId': productId,
+        'store': store,
+        'url': originalUrl,
+      },
+    );
+
+    if (response is Map) {
+      return (response['affiliateUrl'] ?? response['affiliate_url'] ?? response['url'])
+          ?.toString();
+    }
+
+    return null;
   }
 
   Future<dynamic> postMultipart(

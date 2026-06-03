@@ -4,6 +4,8 @@ import '../models/product.dart';
 import 'api_service.dart';
 
 class ProductService {
+  static final ProductService instance = ProductService();
+
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
   Stream<List<Product>> getProducts({String countryCode = 'es'}) {
@@ -51,6 +53,27 @@ class ProductService {
     return merged;
   }
 
+  Future<List<Product>> getProductsOnce({
+    String countryCode = 'es',
+    int limit = 300,
+  }) async {
+    final snapshot = await _db.collection('products').limit(limit).get();
+    final country = countryCode.toLowerCase();
+
+    final products = snapshot.docs
+        .map((doc) => Product.fromMap(doc.data(), doc.id))
+        .where((p) {
+          if (p.image.isEmpty) return false;
+          if (p.newPrice <= 0) return false;
+          if (p.isOnline) return true;
+          return p.country.toLowerCase() == country;
+        })
+        .toList();
+
+    products.sort(_sortProducts);
+    return products;
+  }
+
   Future<List<Product>> _searchFirebase(
     String query, {
     String countryCode = 'es',
@@ -83,10 +106,13 @@ class ProductService {
     String countryCode = 'es',
   }) async {
     try {
-      final response = await ApiService.post('/api/products/search', {
-        'query': query,
-        'country': countryCode,
-      });
+      final response = await ApiService.instance.post(
+        '/api/products/search',
+        body: {
+          'query': query,
+          'country': countryCode,
+        },
+      );
 
       if (response is List) {
         return response.map<Product>((item) {

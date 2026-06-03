@@ -9,6 +9,10 @@ class SearchProvider extends ChangeNotifier {
   bool isLoading = false;
   List<Product> results = [];
 
+  void setInitialResults(List<Product> products) {
+    results = List<Product>.from(products);
+  }
+
   Future<void> search(String query) async {
     final cleanQuery = query.trim();
 

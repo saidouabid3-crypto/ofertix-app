@@ -9,6 +9,8 @@ class AuthService {
 
   static final AuthService instance = AuthService._();
 
+  factory AuthService() => instance;
+
   final FirebaseAuth _auth = FirebaseService.instance.auth;
 
   User? get currentUser => _auth.currentUser;

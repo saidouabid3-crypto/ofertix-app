@@ -27,7 +27,7 @@ class _AppShellState extends State<AppShell> {
     super.initState();
 
     pages = [
-      const HomeScreen(),
+      HomeScreen(),
 
       const SearchScreen(),
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../../models/product.dart';
 
 import '../../widgets/ai_search_bar.dart';
 import '../../widgets/category_chip.dart';
@@ -12,7 +13,18 @@ import '../product_details/product_details_screen.dart';
 import 'search_provider.dart';
 
 class SearchScreen extends StatefulWidget {
-  const SearchScreen({super.key});
+  final String? initialCategory;
+  final String? initialCategoryLabel;
+  final String? initialQuery;
+  final List<Product> initialResults;
+
+  const SearchScreen({
+    super.key,
+    this.initialCategory,
+    this.initialCategoryLabel,
+    this.initialQuery,
+    this.initialResults = const [],
+  });
 
   @override
   State<SearchScreen> createState() => _SearchScreenState();
@@ -42,6 +54,12 @@ class _SearchScreenState extends State<SearchScreen> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    controller.text = widget.initialQuery ?? '';
+  }
+
+  @override
   void dispose() {
     controller.dispose();
     super.dispose();
@@ -56,7 +74,7 @@ class _SearchScreenState extends State<SearchScreen> {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => SearchProvider(),
+      create: (_) => SearchProvider()..setInitialResults(widget.initialResults),
 
       child: Consumer<SearchProvider>(
         builder: (context, provider, child) {

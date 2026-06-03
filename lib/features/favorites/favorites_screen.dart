@@ -18,10 +18,12 @@ class FavoritesScreen extends StatelessWidget {
   const FavoritesScreen({
     super.key,
 
-    required this.favoriteIds,
+    this.favoriteIds = const {},
 
-    required this.onFavorite,
+    this.onFavorite = _noopFavorite,
   });
+
+  static void _noopFavorite(String productId) {}
 
   @override
   Widget build(BuildContext context) {

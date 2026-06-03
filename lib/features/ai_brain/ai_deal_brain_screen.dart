@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 
+import '../../core/errors/app_exception.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/ai_brain_model.dart';
 import '../../services/ai_brain_service.dart';
@@ -149,11 +150,19 @@ class _AIDealBrainScreenState extends State<AIDealBrainScreen> {
       );
       if (!mounted) return;
       setState(() => result = response);
+    } on AppException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        result = null;
+        aiErrorKey = e.code == 'AI_NOT_CONFIGURED'
+            ? 'ai.error.notConfigured'
+            : 'ai.error.unavailable';
+      });
     } catch (_) {
       if (!mounted) return;
       setState(() {
         result = null;
-        aiErrorKey = 'ai.error.notConfigured';
+        aiErrorKey = 'ai.error.unavailable';
       });
     } finally {
       if (mounted) setState(() => loading = false);
