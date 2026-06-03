@@ -301,10 +301,14 @@ class _Header extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.stars_rounded, color: AppColors.orange, size: 18),
+                Icon(
+                  Icons.account_circle_rounded,
+                  color: AppColors.orange,
+                  size: 20,
+                ),
                 SizedBox(width: 5),
                 Text(
-                  'home.points'.tr(args: ['320']),
+                  'common.profile'.tr(),
                   style: TextStyle(
                     color: Color(0xFF9A4A00),
                     fontSize: 12,

@@ -23,27 +23,19 @@ class AppShell extends StatefulWidget {
 class _AppShellState extends State<AppShell> {
   int currentIndex = 0;
 
-  late final List<Widget> pages;
-
-  @override
-  void initState() {
-    super.initState();
-
-    pages = [
-      HomeScreen(),
-
-      const ScanScreen(),
-
-      SmartReelsScreen(baseUrl: ApiConfig.baseUrl),
-
-      SellScreen(),
-
-      AIAssistantScreen(),
-    ];
-  }
-
   @override
   Widget build(BuildContext context) {
+    final pages = [
+      HomeScreen(),
+      const ScanScreen(),
+      SmartReelsScreen(
+        baseUrl: ApiConfig.baseUrl,
+        isVisible: currentIndex == 2,
+      ),
+      SellScreen(),
+      AIAssistantScreen(),
+    ];
+
     return Scaffold(
       body: IndexedStack(index: currentIndex, children: pages),
 
