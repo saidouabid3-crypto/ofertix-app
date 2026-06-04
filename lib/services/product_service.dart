@@ -8,6 +8,10 @@ class ProductService {
 
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
+  // Session-level cache: avoids repeated 200-doc Firestore reads when
+  // multiple Product Details screens open in the same session.
+  List<Product>? _similarProductsCache;
+
   Stream<List<Product>> getProducts({String countryCode = 'es'}) {
     final country = countryCode.toLowerCase();
 
@@ -156,7 +160,8 @@ class ProductService {
     int limit = 8,
   }) async {
     try {
-      final all = await getProductsOnce(limit: 200);
+      _similarProductsCache ??= await getProductsOnce(limit: 200);
+      final all = _similarProductsCache!;
       final q = category.toLowerCase().trim();
       return all.where((p) {
         if (p.id == excludeId) return false;
@@ -168,6 +173,7 @@ class ProductService {
             q.contains(p.category.toLowerCase().trim());
       }).take(limit).toList();
     } catch (_) {
+      _similarProductsCache = null;
       return [];
     }
   }

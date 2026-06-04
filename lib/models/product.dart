@@ -364,7 +364,7 @@ class Product {
   bool get hasAffiliateLink => affiliateUrl.isNotEmpty;
   bool get hasMultipleImages => images.length > 1;
   String get priceLabel =>
-      priceAccuracy == 'live' ? 'Precio actual' : 'Precio aprox.';
+      priceAccuracy == 'live' ? 'product.priceCurrent' : 'product.approxPrice';
   String get ratingLabel => rating > 0 ? rating.toStringAsFixed(1) : '—';
   String get reviewLabel => reviewCount >= 1000
       ? '${(reviewCount / 1000).toStringAsFixed(1)}k'

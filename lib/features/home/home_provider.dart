@@ -25,7 +25,6 @@ class HomeProvider extends ChangeNotifier {
   bool isLoading = true;
   String? errorMessage;
 
-  // ✅ userPoints مضاف
   int userPoints = 0;
 
   Future<void> initialize({String? countryCode}) async {
@@ -34,7 +33,6 @@ class HomeProvider extends ChangeNotifier {
     notifyListeners();
 
     await _loadUserLocation();
-    await _loadUserPoints();
 
     final country =
         countryCode ?? await SettingsService.instance.getCountry();
@@ -72,17 +70,6 @@ class HomeProvider extends ChangeNotifier {
 
     isLoading = false;
     notifyListeners();
-  }
-
-  // ✅ Load user points
-  Future<void> _loadUserPoints() async {
-    try {
-      // مؤقتاً 320 — بعدا تربطو بـAPI أو SharedPreferences ديالك
-      userPoints = 320;
-      notifyListeners();
-    } catch (_) {
-      userPoints = 0;
-    }
   }
 
   Future<List<LocalStoreModel>> _loadLocalStores(String countryCode) async {

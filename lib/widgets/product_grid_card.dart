@@ -1,12 +1,14 @@
 import 'dart:async';
 
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 
 import '../core/theme/app_theme.dart';
+import '../core/utils/price_utils.dart';
 import '../models/ai_deal_brain_result.dart';
 import '../models/product.dart';
 import '../services/card_verdict_cache.dart';
@@ -421,7 +423,7 @@ class _ProductGridCardState extends State<ProductGridCard> {
                             Text(
                               product.reviewCount > 0 || product.soldCount > 0
                                   ? '${product.reviewLabel} reviews · ${product.soldLabel} sold'
-                                  : product.priceLabel,
+                                  : product.priceLabel.tr(),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
@@ -441,7 +443,7 @@ class _ProductGridCardState extends State<ProductGridCard> {
                                     fit: BoxFit.scaleDown,
                                     alignment: Alignment.centerLeft,
                                     child: Text(
-                                      '${product.newPrice.toStringAsFixed(2)}€',
+                                      PriceUtils.formatPrice(product.newPrice, product.currency),
                                       maxLines: 1,
                                       style: TextStyle(
                                         color: AppColors.orange,
@@ -457,7 +459,7 @@ class _ProductGridCardState extends State<ProductGridCard> {
                                   const SizedBox(width: 5),
                                   Flexible(
                                     child: Text(
-                                      '${product.oldPrice.toStringAsFixed(2)}€',
+                                      PriceUtils.formatPrice(product.oldPrice, product.currency),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                       style: const TextStyle(

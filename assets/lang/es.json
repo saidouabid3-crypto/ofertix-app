@@ -328,6 +328,7 @@
   "product.currentPrice": "CurrentPrice",
   "product.description": "Descripción",
   "product.approxPrice": "Precio aprox.",
+  "product.priceCurrent": "Precio actual",
   "product.beforeBuy": "Antes de comprar",
   "product.beforeBuy1": "El precio puede cambiar en la tienda",
   "product.beforeBuy2": "Revisa color, talla y envío",

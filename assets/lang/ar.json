@@ -328,6 +328,7 @@
   "product.currentPrice": "CurrentPrice",
   "product.description": "الوصف",
   "product.approxPrice": "سعر تقريبي",
+  "product.priceCurrent": "السعر الحالي",
   "product.beforeBuy": "قبل الشراء",
   "product.beforeBuy1": "قد يتغير السعر في المتجر",
   "product.beforeBuy2": "تحقق من اللون والمقاس والشحن",

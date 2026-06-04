@@ -10,5 +10,7 @@
   "change_language": "Sprache ändern",
   "change_country": "Land ändern",
   "search_hint": "Produkte suchen...",
-  "hot_deals": "Top-Angebote"
+  "hot_deals": "Top-Angebote",
+  "product.approxPrice": "Ca.-Preis",
+  "product.priceCurrent": "Aktueller Preis"
 }
