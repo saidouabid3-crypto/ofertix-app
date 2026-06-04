@@ -236,12 +236,19 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
     }
   }
 
-  /// Opens affiliate URL via AffiliateService which tracks the click first.
-  /// If no URL exists the button is already disabled by [hasBuyLink].
+  /// Opens the best available offer URL via AffiliateService (tracks click
+  /// first), then falls back to direct launch. Shows a snackbar only when
+  /// there is genuinely no URL or the launch fails.
   Future<void> openLink() async {
     final product = widget.product;
     final urlStr = product.affiliateUrl.trim();
+
+    debugPrint('[ProductDetails] openLink: id=${product.id} '
+        'name="${product.name}" '
+        'affiliateUrl=${urlStr.isNotEmpty ? "present(${urlStr.length}ch)" : "EMPTY"}');
+
     if (urlStr.isEmpty) {
+      debugPrint('[ProductDetails] No URL found — showing no-link snackbar');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -252,6 +259,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
       );
       return;
     }
+
     final country = await _settingsService.getCountry();
     try {
       await AffiliateService.instance.openProduct(
@@ -260,7 +268,21 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
         countryCode: country,
         store: product.store,
       );
-    } catch (_) {
+      debugPrint('[ProductDetails] openProduct completed successfully');
+    } catch (e) {
+      debugPrint('[ProductDetails] AffiliateService failed: $e — trying direct launch');
+      // Rethrow only real "no_url" sentinel; for all launch failures show error.
+      if (e.toString().contains('no_url')) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('product.offer.noLink'.tr()),
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

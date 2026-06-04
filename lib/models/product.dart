@@ -252,7 +252,17 @@ class Product {
       description: map['description']?.toString() ?? fullTitle,
       affiliateUrl:
           map['affiliateUrl']?.toString() ??
+          map['affiliate_url']?.toString() ??
+          map['affiliateURL']?.toString() ??
           map['productUrl']?.toString() ??
+          map['product_url']?.toString() ??
+          map['productURL']?.toString() ??
+          map['sourceUrl']?.toString() ??
+          map['source_url']?.toString() ??
+          map['originalUrl']?.toString() ??
+          map['original_url']?.toString() ??
+          map['storeUrl']?.toString() ??
+          map['store_url']?.toString() ??
           map['link']?.toString() ??
           map['url']?.toString() ??
           '',
