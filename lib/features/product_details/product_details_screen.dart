@@ -896,9 +896,9 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                   ),
                 ),
               ),
-              if (result != null)
+              if (result != null && result.score > 0)
                 Text(
-                  '${result.score}',
+                  '${result.score}%',
                   style: const TextStyle(
                     color: AppColors.orange,
                     fontSize: 24,
@@ -946,7 +946,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
               ],
             )
           else if (result != null) ...[
-            _analysisItem(result.verdict.replaceAll('_', ' ').toUpperCase()),
+            _analysisItem('ai_deal.${result.verdict}'.tr()),
             if (result.brutalTruth.isNotEmpty)
               _analysisItem(result.brutalTruth),
             if (result.summary.isNotEmpty) _analysisItem(result.summary),

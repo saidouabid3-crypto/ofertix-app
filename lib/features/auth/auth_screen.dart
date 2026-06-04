@@ -16,10 +16,14 @@ class AuthScreen extends StatelessWidget {
       body: Container(
         decoration: BoxDecoration(gradient: ui.gradient),
         child: SafeArea(
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(22, 18, 22, 28),
-            child: Column(
-              children: [
+          child: LayoutBuilder(
+            builder: (context, constraints) => SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(22, 18, 22, 28),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: IntrinsicHeight(
+                  child: Column(
+                    children: [
                 Row(
                   children: [
                     if (Navigator.canPop(context)) _BackButton(ui: ui),
@@ -128,11 +132,14 @@ class AuthScreen extends StatelessWidget {
                     ),
                   ),
                 ),
-              ],
-            ),
-          ),
-        ),
-      ),
+                    ],
+                  ),          // Column
+                ),            // IntrinsicHeight
+              ),              // ConstrainedBox
+            ),                // SingleChildScrollView
+          ),                  // LayoutBuilder
+        ),                    // SafeArea
+      ),                      // Container (body)
     );
   }
 }

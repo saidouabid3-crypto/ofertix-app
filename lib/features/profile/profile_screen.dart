@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -35,10 +36,10 @@ class ProfileScreen extends StatelessWidget {
             backgroundColor: AppColors.background,
             appBar: AppBar(
               backgroundColor: Colors.transparent,
-              title: const Text('Profile'),
+              title: Text('auto.profile_profile_screen.profile'.tr()),
             ),
             body: ListView(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
               children: [
                 Center(
                   child: Container(
@@ -60,7 +61,7 @@ class ProfileScreen extends StatelessWidget {
 
                 Center(
                   child: Text(
-                    user?.email ?? 'Guest User',
+                    user?.email ?? 'profile.guestUser'.tr(),
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 28,
@@ -82,7 +83,7 @@ class ProfileScreen extends StatelessWidget {
 
                 _Tile(
                   icon: Icons.favorite_rounded,
-                  title: 'Favorites',
+                  title: 'profile.favorites'.tr(),
                   onTap: () {
                     Navigator.push(
                       context,
@@ -98,7 +99,7 @@ class ProfileScreen extends StatelessWidget {
 
                 _Tile(
                   icon: Icons.remove_red_eye,
-                  title: 'Watchlist',
+                  title: 'profile.watchlist'.tr(),
                   onTap: () {
                     Navigator.push(
                       context,
@@ -114,7 +115,7 @@ class ProfileScreen extends StatelessWidget {
 
                 _Tile(
                   icon: Icons.notifications_active,
-                  title: 'Price Alerts',
+                  title: 'profile.priceAlerts'.tr(),
                   onTap: () {
                     Navigator.push(
                       context,
@@ -125,7 +126,7 @@ class ProfileScreen extends StatelessWidget {
 
                 _Tile(
                   icon: Icons.workspace_premium,
-                  title: 'Rewards',
+                  title: 'profile.rewards'.tr(),
                   onTap: () {
                     Navigator.push(
                       context,
@@ -136,7 +137,7 @@ class ProfileScreen extends StatelessWidget {
 
                 _Tile(
                   icon: Icons.settings,
-                  title: 'Settings',
+                  title: 'profile.settings'.tr(),
                   onTap: () {
                     Navigator.push(
                       context,
@@ -164,9 +165,9 @@ class ProfileScreen extends StatelessWidget {
                     Navigator.pushReplacementNamed(context, '/auth');
                   },
                   icon: const Icon(Icons.logout),
-                  label: const Text(
-                    'Logout',
-                    style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
+                  label: Text(
+                    'auto.profile_profile_screen.logout'.tr(),
+                    style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
                   ),
                 ),
               ],

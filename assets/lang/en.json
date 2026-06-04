@@ -27,6 +27,8 @@
     "store": "Store",
     "title": "AI Deal Brain Pro",
     "wait": "Wait",
+    "safe_deal": "Safe deal",
+    "risky": "Risky",
     "why_verdict": "Why this verdict"
   },
   "app": {
@@ -311,7 +313,7 @@
   "market.manual": "Manual",
   "market.settings": "Settings",
   "product.addedToFavorites": "AddedToFavorites",
-  "product.aiAnalysis": "AiAnalysis",
+  "product.aiAnalysis": "AI Analysis",
   "product.aiPick": "AiPick",
   "product.alertInvalid": "AlertInvalid",
   "product.alertTip": "AlertTip",
@@ -485,6 +487,7 @@
   "profile.priceAlertsSubtitle": "Alerts when the price drops",
   "profile.rewards": "Rewards",
   "profile.rewardsSubtitle": "Coins, missions, coupons and perks",
+  "profile.guestUser": "Guest User",
   "profile.account": "Account",
   "profile.accountSubtitle": "Preferences, security and settings",
   "profile.settings": "Settings",
