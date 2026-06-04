@@ -774,5 +774,21 @@
   "watchlist.syncedAfterLogin": "تمت مزامنة عروضك المحفوظة",
   "alerts.lastChecked": "آخر فحص",
   "alerts.neverChecked": "لم يتم الفحص بعد",
-  "common.justNow": "الآن"
+  "common.justNow": "الآن",
+  "cashback.title": "كاشباك 💸",
+  "cashback.comingSoon": "قريباً",
+  "cashback.available": "الرصيد المتاح",
+  "cashback.earnHint": "افتح عروض الشركاء لبدء كسب الكاشباك",
+  "cashback.howItWorks": "كيف يعمل",
+  "cashback.step1": "افتح عرضاً بالضغط على فتح العرض.",
+  "cashback.step2": "أتمّ عملية الشراء في متجر الشريك.",
+  "cashback.step3": "يُضاف الكاشباك بعد التأكيد.",
+  "cashback.recentTitle": "آخر المعاملات",
+  "cashback.noHistory": "لا يوجد سجل كاشباك بعد",
+  "cashback.noHistoryHint": "اشترِ عروضاً لبدء الكسب",
+  "rewards.coinsToNextLevel": "عملة للمستوى التالي",
+  "rewards.missionSearch": "ابحث عن 5 منتجات",
+  "rewards.missionOpenDeal": "افتح عرض شريك",
+  "rewards.missionInvite": "ادعُ صديقاً",
+  "rewards.missionDailyLogin": "مكافأة تسجيل الدخول اليومي"
 }

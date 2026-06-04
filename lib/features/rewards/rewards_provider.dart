@@ -6,18 +6,27 @@ class RewardsProvider extends ChangeNotifier {
   final RewardsFeatureRepository _repository = RewardsFeatureRepository();
 
   int coins = 0;
-
   bool isLoading = false;
+  bool _loaded = false;
 
-  Future<void> earn(int amount) async {
+  RewardsProvider() {
+    _loadCoins();
+  }
+
+  Future<void> _loadCoins() async {
+    if (_loaded) return;
     isLoading = true;
     notifyListeners();
-
-    await _repository.addCoins(amount);
-
-    coins += amount;
-
+    try {
+      coins = await _repository.getCoins();
+      _loaded = true;
+    } catch (_) {}
     isLoading = false;
     notifyListeners();
+  }
+
+  Future<void> refresh() async {
+    _loaded = false;
+    await _loadCoins();
   }
 }

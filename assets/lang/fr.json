@@ -774,5 +774,21 @@
   "watchlist.syncedAfterLogin": "Vos offres sauvegardées ont été synchronisées",
   "alerts.lastChecked": "Vérifié",
   "alerts.neverChecked": "Pas encore vérifié",
-  "common.justNow": "À l'instant"
+  "common.justNow": "À l'instant",
+  "cashback.title": "Cashback 💸",
+  "cashback.comingSoon": "Bientôt disponible",
+  "cashback.available": "Cashback disponible",
+  "cashback.earnHint": "Ouvrez des offres affiliées pour commencer à gagner",
+  "cashback.howItWorks": "Comment ça marche",
+  "cashback.step1": "Ouvrez une offre en appuyant sur Ouvrir l'offre.",
+  "cashback.step2": "Finalisez votre achat sur le site affilié.",
+  "cashback.step3": "Le cashback est crédité après confirmation.",
+  "cashback.recentTitle": "Historique récent",
+  "cashback.noHistory": "Aucun historique de cashback pour l'instant",
+  "cashback.noHistoryHint": "Achetez des offres pour commencer à gagner",
+  "rewards.coinsToNextLevel": "coins pour le niveau suivant",
+  "rewards.missionSearch": "Chercher 5 produits",
+  "rewards.missionOpenDeal": "Ouvrir une offre affiliée",
+  "rewards.missionInvite": "Inviter un ami",
+  "rewards.missionDailyLogin": "Bonus de connexion quotidien"
 }

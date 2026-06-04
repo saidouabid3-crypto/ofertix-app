@@ -1,8 +1,8 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/theme/app_theme.dart';
-
 import 'rewards_provider.dart';
 
 class RewardsScreen extends StatelessWidget {
@@ -12,388 +12,300 @@ class RewardsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
       create: (_) => RewardsProvider(),
-      child: Consumer<RewardsProvider>(
-        builder: (context, provider, child) {
-          return Scaffold(
-            backgroundColor: AppColors.background,
+      child: const _RewardsBody(),
+    );
+  }
+}
 
-            body: SafeArea(
-              child: CustomScrollView(
-                slivers: [
-                  SliverPadding(
-                    padding: const EdgeInsets.all(20),
+class _RewardsBody extends StatelessWidget {
+  const _RewardsBody();
 
-                    sliver: SliverList(
-                      delegate: SliverChildListDelegate([
-                        /// HEADER
-                        Row(
-                          children: [
-                            const Text(
-                              'Rewards 🚀',
+  @override
+  Widget build(BuildContext context) {
+    final provider = context.watch<RewardsProvider>();
 
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 38,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: -1.2,
-                              ),
-                            ),
-
-                            const Spacer(),
-
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 8,
-                              ),
-
-                              decoration: BoxDecoration(
-                                color: AppColors.orange.withValues(alpha: 0.15),
-
-                                borderRadius: BorderRadius.circular(999),
-                              ),
-
-                              child: const Text(
-                                'VIP LEVEL 3',
-
-                                style: TextStyle(
-                                  color: AppColors.orange,
-                                  fontWeight: FontWeight.w900,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 28),
-
-                        /// MAIN CARD
-                        Container(
-                          width: double.infinity,
-
-                          padding: const EdgeInsets.all(28),
-
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFFFF7A00), Color(0xFF7C3AED)],
-                            ),
-
-                            borderRadius: BorderRadius.circular(34),
-
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppColors.orange.withValues(alpha: 0.35),
-                                blurRadius: 40,
-                                offset: const Offset(0, 20),
-                              ),
-                            ],
-                          ),
-
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-
-                            children: [
-                              const Row(
-                                children: [
-                                  Icon(
-                                    Icons.workspace_premium_rounded,
-                                    color: Colors.white,
-                                    size: 42,
-                                  ),
-
-                                  Spacer(),
-
-                                  Icon(
-                                    Icons.auto_awesome_rounded,
-                                    color: Colors.white,
-                                  ),
-                                ],
-                              ),
-
-                              const SizedBox(height: 26),
-
-                              const Text(
-                                'Ofertix Coins',
-
-                                style: TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 16,
-                                ),
-                              ),
-
-                              const SizedBox(height: 8),
-
-                              Text(
-                                provider.coins.toString(),
-
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 52,
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing: -2,
-                                ),
-                              ),
-
-                              const SizedBox(height: 20),
-
-                              LinearProgressIndicator(
-                                value: 0.72,
-
-                                backgroundColor: Colors.white.withValues(
-                                  alpha: 0.15,
-                                ),
-
-                                valueColor: const AlwaysStoppedAnimation(
-                                  Colors.white,
-                                ),
-                              ),
-
-                              const SizedBox(height: 12),
-
-                              const Text(
-                                '72% to next VIP level',
-
-                                style: TextStyle(color: Colors.white70),
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        const SizedBox(height: 30),
-
-                        /// ACTIONS
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _actionButton(
-                                icon: Icons.add_rounded,
-                                title: 'Earn',
-                                color: AppColors.orange,
-                                onTap: () {
-                                  provider.earn(10);
-                                },
-                              ),
-                            ),
-
-                            const SizedBox(width: 14),
-
-                            Expanded(
-                              child: _actionButton(
-                                icon: Icons.card_giftcard_rounded,
-                                title: 'Redeem',
-                                color: AppColors.green,
-                                onTap: () {},
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 34),
-
-                        /// DAILY MISSIONS
-                        const Text(
-                          'Daily Missions',
-
-                          style: TextStyle(
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: SafeArea(
+        child: RefreshIndicator(
+          color: AppColors.orange,
+          onRefresh: () => provider.refresh(),
+          child: CustomScrollView(
+            slivers: [
+              SliverPadding(
+                padding: const EdgeInsets.all(20),
+                sliver: SliverList(
+                  delegate: SliverChildListDelegate([
+                    // ── Header ─────────────────────────────────────────────
+                    Row(
+                      children: [
+                        Text(
+                          'auto.rewards_rewards_screen.rewards'.tr(),
+                          style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 28,
+                            fontSize: 38,
                             fontWeight: FontWeight.w900,
+                            letterSpacing: -1.2,
                           ),
                         ),
-
-                        const SizedBox(height: 18),
-
-                        _missionCard(
-                          icon: Icons.search_rounded,
-                          title: 'Search 5 products',
-                          reward: '+20',
-                          completed: true,
-                        ),
-
-                        _missionCard(
-                          icon: Icons.shopping_bag_rounded,
-                          title: 'Open affiliate deal',
-                          reward: '+15',
-                        ),
-
-                        _missionCard(
-                          icon: Icons.people_alt_rounded,
-                          title: 'Invite a friend',
-                          reward: '+100',
-                        ),
-
-                        _missionCard(
-                          icon: Icons.flash_on_rounded,
-                          title: 'Daily login bonus',
-                          reward: '+5',
-                        ),
-
-                        const SizedBox(height: 30),
-
-                        /// BONUS
+                        const Spacer(),
                         Container(
-                          width: double.infinity,
-
-                          padding: const EdgeInsets.all(24),
-
-                          decoration: BoxDecoration(
-                            color: AppColors.card,
-                            borderRadius: BorderRadius.circular(28),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 8,
                           ),
+                          decoration: BoxDecoration(
+                            color: AppColors.orange.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            _vipLabel(provider.coins),
+                            style: const TextStyle(
+                              color: AppColors.orange,
+                              fontWeight: FontWeight.w900,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
 
-                          child: const Column(
+                    const SizedBox(height: 28),
+
+                    // ── Main coins card ─────────────────────────────────────
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(28),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFFF7A00), Color(0xFF7C3AED)],
+                        ),
+                        borderRadius: BorderRadius.circular(34),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.orange.withValues(alpha: 0.35),
+                            blurRadius: 40,
+                            offset: const Offset(0, 20),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Row(
                             children: [
                               Icon(
-                                Icons.auto_awesome,
-                                color: AppColors.orange,
-                                size: 52,
+                                Icons.workspace_premium_rounded,
+                                color: Colors.white,
+                                size: 42,
                               ),
-
-                              SizedBox(height: 18),
-
-                              Text(
-                                'AI Reward Booster',
-
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.w900,
-                                ),
-                              ),
-
-                              SizedBox(height: 12),
-
-                              Text(
-                                'AI automatically boosts your rewards when detecting hot deals interactions.',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: AppColors.gray,
-                                  height: 1.5,
-                                ),
+                              Spacer(),
+                              Icon(
+                                Icons.auto_awesome_rounded,
+                                color: Colors.white,
                               ),
                             ],
                           ),
-                        ),
-
-                        const SizedBox(height: 40),
-                      ]),
+                          const SizedBox(height: 26),
+                          Text(
+                            'auto.rewards_rewards_screen.ofertix_coins'.tr(),
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 16,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          provider.isLoading
+                              ? const SizedBox(
+                                  width: 32,
+                                  height: 32,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2.5,
+                                  ),
+                                )
+                              : Text(
+                                  '${provider.coins}',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 52,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: -2,
+                                  ),
+                                ),
+                          const SizedBox(height: 20),
+                          LinearProgressIndicator(
+                            value: _levelProgress(provider.coins),
+                            backgroundColor:
+                                Colors.white.withValues(alpha: 0.15),
+                            valueColor: const AlwaysStoppedAnimation(
+                              Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            _progressLabel(provider.coins),
+                            style:
+                                const TextStyle(color: Colors.white70),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+
+                    const SizedBox(height: 34),
+
+                    // ── Daily missions (not yet tracked — coming soon) ──────
+                    Text(
+                      'auto.rewards_rewards_screen.daily_missions'.tr(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 28,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+
+                    const SizedBox(height: 18),
+
+                    _missionCard(
+                      icon: Icons.search_rounded,
+                      title: 'rewards.missionSearch'.tr(),
+                      reward: '+20',
+                    ),
+                    _missionCard(
+                      icon: Icons.shopping_bag_rounded,
+                      title: 'rewards.missionOpenDeal'.tr(),
+                      reward: '+15',
+                    ),
+                    _missionCard(
+                      icon: Icons.people_alt_rounded,
+                      title: 'rewards.missionInvite'.tr(),
+                      reward: '+100',
+                    ),
+                    _missionCard(
+                      icon: Icons.flash_on_rounded,
+                      title: 'rewards.missionDailyLogin'.tr(),
+                      reward: '+5',
+                    ),
+
+                    const SizedBox(height: 30),
+
+                    // ── AI booster banner ───────────────────────────────────
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: AppColors.card,
+                        borderRadius: BorderRadius.circular(28),
+                      ),
+                      child: Column(
+                        children: [
+                          const Icon(
+                            Icons.auto_awesome,
+                            color: AppColors.orange,
+                            size: 52,
+                          ),
+                          const SizedBox(height: 18),
+                          Text(
+                            'auto.rewards_rewards_screen.ai_reward_booster'.tr(),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 24,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'auto.rewards_rewards_screen.ai_automatically_boosts_your_rewards_w'.tr(),
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              color: AppColors.gray,
+                              height: 1.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 40),
+                  ]),
+                ),
               ),
-            ),
-          );
-        },
+            ],
+          ),
+        ),
       ),
     );
   }
 
-  Widget _actionButton({
-    required IconData icon,
-    required String title,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
+  // ── Helpers ──────────────────────────────────────────────────────────────
 
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 20),
+  /// VIP level based on real coin count.
+  String _vipLabel(int coins) {
+    final level = (coins ~/ 100) + 1;
+    return 'LEVEL $level';
+  }
 
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.15),
+  /// Progress within the current level (0.0 – 1.0).
+  double _levelProgress(int coins) {
+    final coinsInLevel = coins % 100;
+    return coinsInLevel / 100;
+  }
 
-          borderRadius: BorderRadius.circular(24),
-
-          border: Border.all(color: color.withValues(alpha: 0.3)),
-        ),
-
-        child: Column(
-          children: [
-            Icon(icon, color: color, size: 34),
-
-            const SizedBox(height: 10),
-
-            Text(
-              title,
-
-              style: TextStyle(color: color, fontWeight: FontWeight.w900),
-            ),
-          ],
-        ),
-      ),
-    );
+  String _progressLabel(int coins) {
+    final remaining = 100 - (coins % 100);
+    return '$remaining ${'rewards.coinsToNextLevel'.tr()}';
   }
 
   Widget _missionCard({
     required IconData icon,
     required String title,
     required String reward,
-    bool completed = false,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
-
       child: Container(
         padding: const EdgeInsets.all(18),
-
         decoration: BoxDecoration(
           color: AppColors.card,
-
           borderRadius: BorderRadius.circular(24),
         ),
-
         child: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(14),
-
               decoration: BoxDecoration(
                 color: AppColors.orange.withValues(alpha: 0.15),
-
                 borderRadius: BorderRadius.circular(18),
               ),
-
               child: Icon(icon, color: AppColors.orange),
             ),
-
             const SizedBox(width: 16),
-
             Expanded(
               child: Text(
                 title,
-
                 style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.w800,
                 ),
               ),
             ),
-
-            if (completed)
-              const Icon(Icons.check_circle_rounded, color: AppColors.green)
-            else
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-
-                decoration: BoxDecoration(
-                  color: AppColors.green.withValues(alpha: 0.15),
-
-                  borderRadius: BorderRadius.circular(999),
-                ),
-
-                child: Text(
-                  reward,
-
-                  style: const TextStyle(
-                    color: AppColors.green,
-                    fontWeight: FontWeight.w900,
-                  ),
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 8,
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.green.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Text(
+                reward,
+                style: const TextStyle(
+                  color: AppColors.green,
+                  fontWeight: FontWeight.w900,
                 ),
               ),
+            ),
           ],
         ),
       ),

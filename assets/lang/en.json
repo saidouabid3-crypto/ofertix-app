@@ -774,5 +774,21 @@
   "watchlist.syncedAfterLogin": "Your saved deals have been synced",
   "alerts.lastChecked": "Last checked",
   "alerts.neverChecked": "Not checked yet",
-  "common.justNow": "Just now"
+  "common.justNow": "Just now",
+  "cashback.title": "Cashback 💸",
+  "cashback.comingSoon": "Coming soon",
+  "cashback.available": "Available cashback",
+  "cashback.earnHint": "Open affiliate deals to start earning cashback",
+  "cashback.howItWorks": "How it works",
+  "cashback.step1": "Open a deal by tapping Open offer.",
+  "cashback.step2": "Complete your purchase at the affiliate store.",
+  "cashback.step3": "Cashback is added to your balance after confirmation.",
+  "cashback.recentTitle": "Recent cashback",
+  "cashback.noHistory": "No cashback history yet",
+  "cashback.noHistoryHint": "Purchase deals to start earning",
+  "rewards.coinsToNextLevel": "coins to next level",
+  "rewards.missionSearch": "Search 5 products",
+  "rewards.missionOpenDeal": "Open an affiliate deal",
+  "rewards.missionInvite": "Invite a friend",
+  "rewards.missionDailyLogin": "Daily login bonus"
 }
