@@ -327,6 +327,7 @@
   "product.createAlertError": "CreateAlertError",
   "product.currentPrice": "CurrentPrice",
   "product.description": "Description",
+  "product.approxPrice": "Approx. price",
   "product.globalOnline": "GlobalOnline",
   "product.globalOnlineOffer": "GlobalOnlineOffer",
   "product.goToStore": "GoToStore",

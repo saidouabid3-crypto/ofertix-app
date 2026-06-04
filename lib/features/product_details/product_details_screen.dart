@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:share_plus/share_plus.dart';
@@ -424,10 +425,32 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                       ),
                     ),
 
-                  // Carousel dots indicator
-                  if (hasMultipleImages)
+                  // Image counter + dots indicator
+                  if (hasMultipleImages) ...[
                     Positioned(
-                      bottom: 76,
+                      top: 60,
+                      right: 16,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.55),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          '${_imageIndex + 1} / ${images.length}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      bottom: 84,
                       left: 0,
                       right: 0,
                       child: Row(
@@ -449,6 +472,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                         ),
                       ),
                     ),
+                  ],
 
                   // Title / store overlay
                   Positioned(
@@ -489,17 +513,14 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
 
                         Text(
                           product.name,
-
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             color: Colors.white,
-
-                            fontSize: 34,
-
+                            fontSize: 24,
                             fontWeight: FontWeight.w900,
-
-                            height: 1.1,
-
-                            letterSpacing: -1,
+                            height: 1.15,
+                            letterSpacing: -0.5,
                           ),
                         ),
 
@@ -534,16 +555,27 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                   /// PRICE ROW
                   Row(
                     children: [
-                      Text(
-                        _formatPrice(product.newPrice),
-
-                        style: const TextStyle(
-                          color: AppColors.orange,
-
-                          fontSize: 42,
-
-                          fontWeight: FontWeight.w900,
-                        ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _formatPrice(product.newPrice),
+                            style: const TextStyle(
+                              color: AppColors.orange,
+                              fontSize: 42,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          Text(
+                            'product.approxPrice'.tr(),
+                            style: TextStyle(
+                              color: AppColors.orange.withValues(alpha: 0.65),
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.3,
+                            ),
+                          ),
+                        ],
                       ),
 
                       const SizedBox(width: 12),
@@ -869,10 +901,23 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
   }
 
   Widget _buildImage(String imageUrl, {String? heroTag}) {
-    final img = Image.network(
-      imageUrl,
+    final img = CachedNetworkImage(
+      imageUrl: imageUrl,
       fit: BoxFit.cover,
-      errorBuilder: (c, e, s) => Container(
+      placeholder: (_, __) => Container(
+        color: AppColors.card,
+        child: const Center(
+          child: SizedBox(
+            width: 32,
+            height: 32,
+            child: CircularProgressIndicator(
+              color: AppColors.orange,
+              strokeWidth: 2,
+            ),
+          ),
+        ),
+      ),
+      errorWidget: (_, __, ___) => Container(
         color: AppColors.card,
         child: const Icon(
           Icons.image_not_supported_rounded,
@@ -951,20 +996,46 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
               ],
             )
           else if (aiErrorKey != null)
-            Row(
+            Column(
               children: [
-                const Icon(Icons.info_rounded, color: AppColors.orange),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    aiErrorKey!.tr(),
-                    style: const TextStyle(color: AppColors.gray, height: 1.4),
+                const SizedBox(height: 8),
+                Icon(
+                  Icons.psychology_alt_rounded,
+                  color: AppColors.orange.withValues(alpha: 0.45),
+                  size: 44,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  aiErrorKey!.tr(),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: AppColors.gray,
+                    fontSize: 14,
+                    height: 1.5,
                   ),
                 ),
-                TextButton(
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
                   onPressed: _loadAiAnalysis,
-                  child: Text('common.retry'.tr()),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.orange.withValues(alpha: 0.14),
+                    foregroundColor: AppColors.orange,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 10,
+                    ),
+                  ),
+                  icon: const Icon(Icons.refresh_rounded, size: 18),
+                  label: Text(
+                    'common.retry'.tr(),
+                    style: const TextStyle(fontWeight: FontWeight.w800),
+                  ),
                 ),
+                const SizedBox(height: 8),
               ],
             )
           else if (result != null) ...[

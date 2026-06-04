@@ -186,9 +186,16 @@ class Product {
         map['name']?.toString() ?? map['title']?.toString() ?? 'Product';
     final fullTitle =
         map['fullTitle']?.toString() ?? map['title']?.toString() ?? rawName;
-    final rawImages = toList(
-      map['images'] ?? map['imageUrls'] ?? map['gallery'],
-    );
+    // Aggregate all possible image field variants — deduplication happens below.
+    final rawImages = <String>{};
+    for (final key in [
+      'images', 'imageUrls', 'image_urls', 'gallery',
+      'galleryImages', 'gallery_images',
+      'productImages', 'product_images',
+      'media', 'photos', 'pictures',
+    ]) {
+      rawImages.addAll(toList(map[key]));
+    }
     final image =
         (map['mainImage'] ??
                 map['image'] ??
