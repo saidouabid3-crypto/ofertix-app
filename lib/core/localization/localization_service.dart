@@ -6,9 +6,6 @@ class LocalizationService {
     Locale('en'),
     Locale('fr'),
     Locale('ar'),
-    Locale('de'),
-    Locale('it'),
-    Locale('pt'),
   ];
 
   static const fallbackLocale = Locale('es');

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/constants/app_languages.dart';
 import 'settings_repository.dart';
 
 class SettingsProvider extends ChangeNotifier {
@@ -13,7 +14,17 @@ class SettingsProvider extends ChangeNotifier {
   bool isLoading = true;
 
   Future<void> initialize() async {
-    language = await _repository.getLanguage();
+    final savedLanguage = await _repository.getLanguage();
+    final supportedLanguageCodes = AppLanguages.supported
+        .map((language) => language['code'])
+        .whereType<String>()
+        .toSet();
+    language = supportedLanguageCodes.contains(savedLanguage)
+        ? savedLanguage
+        : 'es';
+    if (language != savedLanguage) {
+      await _repository.saveLanguage(language);
+    }
     country = await _repository.getCountry();
     currency = await _repository.getCurrency();
 

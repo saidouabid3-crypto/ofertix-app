@@ -181,37 +181,7 @@ class _SmartReelsScreenState extends State<SmartReelsScreen>
   List<_ReelsFeedEntry> _composeFeed(List<OfertixAdModel> ads) {
     final activeAds = ads.where(_isValidReelsAd).toList();
 
-    // If user reels are empty or the reels backend failed, Reels ads still fill
-    // the feed so the screen never becomes a dead error page.
-    if (reels.isEmpty && activeAds.isNotEmpty) {
-      return List.generate(
-        20,
-        (index) => _ReelsFeedEntry.ad(activeAds[index % activeAds.length]),
-      );
-    }
-
-    // Temporary growth mode:
-    // Until Ofertix has enough user-generated reels, mix ads aggressively so
-    // the Reels feed always looks alive and scrollable.
-    if (reels.length < 10 && activeAds.isNotEmpty) {
-      final entries = <_ReelsFeedEntry>[];
-      var adIndex = 0;
-
-      for (final reel in reels) {
-        entries.add(_ReelsFeedEntry.reel(reel));
-        entries.add(_ReelsFeedEntry.ad(activeAds[adIndex % activeAds.length]));
-        adIndex++;
-      }
-
-      while (entries.length < 20) {
-        entries.add(_ReelsFeedEntry.ad(activeAds[adIndex % activeAds.length]));
-        adIndex++;
-      }
-
-      return entries;
-    }
-
-    if (activeAds.isEmpty) {
+    if (reels.isEmpty || activeAds.isEmpty) {
       return reels.map((reel) => _ReelsFeedEntry.reel(reel)).toList();
     }
 
@@ -550,7 +520,7 @@ class _SmartReelsScreenState extends State<SmartReelsScreen>
 
                     if (ad != null) {
                       return OfertixReelsVideoAd(
-                        key: ValueKey('ad_${ad.id}_${canPlay}_$currentIndex'),
+                        key: ValueKey('ad_${ad.id}'),
                         ad: ad,
                         isActive: canPlay && index == currentIndex,
                       );
@@ -559,7 +529,7 @@ class _SmartReelsScreenState extends State<SmartReelsScreen>
                     final reel = entry.reel!;
 
                     return _SmartReelPage(
-                      key: ValueKey('${reel.id}_${canPlay}_$currentIndex'),
+                      key: ValueKey(reel.id),
                       reel: reel,
                       isActive: canPlay && index == currentIndex,
                       onLike: () => toggleLike(reel),

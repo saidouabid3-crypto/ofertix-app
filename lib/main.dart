@@ -43,9 +43,6 @@ Future<void> main() async {
         Locale('en'),
         Locale('fr'),
         Locale('ar'),
-        Locale('de'),
-        Locale('it'),
-        Locale('pt'),
       ],
 
       path: 'assets/lang',

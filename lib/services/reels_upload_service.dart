@@ -1,9 +1,5 @@
 import 'dart:io';
 
-import 'package:http/http.dart' as http;
-
-import '../core/network/api_client.dart';
-
 class ReelsUploadResult {
   final String cloudinaryPublicId;
   final String videoUrlOriginal;
@@ -36,16 +32,8 @@ class ReelsUploadService {
   const ReelsUploadService();
 
   Future<ReelsUploadResult> uploadVideo(File file) async {
-    final decoded = await ApiService.instance.postMultipart(
-      ApiEndpoints.reelsUploadVideo,
-      files: [await http.MultipartFile.fromPath('file', file.path)],
+    throw UnsupportedError(
+      'Legacy /api/reels/upload-video is retired. Use SmartReelService.uploadSmartReel.',
     );
-
-    if (decoded is! Map || decoded['ok'] != true) {
-      throw Exception('Upload failed: $decoded');
-    }
-
-    final data = Map<String, dynamic>.from(decoded['data'] as Map);
-    return ReelsUploadResult.fromJson(data);
   }
 }
