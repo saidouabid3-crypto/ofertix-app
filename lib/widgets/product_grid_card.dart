@@ -13,6 +13,7 @@ import '../core/utils/price_utils.dart';
 import '../models/ai_deal_brain_result.dart';
 import '../models/product.dart';
 import '../providers/watchlist_provider.dart';
+import '../services/auth_service.dart';
 import '../services/card_verdict_cache.dart';
 import '../services/favorite_service.dart';
 import 'product_ai_badge.dart';
@@ -103,12 +104,26 @@ class _ProductGridCardState extends State<ProductGridCard> {
     if (_watchLoading) return;
     setState(() => _watchLoading = true);
     final provider = Provider.of<WatchlistProvider>(context, listen: false);
+    final isGuest = !AuthService.instance.isLoggedIn;
     final nowWatching = await provider.toggleWatch(product);
     if (!mounted) return;
     setState(() {
       _isWatching = nowWatching;
       _watchLoading = false;
     });
+    if (!mounted) return;
+    final msg = isGuest
+        ? 'watchlist.guestSaved'.tr()
+        : nowWatching
+            ? 'product.watchlist.added'.tr()
+            : 'product.watchlist.removed'.tr();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        duration: const Duration(seconds: 3),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   @override

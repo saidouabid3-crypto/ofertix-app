@@ -767,5 +767,8 @@
   "notifications.openProduct": "فتح المنتج",
   "notifications.markedRead": "تم التحديد كمقروء",
   "notifications.deleted": "تم حذف الإشعار",
-  "notifications.errorLoad": "تعذّر تحميل الإشعارات"
+  "notifications.errorLoad": "تعذّر تحميل الإشعارات",
+  "auth.loginRequired.alerts": "سجّل الدخول لإنشاء تنبيهات الأسعار",
+  "auth.loginRequired.watchlist": "سجّل الدخول لمزامنة عروضك المحفوظة",
+  "watchlist.guestSaved": "محفوظ على هذا الجهاز · سجّل الدخول للمزامنة"
 }

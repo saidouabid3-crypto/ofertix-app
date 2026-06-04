@@ -767,5 +767,8 @@
   "notifications.openProduct": "Open product",
   "notifications.markedRead": "Marked as read",
   "notifications.deleted": "Notification deleted",
-  "notifications.errorLoad": "Could not load notifications"
+  "notifications.errorLoad": "Could not load notifications",
+  "auth.loginRequired.alerts": "Sign in to create price alerts",
+  "auth.loginRequired.watchlist": "Sign in to sync your saved deals",
+  "watchlist.guestSaved": "Saved on this device · Sign in to sync"
 }

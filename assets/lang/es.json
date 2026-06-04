@@ -767,5 +767,8 @@
   "notifications.openProduct": "Ver producto",
   "notifications.markedRead": "Marcado como leído",
   "notifications.deleted": "Notificación eliminada",
-  "notifications.errorLoad": "No se pudieron cargar las notificaciones"
+  "notifications.errorLoad": "No se pudieron cargar las notificaciones",
+  "auth.loginRequired.alerts": "Inicia sesión para crear avisos de precio",
+  "auth.loginRequired.watchlist": "Inicia sesión para sincronizar tus ofertas guardadas",
+  "watchlist.guestSaved": "Guardado en este dispositivo · Inicia sesión para sincronizar"
 }

@@ -50,5 +50,8 @@
   "alerts.statusActive": "ATIVO",
   "alerts.statusOff": "OFF",
   "common.error": "Algo correu mal",
-  "common.retry": "Tentar novamente"
+  "common.retry": "Tentar novamente",
+  "auth.loginRequired.alerts": "Inicia sessão para criar alertas de preço",
+  "auth.loginRequired.watchlist": "Inicia sessão para sincronizar as tuas ofertas guardadas",
+  "watchlist.guestSaved": "Guardado neste dispositivo · Inicia sessão para sincronizar"
 }

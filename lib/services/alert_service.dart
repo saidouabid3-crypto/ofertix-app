@@ -1,13 +1,12 @@
-import 'dart:math';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/product.dart';
 import 'auth_service.dart';
 import 'firebase_service.dart';
 import 'notification_service.dart';
 
+/// Price alert service. Requires Firebase authentication for all writes.
+/// Guest users cannot create price alerts — they must log in first.
 class AlertService {
   AlertService._();
 
@@ -16,101 +15,73 @@ class AlertService {
   final FirebaseFirestore _firestore = FirebaseService.instance.firestore;
   final NotificationService _notifications = NotificationService.instance;
 
-  // Same key as FavoriteService and WatchlistService — one device-scoped
-  // guest identity is shared across all user collections.
-  static const String _guestIdKey = 'ofertix_guest_id';
+  CollectionReference<Map<String, dynamic>> get _alertsCollection =>
+      _firestore.collection('price_alerts');
 
-  CollectionReference<Map<String, dynamic>> get _alertsCollection {
-    return _firestore.collection('price_alerts');
-  }
+  String? get _uid => AuthService.instance.currentUserId?.trim();
 
-  /// Returns the Firebase UID for authenticated users.
-  /// For guests, returns a persistent device-scoped id (guest_{random32hex})
-  /// stored in SharedPreferences — consistent with FavoriteService/WatchlistService.
-  Future<String> _resolveUserId() async {
-    final uid = AuthService.instance.currentUserId;
-    if (uid != null && uid.trim().isNotEmpty) return uid.trim();
-    final prefs = await SharedPreferences.getInstance();
-    final existing = prefs.getString(_guestIdKey);
-    if (existing != null && existing.isNotEmpty) return 'guest_$existing';
-    final newId = _generateGuestId();
-    await prefs.setString(_guestIdKey, newId);
-    return 'guest_$newId';
-  }
-
-  static String _generateGuestId() {
-    final rand = Random.secure();
-    final bytes = List<int>.generate(16, (_) => rand.nextInt(256));
-    return bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+  bool get _isAuthenticated {
+    final uid = _uid;
+    return uid != null && uid.isNotEmpty;
   }
 
   Stream<List<QueryDocumentSnapshot<Map<String, dynamic>>>> watchAlerts({
-    String userId = 'guest',
+    required String userId,
   }) {
     return _alertsCollection.where('userId', isEqualTo: userId).snapshots().map(
       (snapshot) {
         final docs = snapshot.docs;
-
         docs.sort((a, b) {
           final aTime = a.data()['createdAt'];
           final bTime = b.data()['createdAt'];
-
           if (aTime is Timestamp && bTime is Timestamp) {
             return bTime.compareTo(aTime);
           }
-
           return 0;
         });
-
         return docs;
       },
     );
   }
 
   Future<List<QueryDocumentSnapshot<Map<String, dynamic>>>> getAlertsOnce({
-    String userId = 'guest',
+    required String userId,
   }) async {
     try {
       final snapshot = await _alertsCollection
           .where('userId', isEqualTo: userId)
           .get();
-
       final docs = snapshot.docs;
-
       docs.sort((a, b) {
         final aTime = a.data()['createdAt'];
         final bTime = b.data()['createdAt'];
-
         if (aTime is Timestamp && bTime is Timestamp) {
           return bTime.compareTo(aTime);
         }
-
         return 0;
       });
-
       return docs;
     } catch (_) {
       return [];
     }
   }
 
+  /// Creates a product price alert. Requires the user to be logged in.
+  /// Returns the alert document ID on success, null if not authenticated
+  /// or on any error.
   Future<String?> createProductAlert({
     required Product product,
     required double targetPrice,
-    String userId = 'guest',
     String countryCode = 'global',
     String currency = 'EUR',
   }) async {
+    if (!_isAuthenticated) return null;
     if (targetPrice <= 0) return null;
 
-    final resolvedUserId = (userId == 'guest' || userId.trim().isEmpty)
-        ? await _resolveUserId()
-        : userId;
-
+    final uid = _uid!;
     final productId = product.id.trim().isNotEmpty
         ? product.id.trim()
         : product.name.trim();
-
     final productName = product.name.trim().isNotEmpty
         ? product.name.trim()
         : productId;
@@ -119,27 +90,22 @@ class AlertService {
 
     try {
       final existing = await _alertsCollection
-          .where('userId', isEqualTo: resolvedUserId)
+          .where('userId', isEqualTo: uid)
           .where('productId', isEqualTo: productId)
           .where('targetPrice', isEqualTo: targetPrice)
           .where('active', isEqualTo: true)
           .limit(1)
           .get();
 
-      if (existing.docs.isNotEmpty) {
-        return existing.docs.first.id;
-      }
+      if (existing.docs.isNotEmpty) return existing.docs.first.id;
 
       final doc = await _alertsCollection.add({
-        'userId': resolvedUserId,
-
+        'userId': uid,
         'productId': productId,
         'productName': productName,
         'productImage': product.image,
         'productQuery': product.name,
         'store': product.store,
-
-        // Full product snapshot, باش نقدر نفتحو من Alerts
         'name': product.name,
         'image': product.image,
         'description': product.description,
@@ -161,7 +127,6 @@ class AlertService {
         'sales': product.sales,
         'lat': product.lat,
         'lng': product.lng,
-
         'targetPrice': targetPrice,
         'currency': currency,
         'countryCode': countryCode,
@@ -175,8 +140,7 @@ class AlertService {
       try {
         await _notifications.showLocalNotification(
           title: '🔔 Price alert created',
-          body:
-              '$productName — target ${targetPrice.toStringAsFixed(2)} $currency',
+          body: '$productName — target ${targetPrice.toStringAsFixed(2)} $currency',
         );
       } catch (_) {}
 
@@ -186,36 +150,33 @@ class AlertService {
     }
   }
 
+  /// Creates an AI price alert. Requires the user to be logged in.
   Future<String?> createAiAlert({
     required String productQuery,
     required double targetPrice,
-    String userId = 'guest',
     String countryCode = 'global',
     String currency = 'EUR',
   }) async {
-    final cleanQuery = productQuery.trim();
+    if (!_isAuthenticated) return null;
 
+    final cleanQuery = productQuery.trim();
     if (cleanQuery.isEmpty || targetPrice <= 0) return null;
 
-    final resolvedUserId = (userId == 'guest' || userId.trim().isEmpty)
-        ? await _resolveUserId()
-        : userId;
+    final uid = _uid!;
 
     try {
       final existing = await _alertsCollection
-          .where('userId', isEqualTo: resolvedUserId)
+          .where('userId', isEqualTo: uid)
           .where('productQuery', isEqualTo: cleanQuery)
           .where('targetPrice', isEqualTo: targetPrice)
           .where('active', isEqualTo: true)
           .limit(1)
           .get();
 
-      if (existing.docs.isNotEmpty) {
-        return existing.docs.first.id;
-      }
+      if (existing.docs.isNotEmpty) return existing.docs.first.id;
 
       final doc = await _alertsCollection.add({
-        'userId': resolvedUserId,
+        'userId': uid,
         'productId': cleanQuery,
         'productName': cleanQuery,
         'productQuery': cleanQuery,
@@ -232,8 +193,7 @@ class AlertService {
       try {
         await _notifications.showLocalNotification(
           title: '🔔 AI price alert created',
-          body:
-              '$cleanQuery — target ${targetPrice.toStringAsFixed(2)} $currency',
+          body: '$cleanQuery — target ${targetPrice.toStringAsFixed(2)} $currency',
         );
       } catch (_) {}
 
@@ -244,12 +204,9 @@ class AlertService {
   }
 
   Future<bool> deleteAlert(String alertId) async {
-    final cleanId = alertId.trim();
-
-    if (cleanId.isEmpty) return false;
-
+    if (alertId.trim().isEmpty) return false;
     try {
-      await _alertsCollection.doc(cleanId).delete();
+      await _alertsCollection.doc(alertId.trim()).delete();
       return true;
     } catch (_) {
       return false;
@@ -260,16 +217,12 @@ class AlertService {
     required String alertId,
     required bool active,
   }) async {
-    final cleanId = alertId.trim();
-
-    if (cleanId.isEmpty) return false;
-
+    if (alertId.trim().isEmpty) return false;
     try {
-      await _alertsCollection.doc(cleanId).update({
+      await _alertsCollection.doc(alertId.trim()).update({
         'active': active,
         'updatedAt': FieldValue.serverTimestamp(),
       });
-
       return true;
     } catch (_) {
       return false;
@@ -280,10 +233,9 @@ class AlertService {
     required String alertId,
     required double targetPrice,
   }) async {
-    final cleanId = alertId.trim();
-    if (cleanId.isEmpty || targetPrice <= 0) return false;
+    if (alertId.trim().isEmpty || targetPrice <= 0) return false;
     try {
-      await _alertsCollection.doc(cleanId).update({
+      await _alertsCollection.doc(alertId.trim()).update({
         'targetPrice': targetPrice,
         'triggered': false,
         'active': true,

@@ -11,6 +11,7 @@ import '../../models/product.dart';
 import '../../services/affiliate_service.dart';
 import '../../services/ai_service.dart';
 import '../../services/alert_service.dart';
+import '../../services/auth_service.dart';
 import '../../services/favorite_service.dart';
 import '../../services/price_truth_service.dart';
 import '../../services/product_service.dart';
@@ -171,14 +172,16 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
         _isWatching = nowWatching;
         _isWatchLoading = false;
       });
+      final isGuest = !AuthService.instance.isLoggedIn;
+      final msg = isGuest && nowWatching
+          ? 'watchlist.guestSaved'.tr()
+          : nowWatching
+              ? 'product.watchlist.added'.tr()
+              : 'product.watchlist.removed'.tr();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            nowWatching
-                ? 'product.watchlist.added'.tr()
-                : 'product.watchlist.removed'.tr(),
-          ),
-          duration: const Duration(seconds: 2),
+          content: Text(msg),
+          duration: const Duration(seconds: 3),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -197,6 +200,16 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
 
   Future<void> _showPriceAlertSheet() async {
     if (!mounted) return;
+    if (!AuthService.instance.isLoggedIn) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('auth.loginRequired.alerts'.tr()),
+          duration: const Duration(seconds: 3),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,

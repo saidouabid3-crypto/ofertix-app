@@ -50,5 +50,8 @@
   "alerts.statusActive": "AKTIV",
   "alerts.statusOff": "AUS",
   "common.error": "Etwas ist schiefgelaufen",
-  "common.retry": "Wiederholen"
+  "common.retry": "Wiederholen",
+  "auth.loginRequired.alerts": "Anmelden, um Preisalarme zu erstellen",
+  "auth.loginRequired.watchlist": "Anmelden, um gespeicherte Angebote zu synchronisieren",
+  "watchlist.guestSaved": "Auf diesem Gerät gespeichert · Anmelden zum Synchronisieren"
 }
