@@ -54,5 +54,8 @@
   "auth.loginRequired.alerts": "Accedi per creare avvisi di prezzo",
   "auth.loginRequired.watchlist": "Accedi per sincronizzare le offerte salvate",
   "watchlist.guestSaved": "Salvato su questo dispositivo · Accedi per sincronizzare",
-  "watchlist.syncedAfterLogin": "Le tue offerte salvate sono state sincronizzate"
+  "watchlist.syncedAfterLogin": "Le tue offerte salvate sono state sincronizzate",
+  "alerts.lastChecked": "Ultimo controllo",
+  "alerts.neverChecked": "Non ancora verificato",
+  "common.justNow": "Adesso"
 }

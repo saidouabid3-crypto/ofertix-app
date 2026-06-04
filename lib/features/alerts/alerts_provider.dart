@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../../models/product.dart';
 import '../../repositories/alerts_repository.dart';
 import '../../services/auth_service.dart';
+import '../../services/price_alert_checker_service.dart';
 
 /// Price alerts provider. Requires Firebase authentication.
 /// Guests see an empty state — no Firestore reads or writes are performed.
@@ -14,6 +15,7 @@ class AlertsProvider extends ChangeNotifier {
   final AuthService _auth = AuthService.instance;
 
   bool isLoading = false;
+  bool isChecking = false;
   bool isDeleting = false;
   String? error;
 
@@ -164,6 +166,23 @@ class AlertsProvider extends ChangeNotifier {
       notifyListeners();
     }
     return ok;
+  }
+
+  /// Runs the client-side price checker for the current user's active alerts.
+  /// Fetches latest prices from the products collection and triggers local
+  /// notifications + updates alert documents for any price drops.
+  Future<void> checkAlerts() async {
+    if (!_isAuthenticated || isChecking) return;
+    isChecking = true;
+    error = null;
+    notifyListeners();
+    try {
+      await PriceAlertCheckerService.instance.checkActiveAlerts(
+        userId: _uid!,
+      );
+    } catch (_) {}
+    isChecking = false;
+    notifyListeners();
   }
 
   Future<void> refresh() async {

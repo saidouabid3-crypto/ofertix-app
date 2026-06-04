@@ -112,7 +112,10 @@ class _AlertsBody extends StatelessWidget {
 
     return RefreshIndicator(
       color: AppColors.orange,
-      onRefresh: () => provider.refresh(),
+      onRefresh: () async {
+        await provider.checkAlerts();
+        await provider.refresh();
+      },
       child: ListView.builder(
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
         itemCount: provider.alerts.length,
@@ -292,6 +295,27 @@ class _AlertCard extends StatelessWidget {
                       ),
                     ],
                   ),
+
+                  // Last checked timestamp
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.access_time_rounded,
+                        size: 10,
+                        color: AppColors.gray.withValues(alpha: 0.6),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        _lastCheckedLabel(data['lastCheckedAt']),
+                        style: TextStyle(
+                          color: AppColors.gray.withValues(alpha: 0.7),
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -327,6 +351,23 @@ class _AlertCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  String _lastCheckedLabel(dynamic value) {
+    if (value == null) return 'alerts.neverChecked'.tr();
+    DateTime? dt;
+    if (value is Timestamp) {
+      dt = value.toDate();
+    } else if (value is String && value.isNotEmpty) {
+      dt = DateTime.tryParse(value);
+    }
+    if (dt == null) return 'alerts.neverChecked'.tr();
+    final diff = DateTime.now().difference(dt);
+    final prefix = 'alerts.lastChecked'.tr();
+    if (diff.inSeconds < 60) return '$prefix: ${'common.justNow'.tr()}';
+    if (diff.inMinutes < 60) return '$prefix: ${diff.inMinutes}m';
+    if (diff.inHours < 24) return '$prefix: ${diff.inHours}h';
+    return '$prefix: ${diff.inDays}d';
   }
 
   Widget _imageFallback() {

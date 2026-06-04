@@ -771,5 +771,8 @@
   "auth.loginRequired.alerts": "سجّل الدخول لإنشاء تنبيهات الأسعار",
   "auth.loginRequired.watchlist": "سجّل الدخول لمزامنة عروضك المحفوظة",
   "watchlist.guestSaved": "محفوظ على هذا الجهاز · سجّل الدخول للمزامنة",
-  "watchlist.syncedAfterLogin": "تمت مزامنة عروضك المحفوظة"
+  "watchlist.syncedAfterLogin": "تمت مزامنة عروضك المحفوظة",
+  "alerts.lastChecked": "آخر فحص",
+  "alerts.neverChecked": "لم يتم الفحص بعد",
+  "common.justNow": "الآن"
 }

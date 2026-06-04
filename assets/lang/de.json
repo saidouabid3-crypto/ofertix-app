@@ -54,5 +54,8 @@
   "auth.loginRequired.alerts": "Anmelden, um Preisalarme zu erstellen",
   "auth.loginRequired.watchlist": "Anmelden, um gespeicherte Angebote zu synchronisieren",
   "watchlist.guestSaved": "Auf diesem Gerät gespeichert · Anmelden zum Synchronisieren",
-  "watchlist.syncedAfterLogin": "Deine gespeicherten Angebote wurden synchronisiert"
+  "watchlist.syncedAfterLogin": "Deine gespeicherten Angebote wurden synchronisiert",
+  "alerts.lastChecked": "Zuletzt geprüft",
+  "alerts.neverChecked": "Noch nicht geprüft",
+  "common.justNow": "Gerade eben"
 }

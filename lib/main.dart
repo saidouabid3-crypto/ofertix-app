@@ -10,6 +10,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'firebase_options.dart';
 
 import 'core/navigation/app_router.dart';
+import 'services/notification_service.dart';
 import 'core/navigation/app_routes.dart';
 
 import 'core/theme/app_theme.dart';
@@ -31,6 +32,9 @@ Future<void> main() async {
   await EasyLocalization.ensureInitialized();
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // Initialize local notifications + FCM listener. Safe to call before runApp.
+  await NotificationService.instance.initialize();
 
   runApp(
     EasyLocalization(

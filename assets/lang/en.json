@@ -771,5 +771,8 @@
   "auth.loginRequired.alerts": "Sign in to create price alerts",
   "auth.loginRequired.watchlist": "Sign in to sync your saved deals",
   "watchlist.guestSaved": "Saved on this device · Sign in to sync",
-  "watchlist.syncedAfterLogin": "Your saved deals have been synced"
+  "watchlist.syncedAfterLogin": "Your saved deals have been synced",
+  "alerts.lastChecked": "Last checked",
+  "alerts.neverChecked": "Not checked yet",
+  "common.justNow": "Just now"
 }

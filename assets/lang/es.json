@@ -771,5 +771,8 @@
   "auth.loginRequired.alerts": "Inicia sesión para crear avisos de precio",
   "auth.loginRequired.watchlist": "Inicia sesión para sincronizar tus ofertas guardadas",
   "watchlist.guestSaved": "Guardado en este dispositivo · Inicia sesión para sincronizar",
-  "watchlist.syncedAfterLogin": "Tus ofertas guardadas se han sincronizado"
+  "watchlist.syncedAfterLogin": "Tus ofertas guardadas se han sincronizado",
+  "alerts.lastChecked": "Verificado",
+  "alerts.neverChecked": "Sin verificar",
+  "common.justNow": "Ahora"
 }

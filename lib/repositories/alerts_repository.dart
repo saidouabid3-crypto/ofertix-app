@@ -170,6 +170,23 @@ class AlertsRepository {
     }
   }
 
+  Future<bool> updateLastChecked({
+    required String alertId,
+    required double lastCheckedPrice,
+  }) async {
+    if (alertId.trim().isEmpty) return false;
+    try {
+      await _col.doc(alertId.trim()).update({
+        'lastCheckedAt': FieldValue.serverTimestamp(),
+        'lastCheckedPrice': lastCheckedPrice,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<bool> updateTargetPrice({
     required String alertId,
     required double targetPrice,
