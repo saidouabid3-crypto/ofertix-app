@@ -160,6 +160,21 @@ class AlertsProvider extends ChangeNotifier {
     return ok;
   }
 
+  Future<bool> updateTargetPrice({
+    required String alertId,
+    required double targetPrice,
+  }) async {
+    final ok = await _repository.updateTargetPrice(
+      alertId: alertId,
+      targetPrice: targetPrice,
+    );
+    if (!ok) {
+      error = 'Could not update alert';
+      notifyListeners();
+    }
+    return ok;
+  }
+
   Future<bool> setAlertActive({
     required String alertId,
     required bool active,

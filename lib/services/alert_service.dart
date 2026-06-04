@@ -276,6 +276,25 @@ class AlertService {
     }
   }
 
+  Future<bool> updateTargetPrice({
+    required String alertId,
+    required double targetPrice,
+  }) async {
+    final cleanId = alertId.trim();
+    if (cleanId.isEmpty || targetPrice <= 0) return false;
+    try {
+      await _alertsCollection.doc(cleanId).update({
+        'targetPrice': targetPrice,
+        'triggered': false,
+        'active': true,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<void> checkLocalPriceDrop({
     required String alertId,
     required String productName,

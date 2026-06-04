@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:visibility_detector/visibility_detector.dart';
@@ -11,6 +12,7 @@ import '../core/theme/app_theme.dart';
 import '../core/utils/price_utils.dart';
 import '../models/ai_deal_brain_result.dart';
 import '../models/product.dart';
+import '../providers/watchlist_provider.dart';
 import '../services/card_verdict_cache.dart';
 import '../services/favorite_service.dart';
 import 'product_ai_badge.dart';
@@ -40,6 +42,8 @@ class _ProductGridCardState extends State<ProductGridCard> {
 
   bool isFavorite = false;
   bool favoriteLoading = false;
+  bool _isWatching = false;
+  bool _watchLoading = false;
   AiDealBrainResult? _aiResult;
 
   // Visibility-based activation state.
@@ -53,6 +57,7 @@ class _ProductGridCardState extends State<ProductGridCard> {
     super.initState();
     isFavorite = widget.isFavorite;
     loadFavorite();
+    _syncWatchState();
     // Show badge instantly if result is already in cache — no network needed.
     final cached = CardVerdictCache.instance.cached(product.id);
     if (cached != null) {
@@ -67,6 +72,9 @@ class _ProductGridCardState extends State<ProductGridCard> {
     if (oldWidget.product.id != widget.product.id) {
       isFavorite = widget.isFavorite;
       loadFavorite();
+      _isWatching = false;
+      _watchLoading = false;
+      _syncWatchState();
       _aiResult = null;
       _visibilityTriggered = false;
       _debounceTimer?.cancel();
@@ -77,6 +85,30 @@ class _ProductGridCardState extends State<ProductGridCard> {
         _visibilityTriggered = true;
       }
     }
+  }
+
+  void _syncWatchState() {
+    final provider = Provider.of<WatchlistProvider>(context, listen: false);
+    // Reflect current in-memory state immediately (no rebuild needed yet).
+    _isWatching = provider.isWatching(product.id);
+    // Ensure the provider has loaded from Firestore, then re-sync.
+    provider.ensureLoaded().then((_) {
+      if (!mounted) return;
+      final watching = provider.isWatching(product.id);
+      if (watching != _isWatching) setState(() => _isWatching = watching);
+    });
+  }
+
+  Future<void> _toggleWatch() async {
+    if (_watchLoading) return;
+    setState(() => _watchLoading = true);
+    final provider = Provider.of<WatchlistProvider>(context, listen: false);
+    final nowWatching = await provider.toggleWatch(product);
+    if (!mounted) return;
+    setState(() {
+      _isWatching = nowWatching;
+      _watchLoading = false;
+    });
   }
 
   @override
@@ -287,33 +319,68 @@ class _ProductGridCardState extends State<ProductGridCard> {
                           Positioned(
                             top: 8,
                             right: 8,
-                            child: GestureDetector(
-                              onTap: toggleFavorite,
-                              child: Container(
-                                width: 31,
-                                height: 31,
-                                decoration: BoxDecoration(
-                                  color: Colors.black.withValues(alpha: 0.35),
-                                  shape: BoxShape.circle,
+                            child: Column(
+                              children: [
+                                // Favorite heart
+                                GestureDetector(
+                                  onTap: toggleFavorite,
+                                  child: Container(
+                                    width: 31,
+                                    height: 31,
+                                    decoration: BoxDecoration(
+                                      color: Colors.black.withValues(alpha: 0.35),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: favoriteLoading
+                                        ? const Padding(
+                                            padding: EdgeInsets.all(9),
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: Colors.white,
+                                            ),
+                                          )
+                                        : Icon(
+                                            isFavorite
+                                                ? Icons.favorite_rounded
+                                                : Icons.favorite_border_rounded,
+                                            color: isFavorite
+                                                ? AppColors.red
+                                                : Colors.white,
+                                            size: 18,
+                                          ),
+                                  ),
                                 ),
-                                child: favoriteLoading
-                                    ? const Padding(
-                                        padding: EdgeInsets.all(9),
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          color: Colors.white,
-                                        ),
-                                      )
-                                    : Icon(
-                                        isFavorite
-                                            ? Icons.favorite_rounded
-                                            : Icons.favorite_border_rounded,
-                                        color: isFavorite
-                                            ? AppColors.red
-                                            : Colors.white,
-                                        size: 18,
-                                      ),
-                              ),
+                                const SizedBox(height: 4),
+                                // Watchlist bookmark
+                                GestureDetector(
+                                  onTap: _toggleWatch,
+                                  child: Container(
+                                    width: 31,
+                                    height: 31,
+                                    decoration: BoxDecoration(
+                                      color: Colors.black.withValues(alpha: 0.35),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: _watchLoading
+                                        ? const Padding(
+                                            padding: EdgeInsets.all(9),
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: Colors.white,
+                                            ),
+                                          )
+                                        : Icon(
+                                            _isWatching
+                                                ? Icons.bookmark_rounded
+                                                : Icons.bookmark_border_rounded,
+                                            color: _isWatching
+                                                ? AppColors.orange
+                                                : Colors.white,
+                                            size: 18,
+                                          ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
 
