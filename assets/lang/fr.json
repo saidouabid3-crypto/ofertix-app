@@ -770,5 +770,6 @@
   "notifications.errorLoad": "Impossible de charger les notifications",
   "auth.loginRequired.alerts": "Connectez-vous pour créer des alertes de prix",
   "auth.loginRequired.watchlist": "Connectez-vous pour synchroniser vos offres sauvegardées",
-  "watchlist.guestSaved": "Sauvegardé sur cet appareil · Connectez-vous pour synchroniser"
+  "watchlist.guestSaved": "Sauvegardé sur cet appareil · Connectez-vous pour synchroniser",
+  "watchlist.syncedAfterLogin": "Vos offres sauvegardées ont été synchronisées"
 }

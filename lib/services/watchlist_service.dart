@@ -241,6 +241,7 @@ class WatchlistService {
     final localItems = await _readLocalRaw();
     if (localItems.isEmpty) return;
 
+    int migrated = 0;
     for (final m in localItems) {
       try {
         final id = m['id']?.toString() ?? '';
@@ -274,12 +275,16 @@ class WatchlistService {
           'createdAt': FieldValue.serverTimestamp(),
           'updatedAt': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
+        migrated++;
       } catch (_) {
         // Never block login for a failed watchlist migration.
       }
     }
 
-    // Clear local storage after successful migration.
-    await _writeLocalRaw([]);
+    // Clear local storage only when at least one item was successfully
+    // written. If every Firestore write failed, keep local data intact.
+    if (migrated > 0) {
+      await _writeLocalRaw([]);
+    }
   }
 }

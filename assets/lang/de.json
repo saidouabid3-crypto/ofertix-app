@@ -53,5 +53,6 @@
   "common.retry": "Wiederholen",
   "auth.loginRequired.alerts": "Anmelden, um Preisalarme zu erstellen",
   "auth.loginRequired.watchlist": "Anmelden, um gespeicherte Angebote zu synchronisieren",
-  "watchlist.guestSaved": "Auf diesem Gerät gespeichert · Anmelden zum Synchronisieren"
+  "watchlist.guestSaved": "Auf diesem Gerät gespeichert · Anmelden zum Synchronisieren",
+  "watchlist.syncedAfterLogin": "Deine gespeicherten Angebote wurden synchronisiert"
 }

@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:provider/provider.dart';
 
 import '../../core/navigation/app_routes.dart';
 import '../../core/theme/app_theme.dart';
+import '../../providers/watchlist_provider.dart';
 import '../../repositories/auth_repository.dart';
+import '../../services/watchlist_service.dart';
 
 class LoginScreen extends StatefulWidget {
   LoginScreen({super.key});
@@ -59,6 +62,17 @@ class _LoginScreenState extends State<LoginScreen> {
       await _authRepository.login(email: email, password: password);
 
       if (!mounted) return;
+
+      // Grab the global WatchlistProvider reference before navigation
+      // removes this widget from the tree.
+      final watchlistProvider =
+          Provider.of<WatchlistProvider>(context, listen: false);
+
+      // Fire guest watchlist migration asynchronously — never blocks auth flow.
+      // Refreshes the in-memory cache once migration completes.
+      WatchlistService.instance.migrateLocalToFirestore().then((_) {
+        watchlistProvider.refresh();
+      }).catchError((_) {});
 
       Navigator.pushNamedAndRemoveUntil(context, AppRoutes.home, (_) => false);
     } catch (e) {

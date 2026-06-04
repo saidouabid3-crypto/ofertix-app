@@ -770,5 +770,6 @@
   "notifications.errorLoad": "No se pudieron cargar las notificaciones",
   "auth.loginRequired.alerts": "Inicia sesión para crear avisos de precio",
   "auth.loginRequired.watchlist": "Inicia sesión para sincronizar tus ofertas guardadas",
-  "watchlist.guestSaved": "Guardado en este dispositivo · Inicia sesión para sincronizar"
+  "watchlist.guestSaved": "Guardado en este dispositivo · Inicia sesión para sincronizar",
+  "watchlist.syncedAfterLogin": "Tus ofertas guardadas se han sincronizado"
 }

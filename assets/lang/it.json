@@ -53,5 +53,6 @@
   "common.retry": "Riprova",
   "auth.loginRequired.alerts": "Accedi per creare avvisi di prezzo",
   "auth.loginRequired.watchlist": "Accedi per sincronizzare le offerte salvate",
-  "watchlist.guestSaved": "Salvato su questo dispositivo · Accedi per sincronizzare"
+  "watchlist.guestSaved": "Salvato su questo dispositivo · Accedi per sincronizzare",
+  "watchlist.syncedAfterLogin": "Le tue offerte salvate sono state sincronizzate"
 }

@@ -53,5 +53,6 @@
   "common.retry": "Tentar novamente",
   "auth.loginRequired.alerts": "Inicia sessão para criar alertas de preço",
   "auth.loginRequired.watchlist": "Inicia sessão para sincronizar as tuas ofertas guardadas",
-  "watchlist.guestSaved": "Guardado neste dispositivo · Inicia sessão para sincronizar"
+  "watchlist.guestSaved": "Guardado neste dispositivo · Inicia sessão para sincronizar",
+  "watchlist.syncedAfterLogin": "As tuas ofertas guardadas foram sincronizadas"
 }
