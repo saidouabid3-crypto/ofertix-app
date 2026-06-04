@@ -149,6 +149,29 @@ class ProductService {
     return map.values.toList();
   }
 
+  /// Returns products in the same category, excluding the current product.
+  Future<List<Product>> getSimilarProducts({
+    required String category,
+    required String excludeId,
+    int limit = 8,
+  }) async {
+    try {
+      final all = await getProductsOnce(limit: 200);
+      final q = category.toLowerCase().trim();
+      return all.where((p) {
+        if (p.id == excludeId) return false;
+        if (p.image.isEmpty || p.newPrice <= 0) return false;
+        if (q.isEmpty || q == 'general') return p.id != excludeId;
+        final hay =
+            '${p.category} ${p.categoryGroup} ${p.name}'.toLowerCase();
+        return hay.contains(q) ||
+            q.contains(p.category.toLowerCase().trim());
+      }).take(limit).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
   int _sortProducts(Product a, Product b) {
     if (a.featured && !b.featured) return -1;
     if (!a.featured && b.featured) return 1;
