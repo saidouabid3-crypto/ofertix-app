@@ -47,6 +47,11 @@ class _SmartReelsScreenState extends State<SmartReelsScreen>
   String? errorMessage;
   int currentIndex = 0;
 
+  // Pagination state
+  String? _cursor;
+  bool _hasMore = false;
+  bool _loadingMore = false;
+
   bool get canPlay => widget.isVisible && appIsActive;
 
   @override
@@ -91,32 +96,52 @@ class _SmartReelsScreenState extends State<SmartReelsScreen>
     });
 
     try {
-      final items = await service.getFeed(limit: 20);
+      final page = await service.getFeed(limit: 10);
 
       if (!mounted) return;
 
       setState(() {
-        reels = items;
+        reels = page.items;
+        _cursor = page.cursor;
+        _hasMore = page.hasMore;
         loading = false;
         errorMessage = null;
         currentIndex = 0;
       });
 
-      if (items.isNotEmpty) {
-        service.trackView(items.first.id);
+      if (page.items.isNotEmpty) {
+        service.trackView(page.items.first.id);
       }
     } catch (_) {
       if (!mounted) return;
 
-      // Pro behavior:
-      // If the backend reels feed fails, do not block the whole Reels screen.
+      // If the backend reels feed fails, do not block the whole screen.
       // Ads can still fill the feed through Firestore/AdminAdsService.
       setState(() {
         reels = [];
+        _hasMore = false;
         loading = false;
-        errorMessage = 'No se pudieron cargar los reels';
+        errorMessage = 'reels.loadError'.tr();
         currentIndex = 0;
       });
+    }
+  }
+
+  Future<void> _loadMore() async {
+    if (!_hasMore || _loadingMore || _cursor == null) return;
+    setState(() => _loadingMore = true);
+    try {
+      final page = await service.getFeed(limit: 10, cursor: _cursor);
+      if (!mounted) return;
+      setState(() {
+        reels.addAll(page.items);
+        _cursor = page.cursor;
+        _hasMore = page.hasMore;
+        _loadingMore = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _loadingMore = false);
     }
   }
 
@@ -126,12 +151,14 @@ class _SmartReelsScreenState extends State<SmartReelsScreen>
     setState(() => refreshing = true);
 
     try {
-      final items = await service.getFeed(limit: 20);
+      final page = await service.getFeed(limit: 10);
 
       if (!mounted) return;
 
       setState(() {
-        reels = items;
+        reels = page.items;
+        _cursor = page.cursor;
+        _hasMore = page.hasMore;
         currentIndex = 0;
       });
 
@@ -139,8 +166,8 @@ class _SmartReelsScreenState extends State<SmartReelsScreen>
         pageController.jumpToPage(0);
       }
 
-      if (items.isNotEmpty) {
-        service.trackView(items.first.id);
+      if (page.items.isNotEmpty) {
+        service.trackView(page.items.first.id);
       }
     } finally {
       if (mounted) setState(() => refreshing = false);
@@ -205,6 +232,8 @@ class _SmartReelsScreenState extends State<SmartReelsScreen>
     if (index < 0 || index >= entries.length) return;
     final reel = entries[index].reel;
     if (reel != null) service.trackView(reel.id);
+    // Prefetch next page when user is near the end.
+    if (index >= entries.length - 3) _loadMore();
   }
 
   void replaceReel(SmartReelModel reel) {
@@ -217,8 +246,12 @@ class _SmartReelsScreenState extends State<SmartReelsScreen>
   }
 
   Future<void> toggleLike(SmartReelModel reel) async {
-    final nextLiked = !reel.isLiked;
+    if (!auth.isLoggedIn) {
+      showSnack('reels.loginRequiredLike'.tr());
+      return;
+    }
 
+    final nextLiked = !reel.isLiked;
     replaceReel(
       reel.copyWith(
         isLiked: nextLiked,
@@ -226,17 +259,27 @@ class _SmartReelsScreenState extends State<SmartReelsScreen>
       ),
     );
 
-    try {
-      await service.like(reel.id);
-    } catch (_) {
+    final result = await service.like(reel.id);
+    if (!mounted) return;
+    if (result != null) {
+      // Sync authoritative state from server.
+      final serverLiked = result['is_liked'] as bool? ?? nextLiked;
+      final serverLikes = result['likes'] as int? ??
+          (nextLiked ? reel.likes + 1 : (reel.likes - 1).clamp(0, 999999));
+      replaceReel(reel.copyWith(isLiked: serverLiked, likes: serverLikes));
+    } else {
       replaceReel(reel);
-      showSnack('No se pudo guardar el like');
+      showSnack('common.saveFailed'.tr());
     }
   }
 
   Future<void> toggleSave(SmartReelModel reel) async {
-    final nextSaved = !reel.isSaved;
+    if (!auth.isLoggedIn) {
+      showSnack('reels.loginRequiredSave'.tr());
+      return;
+    }
 
+    final nextSaved = !reel.isSaved;
     replaceReel(
       reel.copyWith(
         isSaved: nextSaved,
@@ -244,29 +287,37 @@ class _SmartReelsScreenState extends State<SmartReelsScreen>
       ),
     );
 
-    try {
-      await service.save(reel.id);
-      showSnack(nextSaved ? 'Guardado' : 'Quitado de guardados');
-    } catch (_) {
+    final result = await service.save(reel.id);
+    if (!mounted) return;
+    if (result != null) {
+      final serverSaved = result['is_saved'] as bool? ?? nextSaved;
+      final serverSaves = result['saves'] as int? ??
+          (nextSaved ? reel.saves + 1 : (reel.saves - 1).clamp(0, 999999));
+      replaceReel(reel.copyWith(isSaved: serverSaved, saves: serverSaves));
+      showSnack(serverSaved ? 'reels.saved'.tr() : 'reels.unsaved'.tr());
+    } else {
       replaceReel(reel);
-      showSnack('No se pudo guardar');
+      showSnack('common.saveFailed'.tr());
     }
   }
 
   Future<void> followCreator(SmartReelModel reel) async {
+    if (!auth.isLoggedIn) {
+      showSnack('reels.loginRequiredFollow'.tr());
+      return;
+    }
+
     final nextFollowing = !reel.isFollowing;
     replaceReel(reel.copyWith(isFollowing: nextFollowing));
 
     try {
       await service.followCreator(reel.creatorId);
       showSnack(
-        nextFollowing
-            ? 'Siguiendo a ${reel.creatorName}'
-            : 'Follow actualizado',
+        nextFollowing ? 'reels.following'.tr() : 'reels.unfollowed'.tr(),
       );
     } catch (_) {
       replaceReel(reel);
-      showSnack('Follow pendiente de activar en backend');
+      showSnack('common.saveFailed'.tr());
     }
   }
 
@@ -274,9 +325,9 @@ class _SmartReelsScreenState extends State<SmartReelsScreen>
     try {
       await service.report(reel.id);
       replaceReel(reel.copyWith(reports: reel.reports + 1));
-      showSnack('Gracias. Report guardado.');
+      showSnack('reels.reported'.tr());
     } catch (_) {
-      showSnack('No se pudo enviar el report');
+      showSnack('common.saveFailed'.tr());
     }
   }
 
@@ -310,7 +361,7 @@ class _SmartReelsScreenState extends State<SmartReelsScreen>
     }
 
     final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
-    if (!ok) showSnack('smartReels.cannotOpenLink'.tr());
+    if (!ok && mounted) showSnack('smartReels.cannotOpenLink'.tr());
   }
 
   Future<void> shareReel(SmartReelModel reel) async {
@@ -333,6 +384,10 @@ class _SmartReelsScreenState extends State<SmartReelsScreen>
   }
 
   Future<void> openComments(SmartReelModel reel) async {
+    if (!auth.isLoggedIn) {
+      showSnack('reels.loginRequiredComment'.tr());
+      return;
+    }
     final added = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
@@ -378,7 +433,7 @@ class _SmartReelsScreenState extends State<SmartReelsScreen>
         }
         break;
       case _ReelMenuAction.stats:
-        showSnack('Vistas: ${reel.views} · Likes: ${reel.likes}');
+        showSnack('${reel.views} views · ${reel.likes} likes');
         break;
       case _ReelMenuAction.report:
         await reportReel(reel);
@@ -405,7 +460,7 @@ class _SmartReelsScreenState extends State<SmartReelsScreen>
     if (updated == null) return;
 
     replaceReel(updated);
-    showSnack('Reel actualizado');
+    showSnack('reels.updated'.tr());
   }
 
   Future<void> _deleteReel(SmartReelModel reel) async {
@@ -421,9 +476,9 @@ class _SmartReelsScreenState extends State<SmartReelsScreen>
         }
       });
 
-      showSnack('Reel eliminado');
+      showSnack('reels.deleted'.tr());
     } catch (e) {
-      showSnack('No se pudo eliminar el reel. Revisa tu sesión.');
+      showSnack('reels.deleteError'.tr());
     }
   }
 
@@ -512,9 +567,16 @@ class _SmartReelsScreenState extends State<SmartReelsScreen>
                 return PageView.builder(
                   controller: pageController,
                   scrollDirection: Axis.vertical,
-                  itemCount: entries.length,
+                  itemCount: entries.length + (_loadingMore ? 1 : 0),
                   onPageChanged: (index) => onFeedPageChanged(index, entries),
                   itemBuilder: (context, index) {
+                    // Loading-more page shown at the tail.
+                    if (index == entries.length && _loadingMore) {
+                      return const _LoadingMorePage();
+                    }
+
+                    if (index >= entries.length) return const SizedBox.shrink();
+
                     final entry = entries[index];
                     final ad = entry.ad;
 
@@ -820,6 +882,20 @@ class _TopCircleButton extends StatelessWidget {
                 ),
               )
             : Icon(icon, color: Colors.white, size: 23),
+      ),
+    );
+  }
+}
+
+class _LoadingMorePage extends StatelessWidget {
+  const _LoadingMorePage();
+
+  @override
+  Widget build(BuildContext context) {
+    return const ColoredBox(
+      color: Colors.black,
+      child: Center(
+        child: CircularProgressIndicator(color: Colors.white54, strokeWidth: 2),
       ),
     );
   }
@@ -1479,23 +1555,17 @@ class _CommentsSheetState extends State<_CommentsSheet> {
           comments.insert(0, comment);
           controller.clear();
         });
-
         Navigator.pop(context, true);
       } else {
-        setState(() {
-          comments.insert(
-            0,
-            SmartReelComment(
-              id: DateTime.now().millisecondsSinceEpoch.toString(),
-              reelId: widget.reel.id,
-              userId: 'mobile_user',
-              userName: 'Ofertix User',
-              text: text,
-              createdAt: DateTime.now(),
+        // Backend rejected or returned null — show error, do not fake-insert.
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('common.saveFailed'.tr()),
+              behavior: SnackBarBehavior.floating,
             ),
           );
-          controller.clear();
-        });
+        }
       }
     } catch (_) {
       if (!mounted) return;
@@ -1758,7 +1828,7 @@ class _EditReelSheetState extends State<_EditReelSheet> {
       if (!mounted) return;
       setState(() {
         saving = false;
-        error = 'No se pudo actualizar. Revisa tu sesión o conexión.';
+        error = 'reels.updateError'.tr();
       });
     }
   }

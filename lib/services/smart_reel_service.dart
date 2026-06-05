@@ -9,8 +9,22 @@ import 'api_service.dart';
 import 'auth_service.dart';
 import 'profile_service.dart';
 
+/// Result of a paginated feed fetch.
+class ReelsFeedPage {
+  final List<SmartReelModel> items;
+  final String? cursor;
+  final bool hasMore;
+
+  const ReelsFeedPage({
+    required this.items,
+    this.cursor,
+    required this.hasMore,
+  });
+}
+
 class SmartReelService {
-  SmartReelService({String? baseUrl, ApiService? api}) : _api = api ?? ApiService.instance;
+  SmartReelService({String? baseUrl, ApiService? api})
+      : _api = api ?? ApiService.instance;
 
   static final SmartReelService instance = SmartReelService();
 
@@ -18,17 +32,32 @@ class SmartReelService {
   final AuthService _auth = AuthService.instance;
   final ProfileService _profileService = ProfileService.instance;
 
-  Future<Map<String, String>> _authHeaders({String emptyMessage = 'Debes iniciar sesión para usar esta función.'}) async {
-    final token = await _auth.getIdToken();
+  // ─── Auth helpers ─────────────────────────────────────────────────────────
 
+  Future<Map<String, String>> _authHeaders({
+    String emptyMessage = 'Debes iniciar sesión para usar esta función.',
+  }) async {
+    final token = await _auth.getIdToken();
     if (token == null || token.trim().isEmpty) {
       throw Exception(emptyMessage);
     }
-
     return {'Authorization': 'Bearer ${token.trim()}'};
   }
 
-  Future<List<SmartReelModel>> getFeed({int limit = 10, String? cursor}) async {
+  /// Returns auth headers if logged in, empty map if not.
+  Future<Map<String, String>> _optionalAuthHeaders() async {
+    try {
+      final token = await _auth.getIdToken();
+      if (token == null || token.trim().isEmpty) return {};
+      return {'Authorization': 'Bearer ${token.trim()}'};
+    } catch (_) {
+      return {};
+    }
+  }
+
+  // ─── Feed ──────────────────────────────────────────────────────────────────
+
+  Future<ReelsFeedPage> getFeed({int limit = 10, String? cursor}) async {
     final viewerId = _auth.currentUserId;
 
     final decoded = await _api.get(
@@ -36,20 +65,41 @@ class SmartReelService {
       queryParameters: {
         'limit': limit,
         if (cursor != null && cursor.trim().isNotEmpty) 'cursor': cursor,
-        if (viewerId != null && viewerId.trim().isNotEmpty) 'viewer_id': viewerId,
+        if (viewerId != null && viewerId.trim().isNotEmpty)
+          'viewer_id': viewerId,
       },
       timeout: const Duration(seconds: 25),
     );
 
-    final rawItems = decoded is Map<String, dynamic> ? decoded['items'] : decoded;
-    if (rawItems is! List) return [];
+    List rawItems;
+    String? nextCursor;
+    bool hasMore = false;
 
-    return rawItems
+    if (decoded is Map<String, dynamic>) {
+      rawItems = (decoded['items'] as List?) ?? [];
+      nextCursor = decoded['next_cursor']?.toString();
+      hasMore = decoded['has_more'] == true;
+    } else if (decoded is List) {
+      rawItems = decoded;
+    } else {
+      rawItems = [];
+    }
+
+    final items = rawItems
         .whereType<Map>()
-        .map((item) => SmartReelModel.fromJson(Map<String, dynamic>.from(item)))
+        .map((item) =>
+            SmartReelModel.fromJson(Map<String, dynamic>.from(item)))
         .where((reel) => reel.bestVideoUrl.isNotEmpty)
         .toList();
+
+    return ReelsFeedPage(
+      items: items,
+      cursor: nextCursor,
+      hasMore: hasMore,
+    );
   }
+
+  // ─── Upload / Edit / Delete ────────────────────────────────────────────────
 
   Future<SmartReelModel> uploadSmartReel({
     required File videoFile,
@@ -76,13 +126,16 @@ class SmartReelService {
       'description': description.trim(),
       'store': store.trim(),
       'current_price': currentPrice.toString(),
-      'currency': currency.trim().isEmpty ? 'EUR' : currency.trim().toUpperCase(),
+      'currency':
+          currency.trim().isEmpty ? 'EUR' : currency.trim().toUpperCase(),
       'creator_id': resolvedCreator.id,
       'creator_name': resolvedCreator.name,
       'creator_avatar_url': resolvedCreator.avatarUrl,
       if (oldPrice != null && oldPrice > 0) 'old_price': oldPrice.toString(),
-      if (affiliateUrl != null && affiliateUrl.trim().isNotEmpty) 'affiliate_url': affiliateUrl.trim(),
-      if (productId != null && productId.trim().isNotEmpty) 'product_id': productId.trim(),
+      if (affiliateUrl != null && affiliateUrl.trim().isNotEmpty)
+        'affiliate_url': affiliateUrl.trim(),
+      if (productId != null && productId.trim().isNotEmpty)
+        'product_id': productId.trim(),
     };
 
     final decoded = await _api.postMultipart(
@@ -95,7 +148,9 @@ class SmartReelService {
           contentType: _detectVideoType(videoFile.path),
         ),
       ],
-      extraHeaders: await _authHeaders(emptyMessage: 'Debes iniciar sesión para subir reels.'),
+      extraHeaders: await _authHeaders(
+        emptyMessage: 'Debes iniciar sesión para subir reels.',
+      ),
       timeout: const Duration(seconds: 120),
     );
 
@@ -127,9 +182,16 @@ class SmartReelService {
         'store': store.trim(),
         'current_price': currentPrice,
         'old_price': oldPrice != null && oldPrice > 0 ? oldPrice : null,
-        'currency': currency.trim().isEmpty ? 'EUR' : currency.trim().toUpperCase(),
-        'affiliate_url': affiliateUrl != null && affiliateUrl.trim().isNotEmpty ? affiliateUrl.trim() : null,
-        'product_id': productId != null && productId.trim().isNotEmpty ? productId.trim() : null,
+        'currency':
+            currency.trim().isEmpty ? 'EUR' : currency.trim().toUpperCase(),
+        'affiliate_url':
+            affiliateUrl != null && affiliateUrl.trim().isNotEmpty
+                ? affiliateUrl.trim()
+                : null,
+        'product_id':
+            productId != null && productId.trim().isNotEmpty
+                ? productId.trim()
+                : null,
       },
     );
 
@@ -148,7 +210,12 @@ class SmartReelService {
     );
   }
 
-  Future<void> messageCreator({required String reelId, required String text}) async {
+  // ─── Engagement ────────────────────────────────────────────────────────────
+
+  Future<void> messageCreator({
+    required String reelId,
+    required String text,
+  }) async {
     await _api.post(
       ApiEndpoints.smartReelMessage(reelId),
       extraHeaders: await _authHeaders(),
@@ -157,11 +224,46 @@ class SmartReelService {
     );
   }
 
-  Future<void> trackView(String reelId) => _safePost(ApiEndpoints.smartReelView(reelId));
-  Future<void> trackClick(String reelId) => _safePost(ApiEndpoints.smartReelClick(reelId));
-  Future<void> like(String reelId) => _safePost(ApiEndpoints.smartReelLike(reelId));
-  Future<void> save(String reelId) => _safePost(ApiEndpoints.smartReelSave(reelId));
-  Future<void> report(String reelId) => _safePost(ApiEndpoints.smartReelReport(reelId));
+  Future<void> trackView(String reelId) =>
+      _safePost(ApiEndpoints.smartReelView(reelId));
+
+  Future<void> trackClick(String reelId) =>
+      _safePost(ApiEndpoints.smartReelClick(reelId));
+
+  /// Toggle like. Requires auth token. Returns server {is_liked, likes} or null on error.
+  Future<Map<String, dynamic>?> like(String reelId) async {
+    try {
+      final headers = await _optionalAuthHeaders();
+      final result = await _api.post(
+        ApiEndpoints.smartReelLike(reelId),
+        extraHeaders: headers,
+        timeout: const Duration(seconds: 15),
+      );
+      if (result is Map<String, dynamic>) return result;
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Toggle save. Requires auth token. Returns server {is_saved, saves} or null on error.
+  Future<Map<String, dynamic>?> save(String reelId) async {
+    try {
+      final headers = await _optionalAuthHeaders();
+      final result = await _api.post(
+        ApiEndpoints.smartReelSave(reelId),
+        extraHeaders: headers,
+        timeout: const Duration(seconds: 15),
+      );
+      if (result is Map<String, dynamic>) return result;
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> report(String reelId) =>
+      _safePost(ApiEndpoints.smartReelReport(reelId));
 
   Future<void> followCreator(String creatorId) async {
     await _api.post(
@@ -171,6 +273,8 @@ class SmartReelService {
     );
   }
 
+  // ─── Comments ──────────────────────────────────────────────────────────────
+
   Future<List<SmartReelComment>> getComments(String reelId) async {
     try {
       final decoded = await _api.get(
@@ -178,12 +282,14 @@ class SmartReelService {
         timeout: const Duration(seconds: 20),
       );
 
-      final rawItems = decoded is Map<String, dynamic> ? decoded['items'] : decoded;
+      final rawItems =
+          decoded is Map<String, dynamic> ? decoded['items'] : decoded;
       if (rawItems is! List) return [];
 
       return rawItems
           .whereType<Map>()
-          .map((item) => SmartReelComment.fromJson(Map<String, dynamic>.from(item)))
+          .map((item) =>
+              SmartReelComment.fromJson(Map<String, dynamic>.from(item)))
           .toList();
     } catch (_) {
       return [];
@@ -210,6 +316,8 @@ class SmartReelService {
       return null;
     }
   }
+
+  // ─── Internals ─────────────────────────────────────────────────────────────
 
   Future<void> _safePost(String endpoint) async {
     try {
