@@ -823,5 +823,6 @@
   "reels.deleted": "Reel supprimé",
   "reels.deleteError": "Impossible de supprimer le reel",
   "reels.updated": "Reel mis à jour",
-  "reels.updateError": "Impossible de mettre à jour. Vérifiez votre session."
+  "reels.updateError": "Impossible de mettre à jour. Vérifiez votre session.",
+  "reels.loginRequiredReport": "Connectez-vous pour signaler"
 }

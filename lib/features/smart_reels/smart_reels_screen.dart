@@ -322,6 +322,10 @@ class _SmartReelsScreenState extends State<SmartReelsScreen>
   }
 
   Future<void> reportReel(SmartReelModel reel) async {
+    if (!auth.isLoggedIn) {
+      showSnack('reels.loginRequiredReport'.tr());
+      return;
+    }
     try {
       await service.report(reel.id);
       replaceReel(reel.copyWith(reports: reel.reports + 1));

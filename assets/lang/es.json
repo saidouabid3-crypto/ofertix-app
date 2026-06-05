@@ -823,5 +823,6 @@
   "reels.deleted": "Reel eliminado",
   "reels.deleteError": "No se pudo eliminar el reel",
   "reels.updated": "Reel actualizado",
-  "reels.updateError": "No se pudo actualizar. Revisa tu sesión."
+  "reels.updateError": "No se pudo actualizar. Revisa tu sesión.",
+  "reels.loginRequiredReport": "Inicia sesión para reportar"
 }

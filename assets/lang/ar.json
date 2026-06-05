@@ -823,5 +823,6 @@
   "reels.deleted": "تم حذف الريل",
   "reels.deleteError": "تعذّر حذف الريل",
   "reels.updated": "تم تحديث الريل",
-  "reels.updateError": "تعذّر التحديث. تحقق من جلستك."
+  "reels.updateError": "تعذّر التحديث. تحقق من جلستك.",
+  "reels.loginRequiredReport": "سجّل الدخول للإبلاغ"
 }

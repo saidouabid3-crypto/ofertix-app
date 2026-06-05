@@ -262,8 +262,14 @@ class SmartReelService {
     }
   }
 
-  Future<void> report(String reelId) =>
-      _safePost(ApiEndpoints.smartReelReport(reelId));
+  Future<void> report(String reelId) async {
+    final headers = await _optionalAuthHeaders();
+    await _api.post(
+      ApiEndpoints.smartReelReport(reelId),
+      extraHeaders: headers,
+      timeout: const Duration(seconds: 15),
+    );
+  }
 
   Future<void> followCreator(String creatorId) async {
     await _api.post(

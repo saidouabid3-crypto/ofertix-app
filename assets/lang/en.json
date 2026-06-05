@@ -823,5 +823,6 @@
   "reels.deleted": "Reel deleted",
   "reels.deleteError": "Could not delete reel",
   "reels.updated": "Reel updated",
-  "reels.updateError": "Could not update. Check your session."
+  "reels.updateError": "Could not update. Check your session.",
+  "reels.loginRequiredReport": "Sign in to report"
 }
