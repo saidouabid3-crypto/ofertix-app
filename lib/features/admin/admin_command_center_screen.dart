@@ -135,9 +135,13 @@ class _AdminBodyState extends State<_AdminBody> {
               child: const Icon(Icons.admin_panel_settings_rounded, color: AppColors.orange, size: 20),
             ),
             const SizedBox(width: 10),
-            Text(
-              'admin.title'.tr(),
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 18),
+            Flexible(
+              child: Text(
+                'admin.title'.tr(),
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 18),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+              ),
             ),
           ],
         ),

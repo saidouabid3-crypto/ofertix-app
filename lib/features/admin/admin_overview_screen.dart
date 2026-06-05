@@ -64,14 +64,17 @@ class _AdminOverviewScreenState extends State<AdminOverviewScreen> {
   }
 
   Widget _buildGrid(List<Widget> cards) {
-    return GridView.count(
-      crossAxisCount: 2,
+    return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      mainAxisSpacing: 12,
-      crossAxisSpacing: 12,
-      childAspectRatio: 1.35,
-      children: cards,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 12,
+        mainAxisExtent: 150,
+      ),
+      itemCount: cards.length,
+      itemBuilder: (_, i) => cards[i],
     );
   }
 }
@@ -123,7 +126,7 @@ class _MetricCard extends StatelessWidget {
               ],
             ],
           ),
-          const Spacer(),
+          const SizedBox(height: 8),
           Text(
             value.toString(),
             style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900),
