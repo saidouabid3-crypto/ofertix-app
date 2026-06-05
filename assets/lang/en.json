@@ -894,6 +894,8 @@
   "admin.systemErrors": "System Errors",
   "admin.aiErrors": "AI Errors",
   "admin.markReview": "Mark Review",
+  "admin.commandCenter": "Admin Command Center",
+  "admin.commandCenterSubtitle": "Moderation, users and system",
   "auth.accountRestricted": "Account restricted",
   "auth.accountRestrictedMessage": "Your account has been restricted. Contact support if you think this is a mistake."
 }

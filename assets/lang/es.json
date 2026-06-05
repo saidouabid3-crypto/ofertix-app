@@ -894,6 +894,8 @@
   "admin.systemErrors": "Errores del sistema",
   "admin.aiErrors": "Errores de IA",
   "admin.markReview": "Marcar revisión",
+  "admin.commandCenter": "Centro de Comando Admin",
+  "admin.commandCenterSubtitle": "Moderación, usuarios y sistema",
   "auth.accountRestricted": "Cuenta restringida",
   "auth.accountRestrictedMessage": "Tu cuenta ha sido restringida. Contacta soporte si crees que es un error."
 }

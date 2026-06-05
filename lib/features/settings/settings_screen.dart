@@ -8,7 +8,7 @@ import '../../core/constants/app_countries.dart';
 
 import '../cashback/cashback_screen.dart';
 import '../admin/admin_command_center_screen.dart';
-
+import '../../services/profile_service.dart';
 import 'settings_provider.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -123,16 +123,22 @@ class SettingsScreen extends StatelessWidget {
                   },
                 ),
 
-                _ActionTile(
-                  title: 'Admin Dashboard',
-                  subtitle: 'Analytics, clicks and revenue',
-                  icon: Icons.dashboard_rounded,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const AdminCommandCenterScreen(),
-                      ),
+                FutureBuilder<bool>(
+                  future: ProfileService.instance.isCurrentUserAdmin(),
+                  builder: (context, snap) {
+                    if (snap.data != true) return const SizedBox.shrink();
+                    return _ActionTile(
+                      title: 'admin.commandCenter'.tr(),
+                      subtitle: 'admin.commandCenterSubtitle'.tr(),
+                      icon: Icons.admin_panel_settings_rounded,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const AdminCommandCenterScreen(),
+                          ),
+                        );
+                      },
                     );
                   },
                 ),

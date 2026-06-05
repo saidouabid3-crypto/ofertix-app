@@ -191,7 +191,7 @@ class _AdminBodyState extends State<_AdminBody> {
           ),
           // Main content
           Expanded(
-            child: Provider.value(
+            child: ChangeNotifierProvider.value(
               value: provider,
               child: IndexedStack(
                 index: _index,

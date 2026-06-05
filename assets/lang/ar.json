@@ -894,6 +894,8 @@
   "admin.systemErrors": "أخطاء النظام",
   "admin.aiErrors": "أخطاء الذكاء الاصطناعي",
   "admin.markReview": "تأشير للمراجعة",
+  "admin.commandCenter": "مركز تحكم الإدارة",
+  "admin.commandCenterSubtitle": "الإشراف، المستخدمون والنظام",
   "auth.accountRestricted": "الحساب مقيّد",
   "auth.accountRestrictedMessage": "تم تقييد حسابك. تواصل مع الدعم إذا كنت تعتقد أن هذا خطأ."
 }
