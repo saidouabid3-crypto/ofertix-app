@@ -43,6 +43,12 @@ class ForbiddenException extends AppException {
   });
 }
 
+/// Thrown when the backend returns 403 USER_BANNED — account is restricted.
+class BannedAccountException extends ForbiddenException {
+  const BannedAccountException([super.message = 'Your account is restricted.'])
+      : super(code: 'user_banned');
+}
+
 class NotFoundException extends AppException {
   const NotFoundException(
     super.message, {

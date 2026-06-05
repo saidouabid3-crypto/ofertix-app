@@ -893,5 +893,7 @@
   "admin.openReports": "Open Reports",
   "admin.systemErrors": "System Errors",
   "admin.aiErrors": "AI Errors",
-  "admin.markReview": "Mark Review"
+  "admin.markReview": "Mark Review",
+  "auth.accountRestricted": "Account restricted",
+  "auth.accountRestrictedMessage": "Your account has been restricted. Contact support if you think this is a mistake."
 }

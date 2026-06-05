@@ -378,6 +378,9 @@ class ApiService {
           resetsAt: meta['resetsAt']?.toString(),
         );
       }
+      if (statusCode == 403 && message.startsWith('USER_BANNED')) {
+        throw const BannedAccountException();
+      }
       throw NetworkException(message, statusCode: statusCode, code: 'api_error');
     }
 
@@ -417,6 +420,9 @@ class ApiService {
           resetsAt: meta['resetsAt']?.toString(),
         );
       case 403:
+        if (hasMessage && safeMessage.startsWith('USER_BANNED')) {
+          throw const BannedAccountException();
+        }
         throw ForbiddenException(
           hasMessage ? safeMessage : 'You do not have permission to do this.',
         );

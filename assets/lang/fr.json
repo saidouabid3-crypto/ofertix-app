@@ -893,5 +893,7 @@
   "admin.openReports": "Signalements ouverts",
   "admin.systemErrors": "Erreurs système",
   "admin.aiErrors": "Erreurs IA",
-  "admin.markReview": "Marquer révision"
+  "admin.markReview": "Marquer révision",
+  "auth.accountRestricted": "Compte restreint",
+  "auth.accountRestrictedMessage": "Votre compte a été restreint. Contactez le support si vous pensez que c'est une erreur."
 }

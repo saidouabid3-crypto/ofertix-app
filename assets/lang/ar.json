@@ -893,5 +893,7 @@
   "admin.openReports": "تقارير مفتوحة",
   "admin.systemErrors": "أخطاء النظام",
   "admin.aiErrors": "أخطاء الذكاء الاصطناعي",
-  "admin.markReview": "تأشير للمراجعة"
+  "admin.markReview": "تأشير للمراجعة",
+  "auth.accountRestricted": "الحساب مقيّد",
+  "auth.accountRestrictedMessage": "تم تقييد حسابك. تواصل مع الدعم إذا كنت تعتقد أن هذا خطأ."
 }
