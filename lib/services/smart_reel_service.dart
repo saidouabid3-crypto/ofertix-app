@@ -24,7 +24,7 @@ class ReelsFeedPage {
 
 class SmartReelService {
   SmartReelService({String? baseUrl, ApiService? api})
-      : _api = api ?? ApiService.instance;
+    : _api = api ?? ApiService.instance;
 
   static final SmartReelService instance = SmartReelService();
 
@@ -87,16 +87,11 @@ class SmartReelService {
 
     final items = rawItems
         .whereType<Map>()
-        .map((item) =>
-            SmartReelModel.fromJson(Map<String, dynamic>.from(item)))
+        .map((item) => SmartReelModel.fromJson(Map<String, dynamic>.from(item)))
         .where((reel) => reel.bestVideoUrl.isNotEmpty)
         .toList();
 
-    return ReelsFeedPage(
-      items: items,
-      cursor: nextCursor,
-      hasMore: hasMore,
-    );
+    return ReelsFeedPage(items: items, cursor: nextCursor, hasMore: hasMore);
   }
 
   // ─── Upload / Edit / Delete ────────────────────────────────────────────────
@@ -126,8 +121,9 @@ class SmartReelService {
       'description': description.trim(),
       'store': store.trim(),
       'current_price': currentPrice.toString(),
-      'currency':
-          currency.trim().isEmpty ? 'EUR' : currency.trim().toUpperCase(),
+      'currency': currency.trim().isEmpty
+          ? 'EUR'
+          : currency.trim().toUpperCase(),
       'creator_id': resolvedCreator.id,
       'creator_name': resolvedCreator.name,
       'creator_avatar_url': resolvedCreator.avatarUrl,
@@ -182,16 +178,15 @@ class SmartReelService {
         'store': store.trim(),
         'current_price': currentPrice,
         'old_price': oldPrice != null && oldPrice > 0 ? oldPrice : null,
-        'currency':
-            currency.trim().isEmpty ? 'EUR' : currency.trim().toUpperCase(),
-        'affiliate_url':
-            affiliateUrl != null && affiliateUrl.trim().isNotEmpty
-                ? affiliateUrl.trim()
-                : null,
-        'product_id':
-            productId != null && productId.trim().isNotEmpty
-                ? productId.trim()
-                : null,
+        'currency': currency.trim().isEmpty
+            ? 'EUR'
+            : currency.trim().toUpperCase(),
+        'affiliate_url': affiliateUrl != null && affiliateUrl.trim().isNotEmpty
+            ? affiliateUrl.trim()
+            : null,
+        'product_id': productId != null && productId.trim().isNotEmpty
+            ? productId.trim()
+            : null,
       },
     );
 
@@ -288,14 +283,17 @@ class SmartReelService {
         timeout: const Duration(seconds: 20),
       );
 
-      final rawItems =
-          decoded is Map<String, dynamic> ? decoded['items'] : decoded;
+      final rawItems = decoded is Map<String, dynamic>
+          ? decoded['items']
+          : decoded;
       if (rawItems is! List) return [];
 
       return rawItems
           .whereType<Map>()
-          .map((item) =>
-              SmartReelComment.fromJson(Map<String, dynamic>.from(item)))
+          .map(
+            (item) =>
+                SmartReelComment.fromJson(Map<String, dynamic>.from(item)),
+          )
           .toList();
     } catch (_) {
       return [];
@@ -361,7 +359,7 @@ class SmartReelService {
       if (email.contains('@')) name = email.split('@').first;
     }
 
-    if (name.isEmpty) name = 'Ofertix User';
+    if (name.isEmpty) name = 'Creator';
     return _ResolvedCreator(id: id, name: name, avatarUrl: avatar);
   }
 

@@ -5,7 +5,11 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../models/user_profile_model.dart';
+import '../models/user_identity.dart';
+import '../models/marketplace_item.dart';
 import '../models/smart_reel_model.dart';
+import '../core/config/api_endpoints.dart';
+import 'api_service.dart';
 import 'auth_service.dart';
 import 'settings_service.dart';
 
@@ -18,6 +22,7 @@ class ProfileService {
   final FirebaseStorage _storage = FirebaseStorage.instance;
   final AuthService _auth = AuthService.instance;
   final SettingsService _settings = SettingsService.instance;
+  final ApiService _api = ApiService.instance;
 
   CollectionReference<Map<String, dynamic>> get _users =>
       _db.collection('users');
@@ -85,6 +90,7 @@ class ProfileService {
     required String username,
     required String bio,
     required String country,
+    String? city,
     required String currency,
     required bool isCreator,
     String? photoUrl,
@@ -124,6 +130,7 @@ class ProfileService {
       usernameLower: cleanUsername.toLowerCase(),
       bio: cleanBio,
       country: country.trim().isEmpty ? 'global' : country.trim(),
+      city: city?.trim() ?? profile.city,
       currency: currency.trim().isEmpty ? 'EUR' : currency.trim().toUpperCase(),
       isCreator: isCreator,
       photoUrl: photoUrl ?? profile.photoUrl,
@@ -133,6 +140,27 @@ class ProfileService {
     await _users
         .doc(profile.uid)
         .set(updated.toUpdateMap(), SetOptions(merge: true));
+
+    try {
+      final token = await _auth.getIdToken();
+      if (token != null && token.trim().isNotEmpty) {
+        await _api.put(
+          '${ApiEndpoints.profiles}/me',
+          body: {
+            'display_name': updated.displayName,
+            'username': updated.username,
+            'bio': updated.bio,
+            'country': updated.country,
+            'city': updated.city,
+            'currency': updated.currency,
+            'photo_url': updated.photoUrl,
+            'is_creator': updated.isCreator,
+          },
+          extraHeaders: {'Authorization': 'Bearer ${token.trim()}'},
+          timeout: const Duration(seconds: 20),
+        );
+      }
+    } catch (_) {}
 
     await _settings.setCountry(updated.country);
     await _settings.setCurrency(updated.currency);
@@ -219,6 +247,78 @@ class ProfileService {
       'uid': data['uid'] ?? cleanUid,
       'email': data['email'] ?? '',
     });
+  }
+
+  Future<UserIdentity?> getPublicIdentity(String uid) async {
+    final cleanUid = uid.trim();
+    if (cleanUid.isEmpty) return null;
+
+    try {
+      final decoded = await _api.get(
+        '${ApiEndpoints.profiles}/$cleanUid/public',
+      );
+      if (decoded is Map) {
+        return UserIdentity.fromMap(Map<String, dynamic>.from(decoded));
+      }
+    } catch (_) {}
+
+    final profile = await getProfileById(cleanUid);
+    return profile == null ? null : UserIdentity.fromProfile(profile);
+  }
+
+  Future<List<MarketplaceItem>> getSellItems({
+    required String sellerId,
+    int limit = 24,
+  }) async {
+    final cleanSellerId = sellerId.trim();
+    if (cleanSellerId.isEmpty) return [];
+
+    try {
+      final decoded = await _api.get(
+        '${ApiEndpoints.profiles}/$cleanSellerId/sell-items',
+        queryParameters: {'limit': limit.clamp(1, 50)},
+      );
+      final rawItems = decoded is Map<String, dynamic>
+          ? decoded['items']
+          : decoded;
+      if (rawItems is List) {
+        return rawItems
+            .whereType<Map>()
+            .map(
+              (item) => MarketplaceItem.fromMap(
+                Map<String, dynamic>.from(item),
+                item['id']?.toString() ?? '',
+              ),
+            )
+            .toList();
+      }
+    } catch (_) {}
+
+    final query = await _db
+        .collection('marketplace_items')
+        .where('sellerId', isEqualTo: cleanSellerId)
+        .limit(limit.clamp(1, 50))
+        .get();
+
+    return query.docs
+        .map((doc) => MarketplaceItem.fromMap(doc.data(), doc.id))
+        .where((item) => item.isActive)
+        .toList();
+  }
+
+  Future<bool> followProfile(String uid) async {
+    final token = await _auth.getIdToken();
+    if (token == null || token.trim().isEmpty) {
+      throw Exception('Debes iniciar sesión para seguir perfiles.');
+    }
+
+    final decoded = await _api.post(
+      '${ApiEndpoints.profiles}/${uid.trim()}/follow',
+      extraHeaders: {'Authorization': 'Bearer ${token.trim()}'},
+      timeout: const Duration(seconds: 20),
+    );
+    if (decoded is Map) return decoded['is_following'] == true;
+    return true;
   }
 
   Future<List<SmartReelModel>> getCreatorReels({

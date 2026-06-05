@@ -3,9 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 
 import '../../models/smart_reel_model.dart';
+import '../../models/marketplace_item.dart';
 import '../../models/user_profile_model.dart';
+import '../../services/auth_service.dart';
 import '../../services/profile_service.dart';
-import '../../services/smart_reel_service.dart';
 import '../messages/chat_screen.dart';
 
 class CreatorProfileScreen extends StatefulWidget {
@@ -25,10 +26,9 @@ class CreatorProfileScreen extends StatefulWidget {
 class _CreatorProfileScreenState extends State<CreatorProfileScreen> {
   final ProfileService _profileService = ProfileService.instance;
 
-  late final SmartReelService _reelService;
-
   UserProfileModel? profile;
   List<SmartReelModel> reels = [];
+  List<MarketplaceItem> sellItems = [];
   bool loading = true;
   bool following = false;
   String? error;
@@ -36,7 +36,6 @@ class _CreatorProfileScreenState extends State<CreatorProfileScreen> {
   @override
   void initState() {
     super.initState();
-    _reelService = SmartReelService(baseUrl: widget.baseUrl);
     _load();
   }
 
@@ -51,12 +50,16 @@ class _CreatorProfileScreenState extends State<CreatorProfileScreen> {
       final items = await _profileService.getCreatorReels(
         creatorId: widget.creatorId,
       );
+      final marketplaceItems = await _profileService.getSellItems(
+        sellerId: widget.creatorId,
+      );
 
       if (!mounted) return;
 
       setState(() {
         profile = user;
         reels = items;
+        sellItems = marketplaceItems;
         loading = false;
       });
     } catch (_) {
@@ -69,15 +72,24 @@ class _CreatorProfileScreenState extends State<CreatorProfileScreen> {
   }
 
   Future<void> _toggleFollow() async {
+    if (AuthService.instance.currentUserId == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('profile.loginRequired'.tr())));
+      return;
+    }
+
     try {
-      await _reelService.followCreator(widget.creatorId);
+      final isFollowing = await _profileService.followProfile(widget.creatorId);
       if (!mounted) return;
-      setState(() => following = !following);
+      setState(() => following = isFollowing);
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('auto.profile_creator_profile_screen.follow_pendiente_de_activar'.tr()
+          content: Text(
+            'auto.profile_creator_profile_screen.follow_pendiente_de_activar'
+                .tr()
                 .tr(),
           ),
         ),
@@ -93,7 +105,9 @@ class _CreatorProfileScreenState extends State<CreatorProfileScreen> {
         builder: (_) => ChatScreen(
           baseUrl: widget.baseUrl,
           recipientId: widget.creatorId,
-          recipientName: p?.displayName ?? 'Ofertix User',
+          recipientName: p?.displayName.trim().isNotEmpty == true
+              ? p!.displayName
+              : 'profile.creatorFallback'.tr(),
           recipientAvatarUrl: p?.photoUrl ?? '',
         ),
       ),
@@ -143,18 +157,21 @@ class _CreatorProfileScreenState extends State<CreatorProfileScreen> {
                 background: _ProfileHeader(
                   profile: p,
                   reelsCount: reels.length,
+                  sellItemsCount: sellItems.length,
                   following: following,
                   onFollow: _toggleFollow,
                   onMessage: _openChat,
                 ),
               ),
             ),
+            SliverToBoxAdapter(child: _SellItemsStrip(items: sellItems)),
             SliverToBoxAdapter(
               child: Padding(
                 padding: EdgeInsets.fromLTRB(16, 14, 16, 12),
                 child: Row(
                   children: [
-                    Text('auto.profile_creator_profile_screen.reels'.tr(),
+                    Text(
+                      'auto.profile_creator_profile_screen.reels'.tr(),
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 19,
@@ -177,7 +194,9 @@ class _CreatorProfileScreenState extends State<CreatorProfileScreen> {
               SliverFillRemaining(
                 hasScrollBody: false,
                 child: Center(
-                  child: Text('auto.profile_creator_profile_screen.este_creator_todavia_no_tiene_reels'.tr()
+                  child: Text(
+                    'auto.profile_creator_profile_screen.este_creator_todavia_no_tiene_reels'
+                        .tr()
                         .tr(),
                     style: TextStyle(
                       color: Colors.white54,
@@ -213,6 +232,7 @@ class _ProfileHeader extends StatelessWidget {
   _ProfileHeader({
     required this.profile,
     required this.reelsCount,
+    required this.sellItemsCount,
     required this.following,
     required this.onFollow,
     required this.onMessage,
@@ -220,6 +240,7 @@ class _ProfileHeader extends StatelessWidget {
 
   final UserProfileModel? profile;
   final int reelsCount;
+  final int sellItemsCount;
   final bool following;
   final VoidCallback onFollow;
   final VoidCallback onMessage;
@@ -261,7 +282,7 @@ class _ProfileHeader extends StatelessWidget {
                   Text(
                     p?.displayName.trim().isNotEmpty == true
                         ? p!.displayName
-                        : 'Ofertix Creator',
+                        : 'profile.creatorFallback'.tr(),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
@@ -272,9 +293,7 @@ class _ProfileHeader extends StatelessWidget {
                   ),
                   SizedBox(height: 5),
                   Text(
-                    p?.bio.trim().isNotEmpty == true
-                        ? p!.bio
-                        : 'Deals, reels y ofertas verificadas.',
+                    p?.bio.trim().isNotEmpty == true ? p!.bio : '',
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
@@ -286,7 +305,14 @@ class _ProfileHeader extends StatelessWidget {
                   SizedBox(height: 11),
                   Row(
                     children: [
-                      _Stat(label: 'auto.profile_creator_profile_screen.reels'.tr(), value: reelsCount.toString()),
+                      _Stat(
+                        label: 'auto.profile_creator_profile_screen.reels'.tr(),
+                        value: reelsCount.toString(),
+                      ),
+                      _Stat(
+                        label: 'profile.sellItems'.tr(),
+                        value: sellItemsCount.toString(),
+                      ),
                       _Stat(
                         label: 'Followers',
                         value: '${p?.followersCount ?? 0}',
@@ -382,6 +408,109 @@ class _ProfileButton extends StatelessWidget {
           ),
         ),
         child: Text(label, style: TextStyle(fontWeight: FontWeight.w900)),
+      ),
+    );
+  }
+}
+
+class _SellItemsStrip extends StatelessWidget {
+  const _SellItemsStrip({required this.items});
+
+  final List<MarketplaceItem> items;
+
+  @override
+  Widget build(BuildContext context) {
+    if (items.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'profile.sellerListings'.tr(),
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 19,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            height: 138,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemBuilder: (context, index) =>
+                  _SellItemTile(item: items[index]),
+              separatorBuilder: (_, __) => const SizedBox(width: 10),
+              itemCount: items.length.clamp(0, 10),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SellItemTile extends StatelessWidget {
+  const _SellItemTile({required this.item});
+
+  final MarketplaceItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 150,
+      decoration: BoxDecoration(
+        color: Colors.white10,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white12),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: item.hasImage
+                ? CachedNetworkImage(
+                    imageUrl: item.mainImage,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    errorWidget: (_, __, ___) =>
+                        const Icon(Icons.shopping_bag, color: Colors.white54),
+                  )
+                : const Center(
+                    child: Icon(Icons.shopping_bag, color: Colors.white54),
+                  ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(9),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  item.formattedPrice,
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

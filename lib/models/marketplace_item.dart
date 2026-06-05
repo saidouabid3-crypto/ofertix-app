@@ -2,6 +2,9 @@ class MarketplaceItem {
   final String id;
   final String sellerId;
   final String sellerName;
+  final String sellerUsername;
+  final String sellerAvatarUrl;
+  final bool sellerVerified;
   final String title;
   final String description;
   final double price;
@@ -26,6 +29,9 @@ class MarketplaceItem {
     required this.id,
     required this.sellerId,
     required this.sellerName,
+    this.sellerUsername = '',
+    this.sellerAvatarUrl = '',
+    this.sellerVerified = false,
     required this.title,
     required this.description,
     required this.price,
@@ -60,9 +66,17 @@ class MarketplaceItem {
       sellerId:
           map['sellerId']?.toString() ?? map['seller_id']?.toString() ?? '',
       sellerName:
-          map['sellerName']?.toString() ??
-          map['seller_name']?.toString() ??
-          'Vendedor Ofertix',
+          map['sellerName']?.toString() ?? map['seller_name']?.toString() ?? '',
+      sellerUsername: (map['sellerUsername'] ?? map['seller_username'] ?? '')
+          .toString(),
+      sellerAvatarUrl:
+          (map['sellerAvatarUrl'] ??
+                  map['seller_avatar_url'] ??
+                  map['sellerPhotoUrl'] ??
+                  '')
+              .toString(),
+      sellerVerified:
+          map['sellerVerified'] == true || map['seller_verified'] == true,
       title: map['title']?.toString() ?? 'Producto',
       description: map['description']?.toString() ?? '',
       price: _toDouble(map['price']),
@@ -89,6 +103,9 @@ class MarketplaceItem {
   Map<String, dynamic> toMap() => {
     'sellerId': sellerId,
     'sellerName': sellerName,
+    'sellerUsername': sellerUsername,
+    'sellerAvatarUrl': sellerAvatarUrl,
+    'sellerVerified': sellerVerified,
     'title': title,
     'description': description,
     'price': price,

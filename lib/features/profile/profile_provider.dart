@@ -41,6 +41,7 @@ class ProfileProvider extends ChangeNotifier {
     required String username,
     required String bio,
     required String country,
+    required String city,
     required String currency,
     required bool isCreator,
     XFile? image,
@@ -50,7 +51,8 @@ class ProfileProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final baseProfile = profile ?? await _profileService.createProfileIfMissing();
+      final baseProfile =
+          profile ?? await _profileService.createProfileIfMissing();
       if (baseProfile == null) {
         throw Exception('No authenticated user found.');
       }
@@ -69,6 +71,7 @@ class ProfileProvider extends ChangeNotifier {
         username: username,
         bio: bio,
         country: country,
+        city: city,
         currency: currency,
         isCreator: isCreator,
         photoUrl: photoUrl,

@@ -55,7 +55,7 @@ class UserGeneratedDealModel {
       longitude: json['longitude'] == null ? null : _double(json['longitude']),
       mediaUrl: json['media_url']?.toString() ?? '',
       creatorId: json['creator_id']?.toString() ?? 'mobile_user',
-      creatorName: json['creator_name']?.toString() ?? 'Ofertix User',
+      creatorName: json['creator_name']?.toString() ?? 'User',
       status: json['status']?.toString() ?? 'pending',
       rewardPoints: _int(json['reward_points']),
       hotScore: _int(json['hot_score'], fallback: 50),

@@ -67,7 +67,7 @@ class ConversationModel {
 
   String otherUserName(String currentUserId) {
     final otherId = otherUserId(currentUserId);
-    return participantNames[otherId] ?? 'Ofertix User';
+    return participantNames[otherId] ?? 'User';
   }
 
   String otherUserPhoto(String currentUserId) {

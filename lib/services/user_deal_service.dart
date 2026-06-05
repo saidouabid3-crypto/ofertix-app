@@ -33,7 +33,9 @@ class UserDealService {
 
     return raw
         .whereType<Map>()
-        .map((e) => UserGeneratedDealModel.fromJson(Map<String, dynamic>.from(e)))
+        .map(
+          (e) => UserGeneratedDealModel.fromJson(Map<String, dynamic>.from(e)),
+        )
         .toList();
   }
 
@@ -53,8 +55,7 @@ class UserDealService {
     final user = _auth.currentUser;
     final profile = await _profile.getCurrentProfile();
     final creatorId = profile?.uid ?? user?.uid ?? 'mobile_user';
-    final creatorName =
-        profile?.displayName ?? user?.displayName ?? 'Ofertix User';
+    final creatorName = profile?.displayName ?? user?.displayName ?? 'User';
 
     final decoded = await _api.post(
       ApiEndpoints.userDeals,

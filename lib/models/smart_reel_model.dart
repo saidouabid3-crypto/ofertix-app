@@ -77,7 +77,7 @@ class SmartReelModel {
       description: _string(json['description']),
       store: _string(json['store']),
       creatorId: _string(json['creator_id'], fallback: 'ofertix_creator'),
-      creatorName: _string(json['creator_name'], fallback: 'Ofertix Deals'),
+      creatorName: _string(json['creator_name'], fallback: 'Creator'),
       creatorAvatarUrl: _string(json['creator_avatar_url']),
       currentPrice: _double(json['current_price']),
       oldPrice: json['old_price'] == null ? null : _double(json['old_price']),
@@ -276,6 +276,8 @@ class SmartReelComment {
   final String reelId;
   final String userId;
   final String userName;
+  final String username;
+  final String userAvatarUrl;
   final String text;
   final DateTime? createdAt;
 
@@ -284,6 +286,8 @@ class SmartReelComment {
     required this.reelId,
     required this.userId,
     required this.userName,
+    required this.username,
+    required this.userAvatarUrl,
     required this.text,
     required this.createdAt,
   });
@@ -293,7 +297,9 @@ class SmartReelComment {
       id: json['id']?.toString() ?? '',
       reelId: json['reel_id']?.toString() ?? '',
       userId: json['user_id']?.toString() ?? '',
-      userName: json['user_name']?.toString() ?? 'Usuario',
+      userName: json['user_name']?.toString() ?? 'Creator',
+      username: json['username']?.toString() ?? '',
+      userAvatarUrl: json['user_avatar_url']?.toString() ?? '',
       text: json['text']?.toString() ?? '',
       createdAt: DateTime.tryParse(json['created_at']?.toString() ?? ''),
     );

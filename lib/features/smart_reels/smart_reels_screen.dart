@@ -264,7 +264,8 @@ class _SmartReelsScreenState extends State<SmartReelsScreen>
     if (result != null) {
       // Sync authoritative state from server.
       final serverLiked = result['is_liked'] as bool? ?? nextLiked;
-      final serverLikes = result['likes'] as int? ??
+      final serverLikes =
+          result['likes'] as int? ??
           (nextLiked ? reel.likes + 1 : (reel.likes - 1).clamp(0, 999999));
       replaceReel(reel.copyWith(isLiked: serverLiked, likes: serverLikes));
     } else {
@@ -291,7 +292,8 @@ class _SmartReelsScreenState extends State<SmartReelsScreen>
     if (!mounted) return;
     if (result != null) {
       final serverSaved = result['is_saved'] as bool? ?? nextSaved;
-      final serverSaves = result['saves'] as int? ??
+      final serverSaves =
+          result['saves'] as int? ??
           (nextSaved ? reel.saves + 1 : (reel.saves - 1).clamp(0, 999999));
       replaceReel(reel.copyWith(isSaved: serverSaved, saves: serverSaves));
       showSnack(serverSaved ? 'reels.saved'.tr() : 'reels.unsaved'.tr());
@@ -491,7 +493,8 @@ class _SmartReelsScreenState extends State<SmartReelsScreen>
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: Color(0xFF161616),
-        title: Text('auto.smart_reels_smart_reels_screen.eliminar_reel'.tr(),
+        title: Text(
+          'auto.smart_reels_smart_reels_screen.eliminar_reel'.tr(),
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900),
         ),
         content: Text(
@@ -505,7 +508,8 @@ class _SmartReelsScreenState extends State<SmartReelsScreen>
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: Text('auto.smart_reels_smart_reels_screen.eliminar'.tr(),
+            child: Text(
+              'auto.smart_reels_smart_reels_screen.eliminar'.tr(),
               style: TextStyle(color: Colors.redAccent),
             ),
           ),
@@ -617,7 +621,8 @@ class _SmartReelsScreenState extends State<SmartReelsScreen>
               padding: EdgeInsets.fromLTRB(16, 10, 16, 0),
               child: Row(
                 children: [
-                  Text('auto.smart_reels_smart_reels_screen.ofertix_reels'.tr(),
+                  Text(
+                    'auto.smart_reels_smart_reels_screen.ofertix_reels'.tr(),
                     style: TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.w900,
@@ -1027,7 +1032,11 @@ class _RightActions extends StatelessWidget {
           activeColor: Colors.white,
           onTap: onSave,
         ),
-        _ActionButton(icon: Icons.send_rounded, label: 'product.share'.tr(), onTap: onShare),
+        _ActionButton(
+          icon: Icons.send_rounded,
+          label: 'product.share'.tr(),
+          onTap: onShare,
+        ),
         _ActionButton(icon: Icons.more_horiz_rounded, label: '', onTap: onMenu),
       ],
     );
@@ -1231,7 +1240,8 @@ class _ReelInfo extends StatelessWidget {
           child: ElevatedButton.icon(
             onPressed: onBuy,
             icon: Icon(Icons.shopping_bag_rounded, size: 20),
-            label: Text('auto.smart_reels_smart_reels_screen.ver_oferta'.tr(),
+            label: Text(
+              'auto.smart_reels_smart_reels_screen.ver_oferta'.tr(),
               style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14),
             ),
             style: ElevatedButton.styleFrom(
@@ -1421,7 +1431,12 @@ class _ReelOptionsSheet extends StatelessWidget {
               _MenuTile(
                 icon: Icons.bar_chart_rounded,
                 title: 'smartReels.viewStats'.tr(),
-                subtitle: 'smartReels.statsSubtitle'.tr(namedArgs: {'views': '${reel.views}', 'likes': '${reel.likes}'}),
+                subtitle: 'smartReels.statsSubtitle'.tr(
+                  namedArgs: {
+                    'views': '${reel.views}',
+                    'likes': '${reel.likes}',
+                  },
+                ),
                 onTap: () => Navigator.pop(context, _ReelMenuAction.stats),
               ),
             ] else ...[
@@ -1576,7 +1591,9 @@ class _CommentsSheetState extends State<_CommentsSheet> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('auto.smart_reels_smart_reels_screen.no_se_pudo_enviar_el_comentario'.tr()
+          content: Text(
+            'auto.smart_reels_smart_reels_screen.no_se_pudo_enviar_el_comentario'
+                .tr()
                 .tr(),
           ),
         ),
@@ -1610,7 +1627,8 @@ class _CommentsSheetState extends State<_CommentsSheet> {
               ),
             ),
             SizedBox(height: 14),
-            Text('auto.smart_reels_smart_reels_screen.comentarios'.tr(),
+            Text(
+              'auto.smart_reels_smart_reels_screen.comentarios'.tr(),
               style: TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.w900,
@@ -1625,7 +1643,9 @@ class _CommentsSheetState extends State<_CommentsSheet> {
                     )
                   : comments.isEmpty
                   ? Center(
-                      child: Text('auto.smart_reels_smart_reels_screen.se_el_primero_en_comentar'.tr()
+                      child: Text(
+                        'auto.smart_reels_smart_reels_screen.se_el_primero_en_comentar'
+                            .tr()
                             .tr(),
                         style: TextStyle(
                           color: Colors.white54,
@@ -1645,13 +1665,21 @@ class _CommentsSheetState extends State<_CommentsSheet> {
                           contentPadding: EdgeInsets.zero,
                           leading: CircleAvatar(
                             backgroundColor: Colors.white12,
-                            child: Icon(
-                              Icons.person_rounded,
-                              color: Colors.white,
-                            ),
+                            backgroundImage:
+                                comment.userAvatarUrl.startsWith('http')
+                                ? NetworkImage(comment.userAvatarUrl)
+                                : null,
+                            child: comment.userAvatarUrl.startsWith('http')
+                                ? null
+                                : Icon(
+                                    Icons.person_rounded,
+                                    color: Colors.white,
+                                  ),
                           ),
                           title: Text(
-                            comment.userName,
+                            comment.username.trim().isNotEmpty
+                                ? '@${comment.username.trim()}'
+                                : comment.userName,
                             style: TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.w900,
@@ -1682,7 +1710,9 @@ class _CommentsSheetState extends State<_CommentsSheet> {
                       minLines: 1,
                       maxLines: 3,
                       decoration: InputDecoration(
-                        hintText: 'auto.smart_reels_smart_reels_screen.escribe_un_comentario'.tr()
+                        hintText:
+                            'auto.smart_reels_smart_reels_screen.escribe_un_comentario'
+                                .tr()
                                 .tr(),
                         hintStyle: TextStyle(color: Colors.white38),
                         filled: true,
@@ -1870,7 +1900,8 @@ class _EditReelSheetState extends State<_EditReelSheet> {
                   ),
                 ),
                 SizedBox(height: 18),
-                Text('auto.smart_reels_smart_reels_screen.editar_reel'.tr(),
+                Text(
+                  'auto.smart_reels_smart_reels_screen.editar_reel'.tr(),
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 22,
@@ -2057,7 +2088,8 @@ class _EmptyState extends StatelessWidget {
             children: [
               Icon(Icons.video_library_rounded, color: Colors.white, size: 72),
               SizedBox(height: 16),
-              Text('auto.smart_reels_smart_reels_screen.no_hay_reels_todavia'.tr(),
+              Text(
+                'auto.smart_reels_smart_reels_screen.no_hay_reels_todavia'.tr(),
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: Colors.white,
@@ -2066,7 +2098,9 @@ class _EmptyState extends StatelessWidget {
                 ),
               ),
               SizedBox(height: 8),
-              Text('auto.smart_reels_smart_reels_screen.publica_el_primer_smart_reel_de_oferti'.tr()
+              Text(
+                'auto.smart_reels_smart_reels_screen.publica_el_primer_smart_reel_de_oferti'
+                    .tr()
                     .tr(),
                 textAlign: TextAlign.center,
                 style: TextStyle(
@@ -2078,7 +2112,8 @@ class _EmptyState extends StatelessWidget {
               ElevatedButton.icon(
                 onPressed: onAdd,
                 icon: Icon(Icons.add_rounded),
-                label: Text('auto.smart_reels_smart_reels_screen.anadir_reel'.tr(),
+                label: Text(
+                  'auto.smart_reels_smart_reels_screen.anadir_reel'.tr(),
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.white,
@@ -2087,7 +2122,8 @@ class _EmptyState extends StatelessWidget {
               ),
               TextButton(
                 onPressed: onRetry,
-                child: Text('auto.smart_reels_smart_reels_screen.reintentar'.tr(),
+                child: Text(
+                  'auto.smart_reels_smart_reels_screen.reintentar'.tr(),
                   style: TextStyle(color: Colors.white70),
                 ),
               ),
@@ -2129,7 +2165,8 @@ class _ErrorState extends StatelessWidget {
               ElevatedButton.icon(
                 onPressed: onRetry,
                 icon: Icon(Icons.refresh_rounded),
-                label: Text('auto.smart_reels_smart_reels_screen.reintentar'.tr(),
+                label: Text(
+                  'auto.smart_reels_smart_reels_screen.reintentar'.tr(),
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.white,

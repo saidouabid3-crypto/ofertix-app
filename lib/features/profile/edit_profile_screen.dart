@@ -24,6 +24,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   late final TextEditingController _usernameController;
   late final TextEditingController _bioController;
   late final TextEditingController _countryController;
+  late final TextEditingController _cityController;
   late final TextEditingController _currencyController;
 
   XFile? _selectedImage;
@@ -37,6 +38,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _usernameController = TextEditingController(text: widget.profile.username);
     _bioController = TextEditingController(text: widget.profile.bio);
     _countryController = TextEditingController(text: widget.profile.country);
+    _cityController = TextEditingController(text: widget.profile.city);
     _currencyController = TextEditingController(text: widget.profile.currency);
     _isCreator = widget.profile.isCreator;
   }
@@ -47,6 +49,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _usernameController.dispose();
     _bioController.dispose();
     _countryController.dispose();
+    _cityController.dispose();
     _currencyController.dispose();
     super.dispose();
   }
@@ -80,6 +83,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       username: _usernameController.text,
       bio: _bioController.text,
       country: _countryController.text,
+      city: _cityController.text,
       currency: _currencyController.text,
       isCreator: _isCreator,
       image: _selectedImage,
@@ -90,7 +94,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     if (ok) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('auto.profile_edit_profile_screen.perfil_actualizado_correctamente'.tr()
+          content: Text(
+            'auto.profile_edit_profile_screen.perfil_actualizado_correctamente'
+                .tr()
                 .tr(),
           ),
         ),
@@ -216,6 +222,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       ],
                     ),
 
+                    SizedBox(height: 14),
+
+                    _Input(
+                      controller: _cityController,
+                      label: 'profile.city'.tr(),
+                      hint: 'Barcelona',
+                      icon: Icons.location_city_rounded,
+                    ),
+
                     SizedBox(height: 18),
 
                     _CreatorCard(
@@ -304,7 +319,8 @@ class _TopBar extends StatelessWidget {
         ),
         SizedBox(width: 12),
         Expanded(
-          child: Text('auto.profile_edit_profile_screen.editar_perfil'.tr(),
+          child: Text(
+            'auto.profile_edit_profile_screen.editar_perfil'.tr(),
             style: TextStyle(
               color: ui.text,
               fontSize: 28,
@@ -472,7 +488,8 @@ class _CreatorCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('auto.profile_edit_profile_screen.creator_mode'.tr(),
+                Text(
+                  'auto.profile_edit_profile_screen.creator_mode'.tr(),
                   style: TextStyle(
                     color: ui.text,
                     fontSize: 15,
@@ -480,7 +497,9 @@ class _CreatorCard extends StatelessWidget {
                   ),
                 ),
                 SizedBox(height: 3),
-                Text('auto.profile_edit_profile_screen.activa_tu_perfil_para_publicar_ofertas'.tr()
+                Text(
+                  'auto.profile_edit_profile_screen.activa_tu_perfil_para_publicar_ofertas'
+                      .tr()
                       .tr(),
                   style: TextStyle(
                     color: ui.muted,

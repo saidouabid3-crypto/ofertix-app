@@ -2,13 +2,16 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 
+import '../../core/config/api_config.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/marketplace_item.dart';
 import '../../models/ofertix_ad_model.dart';
 import '../../services/marketplace_service.dart';
 import '../../services/country_service.dart';
+import '../../services/profile_service.dart';
 import '../../widgets/pro_max/ofertix_logo_mark.dart';
 import '../../widgets/ofertix_ad_slot.dart';
+import '../profile/creator_profile_screen.dart';
 
 class SellScreen extends StatefulWidget {
   SellScreen({super.key});
@@ -47,6 +50,13 @@ class _SellScreenState extends State<SellScreen> {
   }
 
   Future<void> _openAddItem() async {
+    if (FirebaseAuth.instance.currentUser == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('profile.loginRequired'.tr())));
+      return;
+    }
+
     final created = await Navigator.push<bool>(
       context,
       MaterialPageRoute(builder: (_) => AddMarketplaceItemScreen()),
@@ -64,7 +74,8 @@ class _SellScreenState extends State<SellScreen> {
         backgroundColor: AppColors.orange,
         foregroundColor: Colors.white,
         icon: Icon(Icons.add_business_rounded),
-        label: Text('auto.sell_sell_screen.vender'.tr(),
+        label: Text(
+          'auto.sell_sell_screen.vender'.tr(),
           style: TextStyle(fontWeight: FontWeight.w900),
         ),
       ),
@@ -193,7 +204,18 @@ class _AddMarketplaceItemScreenState extends State<AddMarketplaceItemScreen> {
       await _loadSellerCountry();
     }
 
+    if (!mounted) return;
+
     final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      setState(() => _saving = false);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('profile.loginRequired'.tr())));
+      return;
+    }
+
+    final sellerProfile = await ProfileService.instance.getCurrentProfile();
     final sellerCountry = _sellerCountryCode == 'global'
         ? 'es'
         : _sellerCountryCode;
@@ -202,8 +224,15 @@ class _AddMarketplaceItemScreenState extends State<AddMarketplaceItemScreen> {
 
     final item = MarketplaceItem(
       id: '',
-      sellerId: user?.uid ?? 'guest_seller',
-      sellerName: user?.displayName ?? user?.email ?? 'Vendedor Ofertix',
+      sellerId: user.uid,
+      sellerName: sellerProfile?.displayName.trim().isNotEmpty == true
+          ? sellerProfile!.displayName.trim()
+          : user.displayName ?? '',
+      sellerUsername: sellerProfile?.username ?? '',
+      sellerAvatarUrl: sellerProfile?.photoUrl ?? '',
+      sellerVerified:
+          sellerProfile?.sellerVerified == true ||
+          sellerProfile?.isVerified == true,
       title: _title.text.trim(),
       description: _description.text.trim(),
       price: double.tryParse(_price.text.replaceAll(',', '.').trim()) ?? 0,
@@ -230,7 +259,8 @@ class _AddMarketplaceItemScreenState extends State<AddMarketplaceItemScreen> {
       Navigator.pop(context, true);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('auto.sell_sell_screen.producto_publicado_en_ofertix'.tr(),
+          content: Text(
+            'auto.sell_sell_screen.producto_publicado_en_ofertix'.tr(),
           ),
         ),
       );
@@ -283,7 +313,9 @@ class _AddMarketplaceItemScreenState extends State<AddMarketplaceItemScreen> {
                 ),
                 _Field(
                   controller: _price,
-                  label: 'sell.labelPrice'.tr(namedArgs: {'currency': _currency}),
+                  label: 'sell.labelPrice'.tr(
+                    namedArgs: {'currency': _currency},
+                  ),
                   icon: Icons.euro_rounded,
                   keyboardType: TextInputType.number,
                   validator: (v) =>
@@ -320,7 +352,8 @@ class _AddMarketplaceItemScreenState extends State<AddMarketplaceItemScreen> {
                   value: _pickupOnly,
                   onChanged: (value) => setState(() => _pickupOnly = value),
                   activeThumbColor: AppColors.orange,
-                  title: Text('auto.sell_sell_screen.solo_entrega_local_recogida'.tr(),
+                  title: Text(
+                    'auto.sell_sell_screen.solo_entrega_local_recogida'.tr(),
                   ),
                   subtitle: Text(
                     _pickupOnly
@@ -342,7 +375,8 @@ class _AddMarketplaceItemScreenState extends State<AddMarketplaceItemScreen> {
                     ),
                     DropdownMenuItem(
                       value: 'used_good',
-                      child: Text('auto.sell_sell_screen.usado_buen_estado'.tr(),
+                      child: Text(
+                        'auto.sell_sell_screen.usado_buen_estado'.tr(),
                       ),
                     ),
                     DropdownMenuItem(
@@ -376,7 +410,11 @@ class _AddMarketplaceItemScreenState extends State<AddMarketplaceItemScreen> {
                           ),
                         )
                       : Icon(Icons.publish_rounded),
-                  label: Text(_saving ? 'sell.publishing'.tr() : 'sell.publishProduct'.tr()),
+                  label: Text(
+                    _saving
+                        ? 'sell.publishing'.tr()
+                        : 'sell.publishProduct'.tr(),
+                  ),
                 ),
               ],
             ),
@@ -456,7 +494,8 @@ class _SellerHero extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('auto.sell_sell_screen.vende_en_ofertix'.tr(),
+                Text(
+                  'auto.sell_sell_screen.vende_en_ofertix'.tr(),
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 23,
@@ -464,7 +503,9 @@ class _SellerHero extends StatelessWidget {
                   ),
                 ),
                 SizedBox(height: 5),
-                Text('auto.sell_sell_screen.publica_productos_recibe_mensajes_y_cr'.tr()
+                Text(
+                  'auto.sell_sell_screen.publica_productos_recibe_mensajes_y_cr'
+                      .tr()
                       .tr(),
                   style: TextStyle(
                     color: Colors.white70,
@@ -549,7 +590,9 @@ class _MarketplaceCard extends StatelessWidget {
                     fontWeight: FontWeight.w900,
                   ),
                 ),
-                SizedBox(height: 4),
+                SizedBox(height: 8),
+                _SellerLine(item: item),
+                SizedBox(height: 5),
                 Row(
                   children: [
                     Icon(
@@ -598,7 +641,8 @@ class _EmptyMarketplace extends StatelessWidget {
         children: [
           Icon(Icons.storefront_rounded, color: AppColors.orange, size: 46),
           SizedBox(height: 12),
-          Text('auto.sell_sell_screen.aun_no_hay_productos'.tr(),
+          Text(
+            'auto.sell_sell_screen.aun_no_hay_productos'.tr(),
             style: TextStyle(
               color: ui.text,
               fontSize: 18,
@@ -606,10 +650,72 @@ class _EmptyMarketplace extends StatelessWidget {
             ),
           ),
           SizedBox(height: 6),
-          Text('auto.sell_sell_screen.se_el_primero_en_vender_algo_en_oferti'.tr(),
+          Text(
+            'auto.sell_sell_screen.se_el_primero_en_vender_algo_en_oferti'.tr(),
             textAlign: TextAlign.center,
             style: TextStyle(color: ui.muted, fontWeight: FontWeight.w700),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SellerLine extends StatelessWidget {
+  const _SellerLine({required this.item});
+
+  final MarketplaceItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    final ui = _SellUi.of(context);
+    final name = item.sellerName.trim().isNotEmpty
+        ? item.sellerName.trim()
+        : 'profile.sellerUnavailable'.tr();
+
+    return InkWell(
+      onTap: item.sellerId.trim().isEmpty
+          ? null
+          : () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => CreatorProfileScreen(
+                    creatorId: item.sellerId,
+                    baseUrl: ApiConfig.baseUrl,
+                  ),
+                ),
+              );
+            },
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 11,
+            backgroundColor: AppColors.orange.withValues(alpha: .22),
+            backgroundImage: item.sellerAvatarUrl.startsWith('http')
+                ? NetworkImage(item.sellerAvatarUrl)
+                : null,
+            child: item.sellerAvatarUrl.startsWith('http')
+                ? null
+                : Icon(Icons.person_rounded, size: 13, color: ui.muted),
+          ),
+          SizedBox(width: 5),
+          Expanded(
+            child: Text(
+              item.sellerUsername.trim().isNotEmpty
+                  ? '@${item.sellerUsername.trim()}'
+                  : name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: ui.muted,
+                fontSize: 10.5,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+          if (item.sellerVerified)
+            Icon(Icons.verified_rounded, color: AppColors.orange, size: 14),
         ],
       ),
     );
@@ -676,7 +782,8 @@ class _FormHero extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('auto.sell_sell_screen.nuevo_anuncio'.tr(),
+                Text(
+                  'auto.sell_sell_screen.nuevo_anuncio'.tr(),
                   style: TextStyle(
                     color: ui.text,
                     fontSize: 20,
@@ -684,7 +791,9 @@ class _FormHero extends StatelessWidget {
                   ),
                 ),
                 SizedBox(height: 4),
-                Text('auto.sell_sell_screen.backend_render_primero_firebase_fallba'.tr()
+                Text(
+                  'auto.sell_sell_screen.backend_render_primero_firebase_fallba'
+                      .tr()
                       .tr(),
                   style: TextStyle(
                     color: ui.muted,
