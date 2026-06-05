@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:image_picker/image_picker.dart';
 
 import '../../models/user_profile_model.dart';
 import '../../services/profile_service.dart';
@@ -44,7 +43,6 @@ class ProfileProvider extends ChangeNotifier {
     required String city,
     required String currency,
     required bool isCreator,
-    XFile? image,
   }) async {
     isSaving = true;
     errorMessage = null;
@@ -57,14 +55,6 @@ class ProfileProvider extends ChangeNotifier {
         throw Exception('No authenticated user found.');
       }
 
-      String? photoUrl;
-      if (image != null) {
-        photoUrl = await _profileService.uploadProfileImage(
-          uid: baseProfile.uid,
-          image: image,
-        );
-      }
-
       profile = await _profileService.updateProfile(
         profile: baseProfile,
         displayName: displayName,
@@ -74,7 +64,6 @@ class ProfileProvider extends ChangeNotifier {
         city: city,
         currency: currency,
         isCreator: isCreator,
-        photoUrl: photoUrl,
       );
 
       this.country = profile?.country ?? country;
@@ -83,7 +72,13 @@ class ProfileProvider extends ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      errorMessage = e.toString();
+      final text = e.toString();
+      if (text.contains('object-not-found') ||
+          text.contains('firebase_storage')) {
+        errorMessage = 'profile.imageUnavailable';
+      } else {
+        errorMessage = text.trim().isEmpty ? 'profile.saveFailed' : text;
+      }
       isSaving = false;
       notifyListeners();
       return false;

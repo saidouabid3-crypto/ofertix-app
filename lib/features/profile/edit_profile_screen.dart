@@ -1,7 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/theme/app_theme.dart';
@@ -27,7 +26,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   late final TextEditingController _cityController;
   late final TextEditingController _currencyController;
 
-  XFile? _selectedImage;
   bool _isCreator = false;
 
   @override
@@ -54,21 +52,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     super.dispose();
   }
 
-  Future<void> _pickImage() async {
-    final picker = ImagePicker();
-
-    final image = await picker.pickImage(
-      source: ImageSource.gallery,
-      imageQuality: 82,
-      maxWidth: 900,
-      maxHeight: 900,
-    );
-
-    if (image == null) return;
-
-    setState(() {
-      _selectedImage = image;
-    });
+  void _showAvatarUploadSoon() {
+    // TODO: avatar upload should use Cloudinary or a backend upload endpoint,
+    // not Firebase Storage.
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('profile.avatarUploadSoon'.tr())));
   }
 
   Future<void> _save() async {
@@ -86,26 +75,22 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       city: _cityController.text,
       currency: _currencyController.text,
       isCreator: _isCreator,
-      image: _selectedImage,
     );
 
     if (!mounted) return;
 
     if (ok) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'auto.profile_edit_profile_screen.perfil_actualizado_correctamente'
-                .tr()
-                .tr(),
-          ),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('profile.saveSuccess'.tr())));
       Navigator.pop(context, true);
       return;
     }
 
-    final message = provider.errorMessage ?? 'No se pudo guardar el perfil.';
+    final rawMessage = provider.errorMessage ?? 'profile.saveFailed';
+    final message = rawMessage.startsWith('profile.')
+        ? rawMessage.tr()
+        : rawMessage;
 
     ScaffoldMessenger.of(
       context,
@@ -136,8 +121,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       child: _AvatarEditor(
                         ui: ui,
                         profile: widget.profile,
-                        selectedImage: _selectedImage,
-                        onTap: _pickImage,
+                        onTap: _showAvatarUploadSoon,
                       ),
                     ),
 
@@ -245,7 +229,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
                     if (provider.errorMessage != null) ...[
                       SizedBox(height: 16),
-                      _ErrorCard(message: provider.errorMessage!),
+                      _ErrorCard(
+                        message: provider.errorMessage!.startsWith('profile.')
+                            ? provider.errorMessage!.tr()
+                            : provider.errorMessage!,
+                      ),
                     ],
 
                     SizedBox(height: 26),
@@ -337,19 +325,15 @@ class _TopBar extends StatelessWidget {
 class _AvatarEditor extends StatelessWidget {
   final _EditProfileUi ui;
   final UserProfileModel profile;
-  final XFile? selectedImage;
   final VoidCallback onTap;
 
-  _AvatarEditor({
-    required this.ui,
-    required this.profile,
-    required this.selectedImage,
-    required this.onTap,
-  });
+  _AvatarEditor({required this.ui, required this.profile, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    final hasNetworkImage = profile.photoUrl.trim().isNotEmpty;
+    final photoUrl = profile.photoUrl.trim();
+    final hasNetworkImage =
+        photoUrl.startsWith('http://') || photoUrl.startsWith('https://');
 
     return GestureDetector(
       onTap: onTap,
@@ -366,20 +350,9 @@ class _AvatarEditor extends StatelessWidget {
             child: Container(
               decoration: BoxDecoration(color: ui.card, shape: BoxShape.circle),
               clipBehavior: Clip.antiAlias,
-              child: selectedImage != null
-                  ? FutureBuilder(
-                      future: selectedImage!.readAsBytes(),
-                      builder: (context, snapshot) {
-                        if (!snapshot.hasData) {
-                          return Center(child: CircularProgressIndicator());
-                        }
-
-                        return Image.memory(snapshot.data!, fit: BoxFit.cover);
-                      },
-                    )
-                  : hasNetworkImage
+              child: hasNetworkImage
                   ? CachedNetworkImage(
-                      imageUrl: profile.photoUrl,
+                      imageUrl: photoUrl,
                       fit: BoxFit.cover,
                       placeholder: (_, __) =>
                           Center(child: CircularProgressIndicator()),

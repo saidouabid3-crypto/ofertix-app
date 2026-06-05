@@ -1,8 +1,4 @@
-import 'dart:typed_data';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
-import 'package:image_picker/image_picker.dart';
 
 import '../models/user_profile_model.dart';
 import '../models/user_identity.dart';
@@ -19,7 +15,6 @@ class ProfileService {
   static final ProfileService instance = ProfileService._();
 
   final FirebaseFirestore _db = FirebaseFirestore.instance;
-  final FirebaseStorage _storage = FirebaseStorage.instance;
   final AuthService _auth = AuthService.instance;
   final SettingsService _settings = SettingsService.instance;
   final ApiService _api = ApiService.instance;
@@ -166,28 +161,6 @@ class ProfileService {
     await _settings.setCurrency(updated.currency);
 
     return updated;
-  }
-
-  Future<String> uploadProfileImage({
-    required String uid,
-    required XFile image,
-  }) async {
-    final Uint8List bytes = await image.readAsBytes();
-
-    if (bytes.isEmpty) {
-      throw Exception('La imagen está vacía.');
-    }
-
-    final ref = _storage.ref().child('users/$uid/profile/avatar.jpg');
-
-    final metadata = SettableMetadata(
-      contentType: 'image/jpeg',
-      customMetadata: {'uid': uid, 'source': 'ofertix_profile'},
-    );
-
-    await ref.putData(bytes, metadata);
-
-    return ref.getDownloadURL();
   }
 
   Future<bool> isUsernameAvailable({
