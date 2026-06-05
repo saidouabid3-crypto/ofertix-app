@@ -95,6 +95,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
 
   Future<void> _toggleFavorite() async {
     if (_isFavoriteLoading) return;
+    final wasFavorite = isFavorite;
     setState(() => _isFavoriteLoading = true);
     try {
       final nowSaved = await FavoriteService.instance.toggleFavorite(
@@ -105,12 +106,17 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
         isFavorite = nowSaved;
         _isFavoriteLoading = false;
       });
+      // Detect a silent Firestore write failure:
+      // user was not saved → tried to add → still not saved.
+      final writeFailed = !wasFavorite && !nowSaved;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            nowSaved
-                ? 'product.favorite.added'.tr()
-                : 'product.favorite.removed'.tr(),
+            writeFailed
+                ? 'common.saveFailed'.tr()
+                : nowSaved
+                    ? 'product.favorite.added'.tr()
+                    : 'product.favorite.removed'.tr(),
           ),
           duration: const Duration(seconds: 2),
           behavior: SnackBarBehavior.floating,
@@ -121,7 +127,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
       setState(() => _isFavoriteLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('product.favorite.error'.tr()),
+          content: Text('common.saveFailed'.tr()),
           duration: const Duration(seconds: 2),
           behavior: SnackBarBehavior.floating,
         ),
@@ -162,6 +168,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
 
   Future<void> _toggleWatch() async {
     if (_isWatchLoading) return;
+    final wasWatching = _isWatching;
     setState(() => _isWatchLoading = true);
     try {
       final nowWatching = await WatchlistService.instance.toggleWatch(
@@ -173,11 +180,14 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
         _isWatchLoading = false;
       });
       final isGuest = !AuthService.instance.isLoggedIn;
-      final msg = isGuest && nowWatching
-          ? 'watchlist.guestSaved'.tr()
-          : nowWatching
-              ? 'product.watchlist.added'.tr()
-              : 'product.watchlist.removed'.tr();
+      final writeFailed = !isGuest && !wasWatching && !nowWatching;
+      final msg = writeFailed
+          ? 'common.saveFailed'.tr()
+          : isGuest && nowWatching
+              ? 'watchlist.guestSaved'.tr()
+              : nowWatching
+                  ? 'product.watchlist.added'.tr()
+                  : 'product.watchlist.removed'.tr();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(msg),
@@ -190,7 +200,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
       setState(() => _isWatchLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('product.watchlist.error'.tr()),
+          content: Text('common.saveFailed'.tr()),
           duration: const Duration(seconds: 2),
           behavior: SnackBarBehavior.floating,
         ),

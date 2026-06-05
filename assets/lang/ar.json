@@ -790,5 +790,8 @@
   "rewards.missionSearch": "ابحث عن 5 منتجات",
   "rewards.missionOpenDeal": "افتح عرض شريك",
   "rewards.missionInvite": "ادعُ صديقاً",
-  "rewards.missionDailyLogin": "مكافأة تسجيل الدخول اليومي"
+  "rewards.missionDailyLogin": "مكافأة تسجيل الدخول اليومي",
+  "common.saveFailed": "تعذّر الحفظ. حاول مرة أخرى.",
+  "common.saved": "تم الحفظ",
+  "common.removed": "تمت الإزالة"
 }

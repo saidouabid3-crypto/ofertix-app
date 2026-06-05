@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/product.dart';
@@ -143,8 +144,8 @@ class WatchlistService {
       await removeWatch(cleanId);
       return false;
     }
-    await addWatch(product);
-    return true;
+    // Return true only if the write actually succeeded.
+    return addWatch(product);
   }
 
   Future<bool> addWatch(Product product) async {
@@ -182,7 +183,8 @@ class WatchlistService {
           'updatedAt': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
         return true;
-      } catch (_) {
+      } catch (e) {
+        debugPrint('[WatchlistService.addWatch] uid=$_uid pid=$cleanId err=$e');
         return false;
       }
     } else {
@@ -198,7 +200,8 @@ class WatchlistService {
       try {
         await _collection.doc(_docId(_uid!, cleanId)).delete();
         return true;
-      } catch (_) {
+      } catch (e) {
+        debugPrint('[WatchlistService.removeWatch] uid=$_uid pid=$cleanId err=$e');
         return false;
       }
     } else {

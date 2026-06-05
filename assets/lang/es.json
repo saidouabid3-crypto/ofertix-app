@@ -790,5 +790,8 @@
   "rewards.missionSearch": "Busca 5 productos",
   "rewards.missionOpenDeal": "Abre una oferta de afiliado",
   "rewards.missionInvite": "Invita a un amigo",
-  "rewards.missionDailyLogin": "Bonus de acceso diario"
+  "rewards.missionDailyLogin": "Bonus de acceso diario",
+  "common.saveFailed": "No se pudo guardar. Inténtalo de nuevo.",
+  "common.saved": "Guardado",
+  "common.removed": "Eliminado"
 }

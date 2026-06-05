@@ -790,5 +790,8 @@
   "rewards.missionSearch": "Chercher 5 produits",
   "rewards.missionOpenDeal": "Ouvrir une offre affiliée",
   "rewards.missionInvite": "Inviter un ami",
-  "rewards.missionDailyLogin": "Bonus de connexion quotidien"
+  "rewards.missionDailyLogin": "Bonus de connexion quotidien",
+  "common.saveFailed": "Impossible de sauvegarder. Réessayez.",
+  "common.saved": "Sauvegardé",
+  "common.removed": "Supprimé"
 }

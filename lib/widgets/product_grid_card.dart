@@ -102,6 +102,7 @@ class _ProductGridCardState extends State<ProductGridCard> {
 
   Future<void> _toggleWatch() async {
     if (_watchLoading) return;
+    final wasWatching = _isWatching;
     setState(() => _watchLoading = true);
     final provider = Provider.of<WatchlistProvider>(context, listen: false);
     final isGuest = !AuthService.instance.isLoggedIn;
@@ -112,11 +113,21 @@ class _ProductGridCardState extends State<ProductGridCard> {
       _watchLoading = false;
     });
     if (!mounted) return;
-    final msg = isGuest
-        ? 'watchlist.guestSaved'.tr()
-        : nowWatching
-            ? 'product.watchlist.added'.tr()
-            : 'product.watchlist.removed'.tr();
+
+    String msg;
+    if (isGuest) {
+      // Guest: item saved to local device storage.
+      msg = nowWatching
+          ? 'watchlist.guestSaved'.tr()
+          : 'product.watchlist.removed'.tr();
+    } else if (!wasWatching && !nowWatching) {
+      // Auth user tried to save but write failed.
+      msg = 'common.saveFailed'.tr();
+    } else {
+      msg = nowWatching
+          ? 'product.watchlist.added'.tr()
+          : 'product.watchlist.removed'.tr();
+    }
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(msg),

@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/product.dart';
@@ -165,8 +166,8 @@ class FavoriteService {
       return false;
     }
 
-    await addFavorite(product);
-    return true;
+    // Return true only if the Firestore write actually succeeded.
+    return addFavorite(product);
   }
 
   Future<bool> addFavorite(Product product) async {
@@ -213,7 +214,8 @@ class FavoriteService {
       }, SetOptions(merge: true));
 
       return true;
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[FavoriteService.addFavorite] uid=$userId pid=$cleanId err=$e');
       return false;
     }
   }
@@ -230,7 +232,8 @@ class FavoriteService {
       await _favoritesCollection.doc(docId).delete();
 
       return true;
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[FavoriteService.removeFavorite] uid=$userId pid=$cleanId err=$e');
       return false;
     }
   }

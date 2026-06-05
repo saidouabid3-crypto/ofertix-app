@@ -790,5 +790,8 @@
   "rewards.missionSearch": "Search 5 products",
   "rewards.missionOpenDeal": "Open an affiliate deal",
   "rewards.missionInvite": "Invite a friend",
-  "rewards.missionDailyLogin": "Daily login bonus"
+  "rewards.missionDailyLogin": "Daily login bonus",
+  "common.saveFailed": "Could not save. Please try again.",
+  "common.saved": "Saved",
+  "common.removed": "Removed"
 }
