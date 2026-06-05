@@ -38,6 +38,7 @@ import '../../features/local/merchant_dashboard_screen.dart';
 import '../../features/local/create_store_screen.dart';
 import '../../features/local/create_offer_screen.dart';
 import '../../features/local/admin_offer_review_screen.dart';
+import '../../features/admin/admin_command_center_screen.dart';
 import '../../features/notifications/notification_center_screen.dart';
 import '../../features/product_details/product_details_loader_screen.dart';
 
@@ -125,6 +126,8 @@ class AppRouter {
         return _page(const CreateOfferScreen());
       case AppRoutes.adminLocalReview:
         return _page(const AdminOfferReviewScreen());
+      case AppRoutes.adminCommandCenter:
+        return _page(const AdminCommandCenterScreen());
 
       case AppRoutes.notifications:
         return _page(const NotificationCenterScreen());

@@ -8,6 +8,8 @@ import '../favorites/favorites_screen.dart';
 import '../rewards/rewards_screen.dart';
 import '../settings/settings_screen.dart';
 import '../watchlist/watchlist_screen.dart';
+import '../../core/navigation/app_routes.dart';
+import '../../services/profile_service.dart';
 import 'edit_profile_screen.dart';
 import 'profile_provider.dart';
 
@@ -139,6 +141,17 @@ class ProfileScreen extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                    );
+                  },
+                ),
+                FutureBuilder<bool>(
+                  future: ProfileService.instance.isCurrentUserAdmin(),
+                  builder: (context, snap) {
+                    if (snap.data != true) return const SizedBox.shrink();
+                    return _Tile(
+                      icon: Icons.admin_panel_settings_rounded,
+                      title: 'admin.title'.tr(),
+                      onTap: () => Navigator.pushNamed(context, AppRoutes.adminCommandCenter),
                     );
                   },
                 ),

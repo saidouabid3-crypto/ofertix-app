@@ -38,6 +38,7 @@ class AppRoutes {
   static const String merchantAddStore = '/merchant/add-store';
   static const String merchantAddOffer = '/merchant/add-offer';
   static const String adminLocalReview = '/admin/local-review';
+  static const String adminCommandCenter = '/admin/command-center';
 
   static const String notifications = '/notifications';
 

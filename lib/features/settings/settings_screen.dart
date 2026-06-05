@@ -7,7 +7,7 @@ import '../../core/constants/app_languages.dart';
 import '../../core/constants/app_countries.dart';
 
 import '../cashback/cashback_screen.dart';
-import '../admin/admin_dashboard_screen.dart';
+import '../admin/admin_command_center_screen.dart';
 
 import 'settings_provider.dart';
 
@@ -131,7 +131,7 @@ class SettingsScreen extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => const AdminDashboardScreen(),
+                        builder: (_) => const AdminCommandCenterScreen(),
                       ),
                     );
                   },
