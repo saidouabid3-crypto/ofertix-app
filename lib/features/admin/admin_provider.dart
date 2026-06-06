@@ -48,6 +48,9 @@ class AdminProvider extends ChangeNotifier {
   bool isLoadingProductQuality = false;
   List<AdminProductQualityItemModel> productQualityItems = [];
   String? productQualityError;
+  bool isScanLoading = false;
+  ProductTrustScanSummaryModel? lastScanSummary;
+  String? scanError;
 
   // ── system health ─────────────────────────────────────────────────────────
   bool isLoadingHealth = false;
@@ -323,6 +326,10 @@ class AdminProvider extends ChangeNotifier {
           await _service.restoreProduct(productId);
         case 'mark_review':
           await _service.markProductReview(productId, reason: reason);
+        case 'mark_safe':
+          await _service.markProductSafe(productId);
+        case 'refresh':
+          await _service.refreshProductQuality(productId);
       }
       isActing = false;
       notifyListeners();
@@ -333,6 +340,45 @@ class AdminProvider extends ChangeNotifier {
       isActing = false;
       notifyListeners();
       return false;
+    }
+  }
+
+  Future<ProductTrustScanSummaryModel?> runDryRunScan({int limit = 100}) async {
+    isScanLoading = true;
+    scanError = null;
+    lastScanSummary = null;
+    notifyListeners();
+    try {
+      final result = await _service.scanProductQuality(dryRun: true, limit: limit, write: false);
+      lastScanSummary = result;
+      isScanLoading = false;
+      notifyListeners();
+      return result;
+    } catch (e) {
+      scanError = e.toString();
+      isScanLoading = false;
+      notifyListeners();
+      return null;
+    }
+  }
+
+  Future<ProductTrustScanSummaryModel?> applyProductQualityScan({int limit = 100}) async {
+    isScanLoading = true;
+    scanError = null;
+    lastScanSummary = null;
+    notifyListeners();
+    try {
+      final result = await _service.scanProductQuality(dryRun: false, limit: limit, write: true);
+      lastScanSummary = result;
+      isScanLoading = false;
+      notifyListeners();
+      await loadProductQuality();
+      return result;
+    } catch (e) {
+      scanError = e.toString();
+      isScanLoading = false;
+      notifyListeners();
+      return null;
     }
   }
 }

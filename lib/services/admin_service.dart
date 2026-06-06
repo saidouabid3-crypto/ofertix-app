@@ -243,6 +243,30 @@ class AdminService {
     await _api.post('/admin/products/$productId/mark-review', authorized: true, body: {'reason': reason});
   }
 
+  Future<void> markProductSafe(String productId) async {
+    await _setToken();
+    await _api.post('/admin/products/$productId/mark-safe', authorized: true);
+  }
+
+  Future<void> refreshProductQuality(String productId) async {
+    await _setToken();
+    await _api.post('/admin/products/$productId/quality/refresh', authorized: true);
+  }
+
+  Future<ProductTrustScanSummaryModel> scanProductQuality({
+    bool dryRun = true,
+    int limit = 100,
+    bool write = false,
+  }) async {
+    await _setToken();
+    final response = await _api.post(
+      '/admin/products/quality/scan',
+      authorized: true,
+      body: {'dryRun': dryRun, 'limit': limit, 'write': write},
+    );
+    return ProductTrustScanSummaryModel.fromJson(_toMap(response));
+  }
+
   // ── system health ─────────────────────────────────────────────────────────
 
   Future<AdminSystemHealthModel> getSystemHealth() async {
