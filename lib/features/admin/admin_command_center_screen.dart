@@ -7,6 +7,7 @@ import 'admin_logs_screen.dart';
 import 'admin_moderation_marketplace_screen.dart';
 import 'admin_moderation_reels_screen.dart';
 import 'admin_overview_screen.dart';
+import 'admin_product_duplicates_screen.dart';
 import 'admin_product_quality_screen.dart';
 import 'admin_provider.dart';
 import 'admin_reports_screen.dart';
@@ -42,6 +43,7 @@ class _AdminBodyState extends State<_AdminBody> {
     'admin.reports',
     'admin.users',
     'admin.productQuality',
+    'admin.duplicateReview',
     'admin.systemHealth',
     'admin.logs',
   ];
@@ -53,6 +55,7 @@ class _AdminBodyState extends State<_AdminBody> {
     Icons.flag_rounded,
     Icons.people_alt_rounded,
     Icons.star_rate_rounded,
+    Icons.content_copy_rounded,
     Icons.monitor_heart_rounded,
     Icons.history_rounded,
   ];
@@ -112,6 +115,7 @@ class _AdminBodyState extends State<_AdminBody> {
       const AdminReportsScreen(),
       const AdminUsersScreen(),
       const AdminProductQualityScreen(),
+      const AdminProductDuplicatesScreen(),
       const AdminSystemHealthScreen(),
       const AdminLogsScreen(),
     ];

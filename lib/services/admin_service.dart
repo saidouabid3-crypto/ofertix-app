@@ -1,5 +1,6 @@
 import '../core/config/api_endpoints.dart';
 import '../models/admin_dashboard_model.dart';
+import '../models/admin_duplicate_model.dart';
 import '../models/admin_log_entry_model.dart';
 import '../models/admin_moderation_item_model.dart';
 import '../models/admin_overview_model.dart';
@@ -265,6 +266,67 @@ class AdminService {
       body: {'dryRun': dryRun, 'limit': limit, 'write': write},
     );
     return ProductTrustScanSummaryModel.fromJson(_toMap(response));
+  }
+
+  // ── product duplicates ────────────────────────────────────────────────────
+
+  Future<AdminDuplicateScanSummaryModel> scanProductDuplicates({
+    bool dryRun = true,
+    int limit = 300,
+    bool write = false,
+  }) async {
+    await _setToken();
+    final response = await _api.post(
+      '/admin/products/duplicates/scan',
+      authorized: true,
+      body: {'dryRun': dryRun, 'limit': limit, 'write': write},
+    );
+    return AdminDuplicateScanSummaryModel.fromJson(_toMap(response));
+  }
+
+  Future<AdminDuplicateGroupListModel> getProductDuplicateGroups({
+    String status = 'candidate',
+    int limit = 50,
+  }) async {
+    await _setToken();
+    final response = await _api.get(
+      '/admin/products/duplicates',
+      authorized: true,
+      queryParameters: {'status': status, 'limit': limit},
+    );
+    return AdminDuplicateGroupListModel.fromJson(_toMap(response));
+  }
+
+  Future<void> markDuplicateMaster(String groupId, String productId, {String? note}) async {
+    await _setToken();
+    await _api.post(
+      '/admin/products/duplicates/$groupId/mark-master',
+      authorized: true,
+      body: {'productId': productId, 'note': note},
+    );
+  }
+
+  Future<void> hideDuplicateProduct(String productId, String masterProductId, {String? note}) async {
+    await _setToken();
+    await _api.post(
+      '/admin/products/$productId/duplicates/hide',
+      authorized: true,
+      body: {'masterProductId': masterProductId, 'note': note},
+    );
+  }
+
+  Future<void> dismissDuplicateProduct(String productId, {String? note}) async {
+    await _setToken();
+    await _api.post(
+      '/admin/products/$productId/duplicates/dismiss',
+      authorized: true,
+      body: {'note': note},
+    );
+  }
+
+  Future<void> restoreDuplicateProduct(String productId) async {
+    await _setToken();
+    await _api.post('/admin/products/$productId/duplicates/restore', authorized: true);
   }
 
   // ── system health ─────────────────────────────────────────────────────────

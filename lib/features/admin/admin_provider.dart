@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../models/admin_duplicate_model.dart';
 import '../../models/admin_log_entry_model.dart';
 import '../../models/admin_moderation_item_model.dart';
 import '../../models/admin_overview_model.dart';
@@ -51,6 +52,15 @@ class AdminProvider extends ChangeNotifier {
   bool isScanLoading = false;
   ProductTrustScanSummaryModel? lastScanSummary;
   String? scanError;
+
+  // ── duplicate review ──────────────────────────────────────────────────────
+  bool isDuplicatesLoading = false;
+  List<AdminDuplicateGroupModel> duplicateGroups = [];
+  String? duplicatesError;
+  bool isDuplicateScanLoading = false;
+  AdminDuplicateScanSummaryModel? lastDuplicateScanSummary;
+  String? duplicateScanError;
+  String selectedDuplicateStatusFilter = 'candidate';
 
   // ── system health ─────────────────────────────────────────────────────────
   bool isLoadingHealth = false;
@@ -379,6 +389,134 @@ class AdminProvider extends ChangeNotifier {
       isScanLoading = false;
       notifyListeners();
       return null;
+    }
+  }
+
+  // ── duplicate actions ─────────────────────────────────────────────────────
+
+  Future<void> loadDuplicateGroups({String? status}) async {
+    isDuplicatesLoading = true;
+    duplicatesError = null;
+    notifyListeners();
+    try {
+      final s = status ?? selectedDuplicateStatusFilter;
+      final result = await _service.getProductDuplicateGroups(status: s, limit: 50);
+      duplicateGroups = result.groups;
+    } catch (e) {
+      duplicatesError = e.toString();
+    }
+    isDuplicatesLoading = false;
+    notifyListeners();
+  }
+
+  Future<AdminDuplicateScanSummaryModel?> runDuplicateDryRunScan({int limit = 300}) async {
+    isDuplicateScanLoading = true;
+    duplicateScanError = null;
+    lastDuplicateScanSummary = null;
+    notifyListeners();
+    try {
+      final result = await _service.scanProductDuplicates(dryRun: true, limit: limit, write: false);
+      lastDuplicateScanSummary = result;
+      isDuplicateScanLoading = false;
+      notifyListeners();
+      return result;
+    } catch (e) {
+      duplicateScanError = e.toString();
+      isDuplicateScanLoading = false;
+      notifyListeners();
+      return null;
+    }
+  }
+
+  Future<AdminDuplicateScanSummaryModel?> applyDuplicateScan({int limit = 300}) async {
+    isDuplicateScanLoading = true;
+    duplicateScanError = null;
+    lastDuplicateScanSummary = null;
+    notifyListeners();
+    try {
+      final result = await _service.scanProductDuplicates(dryRun: false, limit: limit, write: true);
+      lastDuplicateScanSummary = result;
+      isDuplicateScanLoading = false;
+      notifyListeners();
+      await loadDuplicateGroups();
+      return result;
+    } catch (e) {
+      duplicateScanError = e.toString();
+      isDuplicateScanLoading = false;
+      notifyListeners();
+      return null;
+    }
+  }
+
+  Future<bool> markDuplicateMaster(String groupId, String productId, {String? note}) async {
+    isActing = true;
+    actionError = null;
+    notifyListeners();
+    try {
+      await _service.markDuplicateMaster(groupId, productId, note: note);
+      isActing = false;
+      notifyListeners();
+      await loadDuplicateGroups();
+      return true;
+    } catch (e) {
+      actionError = e.toString();
+      isActing = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> hideDuplicate(String productId, String masterProductId, {String? note}) async {
+    isActing = true;
+    actionError = null;
+    notifyListeners();
+    try {
+      await _service.hideDuplicateProduct(productId, masterProductId, note: note);
+      isActing = false;
+      notifyListeners();
+      await loadDuplicateGroups();
+      return true;
+    } catch (e) {
+      actionError = e.toString();
+      isActing = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> dismissDuplicate(String productId, {String? note}) async {
+    isActing = true;
+    actionError = null;
+    notifyListeners();
+    try {
+      await _service.dismissDuplicateProduct(productId, note: note);
+      isActing = false;
+      notifyListeners();
+      await loadDuplicateGroups();
+      return true;
+    } catch (e) {
+      actionError = e.toString();
+      isActing = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> restoreDuplicate(String productId) async {
+    isActing = true;
+    actionError = null;
+    notifyListeners();
+    try {
+      await _service.restoreDuplicateProduct(productId);
+      isActing = false;
+      notifyListeners();
+      await loadDuplicateGroups();
+      return true;
+    } catch (e) {
+      actionError = e.toString();
+      isActing = false;
+      notifyListeners();
+      return false;
     }
   }
 }
