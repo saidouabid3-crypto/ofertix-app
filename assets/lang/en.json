@@ -944,6 +944,7 @@
   "admin.filterSingleImage": "1 image",
   "admin.filterDuplicates": "Duplicates",
   "admin.filterTrusted": "Trusted",
+  "admin.missingCurrency": "Missing currency",
   "admin.duplicateReview": "Duplicates",
   "admin.duplicateReviewSubtitle": "Duplicate product review",
   "admin.duplicateGroups": "Duplicate groups",

@@ -944,6 +944,7 @@
   "admin.filterSingleImage": "1 image",
   "admin.filterDuplicates": "Doublons",
   "admin.filterTrusted": "Fiables",
+  "admin.missingCurrency": "Devise manquante",
   "admin.duplicateReview": "Doublons",
   "admin.duplicateReviewSubtitle": "Révision des produits en double",
   "admin.duplicateGroups": "Groupes de doublons",

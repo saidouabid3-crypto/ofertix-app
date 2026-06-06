@@ -944,6 +944,7 @@
   "admin.filterSingleImage": "صورة واحدة",
   "admin.filterDuplicates": "مكررات",
   "admin.filterTrusted": "موثوق",
+  "admin.missingCurrency": "العملة غير متوفرة",
   "admin.duplicateReview": "المكررات",
   "admin.duplicateReviewSubtitle": "مراجعة المنتجات المكررة",
   "admin.duplicateGroups": "مجموعات المكررات",

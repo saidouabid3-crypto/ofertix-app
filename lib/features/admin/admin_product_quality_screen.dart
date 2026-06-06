@@ -346,6 +346,44 @@ class _ProductCard extends StatelessWidget {
         _ => '',
       };
 
+  static const _invalidCurrencies = {'global', 'unknown', 'null', 'none', 'n/a', 'na', '', 'undefined', 'mixed'};
+
+  List<Widget> _priceRow() {
+    final price = item.price;
+    final countryCode = item.countryCode ?? '';
+    final isBadCurrency = _invalidCurrencies.contains(countryCode.toLowerCase());
+
+    // Missing or zero price
+    if (price == null || price <= 0) {
+      return [
+        const SizedBox(height: 2),
+        Text(
+          'admin.priceMissing'.tr(),
+          style: const TextStyle(color: AppColors.red, fontWeight: FontWeight.w600, fontSize: 11),
+        ),
+      ];
+    }
+
+    // Valid price but bad/missing currency
+    final currencyDisplay = isBadCurrency ? '' : ' $countryCode';
+    return [
+      const SizedBox(height: 2),
+      Row(children: [
+        Text(
+          '${price.toStringAsFixed(2)}$currencyDisplay',
+          style: const TextStyle(color: AppColors.orange, fontWeight: FontWeight.w700, fontSize: 12),
+        ),
+        if (isBadCurrency) ...[
+          const SizedBox(width: 4),
+          Text(
+            'admin.missingCurrency'.tr(),
+            style: const TextStyle(color: AppColors.red, fontSize: 10),
+          ),
+        ],
+      ]),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
     final borderColor = _trustColor();
@@ -382,13 +420,7 @@ class _ProductCard extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(item.store!, style: const TextStyle(color: AppColors.gray, fontSize: 11)),
                   ],
-                  if (item.price != null) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      '${item.price!.toStringAsFixed(2)} ${item.countryCode ?? ''}',
-                      style: const TextStyle(color: AppColors.orange, fontWeight: FontWeight.w700, fontSize: 12),
-                    ),
-                  ],
+                  ..._priceRow(),
                 ]),
               ),
               const SizedBox(width: 8),
