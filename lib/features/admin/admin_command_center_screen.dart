@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/theme/app_theme.dart';
+import 'admin_import_intelligence_screen.dart';
 import 'admin_logs_screen.dart';
 import 'admin_moderation_marketplace_screen.dart';
 import 'admin_moderation_reels_screen.dart';
@@ -44,6 +45,7 @@ class _AdminBodyState extends State<_AdminBody> {
     'admin.users',
     'admin.productQuality',
     'admin.duplicateReview',
+    'admin.imports',
     'admin.systemHealth',
     'admin.logs',
   ];
@@ -56,6 +58,7 @@ class _AdminBodyState extends State<_AdminBody> {
     Icons.people_alt_rounded,
     Icons.star_rate_rounded,
     Icons.content_copy_rounded,
+    Icons.inventory_2_rounded,
     Icons.monitor_heart_rounded,
     Icons.history_rounded,
   ];
@@ -116,6 +119,7 @@ class _AdminBodyState extends State<_AdminBody> {
       const AdminUsersScreen(),
       const AdminProductQualityScreen(),
       const AdminProductDuplicatesScreen(),
+      const AdminImportIntelligenceScreen(),
       const AdminSystemHealthScreen(),
       const AdminLogsScreen(),
     ];

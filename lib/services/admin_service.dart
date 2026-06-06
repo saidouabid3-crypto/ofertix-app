@@ -1,11 +1,13 @@
 import '../core/config/api_endpoints.dart';
 import '../models/admin_dashboard_model.dart';
 import '../models/admin_duplicate_model.dart';
+import '../models/admin_import_batch_model.dart';
 import '../models/admin_log_entry_model.dart';
 import '../models/admin_moderation_item_model.dart';
 import '../models/admin_overview_model.dart';
 import '../models/admin_product_quality_model.dart';
 import '../models/admin_report_model.dart';
+import '../models/admin_source_trust_model.dart';
 import '../models/admin_system_health_model.dart';
 import '../models/admin_user_view_model.dart';
 import 'api_service.dart';
@@ -327,6 +329,64 @@ class AdminService {
   Future<void> restoreDuplicateProduct(String productId) async {
     await _setToken();
     await _api.post('/admin/products/$productId/duplicates/restore', authorized: true);
+  }
+
+  // ── import batches ────────────────────────────────────────────────────────
+
+  Future<AdminImportBatchListModel> getImportBatches({int limit = 50}) async {
+    await _setToken();
+    final response = await _api.get(
+      '/admin/imports/batches',
+      authorized: true,
+      queryParameters: {'limit': limit},
+    );
+    return AdminImportBatchListModel.fromJson(_toMap(response));
+  }
+
+  Future<AdminImportBatchModel> getImportBatchDetails(String batchId) async {
+    await _setToken();
+    final response = await _api.get('/admin/imports/batches/$batchId', authorized: true);
+    return AdminImportBatchModel.fromJson(_toMap(response));
+  }
+
+  Future<Map<String, dynamic>> hideImportBatchProducts(String batchId, {String? note}) async {
+    await _setToken();
+    final response = await _api.post(
+      '/admin/imports/batches/$batchId/hide-products',
+      authorized: true,
+      body: {'note': note},
+    );
+    return _toMap(response);
+  }
+
+  Future<Map<String, dynamic>> markImportBatchReview(String batchId, {String? note}) async {
+    await _setToken();
+    final response = await _api.post(
+      '/admin/imports/batches/$batchId/mark-review',
+      authorized: true,
+      body: {'note': note},
+    );
+    return _toMap(response);
+  }
+
+  Future<Map<String, dynamic>> restoreImportBatchProducts(String batchId, {String? note}) async {
+    await _setToken();
+    final response = await _api.post(
+      '/admin/imports/batches/$batchId/restore-products',
+      authorized: true,
+      body: {'note': note},
+    );
+    return _toMap(response);
+  }
+
+  Future<AdminSourceTrustListModel> getSourceTrust({int limit = 50}) async {
+    await _setToken();
+    final response = await _api.get(
+      '/admin/imports/source-trust',
+      authorized: true,
+      queryParameters: {'limit': limit},
+    );
+    return AdminSourceTrustListModel.fromJson(_toMap(response));
   }
 
   // ── system health ─────────────────────────────────────────────────────────

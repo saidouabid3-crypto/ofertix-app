@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../models/admin_duplicate_model.dart';
+import '../../models/admin_import_batch_model.dart';
 import '../../models/admin_log_entry_model.dart';
+import '../../models/admin_source_trust_model.dart';
 import '../../models/admin_moderation_item_model.dart';
 import '../../models/admin_overview_model.dart';
 import '../../models/admin_product_quality_model.dart';
@@ -71,6 +73,19 @@ class AdminProvider extends ChangeNotifier {
   bool isLoadingLogs = false;
   List<AdminLogEntryModel> adminLogs = [];
   String? logsError;
+
+  // ── import intelligence ───────────────────────────────────────────────────
+  bool isLoadingImportBatches = false;
+  List<AdminImportBatchModel> importBatches = [];
+  String? importBatchesError;
+
+  bool isLoadingSourceTrust = false;
+  List<AdminSourceTrustModel> sourceTrustList = [];
+  String? sourceTrustError;
+
+  bool isImportActing = false;
+  String? importActionError;
+  Map<String, dynamic>? lastImportActionResult;
 
   // ── action state ──────────────────────────────────────────────────────────
   bool isActing = false;
@@ -515,6 +530,96 @@ class AdminProvider extends ChangeNotifier {
     } catch (e) {
       actionError = e.toString();
       isActing = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  // ── import intelligence ───────────────────────────────────────────────────
+
+  Future<void> loadImportBatches() async {
+    isLoadingImportBatches = true;
+    importBatchesError = null;
+    notifyListeners();
+    try {
+      final result = await _service.getImportBatches();
+      importBatches = result.batches;
+    } catch (e) {
+      importBatchesError = e.toString();
+    }
+    isLoadingImportBatches = false;
+    notifyListeners();
+  }
+
+  Future<void> loadSourceTrust() async {
+    isLoadingSourceTrust = true;
+    sourceTrustError = null;
+    notifyListeners();
+    try {
+      final result = await _service.getSourceTrust();
+      sourceTrustList = result.items;
+    } catch (e) {
+      sourceTrustError = e.toString();
+    }
+    isLoadingSourceTrust = false;
+    notifyListeners();
+  }
+
+  Future<bool> hideImportBatchProducts(String batchId, {String? note}) async {
+    isImportActing = true;
+    importActionError = null;
+    lastImportActionResult = null;
+    notifyListeners();
+    try {
+      final result = await _service.hideImportBatchProducts(batchId, note: note);
+      lastImportActionResult = result;
+      isImportActing = false;
+      notifyListeners();
+      await loadImportBatches();
+      return true;
+    } catch (e) {
+      importActionError = e.toString();
+      isImportActing = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> markImportBatchReview(String batchId, {String? note}) async {
+    isImportActing = true;
+    importActionError = null;
+    lastImportActionResult = null;
+    notifyListeners();
+    try {
+      final result = await _service.markImportBatchReview(batchId, note: note);
+      lastImportActionResult = result;
+      isImportActing = false;
+      notifyListeners();
+      await loadImportBatches();
+      return true;
+    } catch (e) {
+      importActionError = e.toString();
+      isImportActing = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> restoreImportBatchProducts(String batchId, {String? note}) async {
+    isImportActing = true;
+    importActionError = null;
+    lastImportActionResult = null;
+    notifyListeners();
+    try {
+      final result = await _service.restoreImportBatchProducts(batchId, note: note);
+      lastImportActionResult = result;
+      isImportActing = false;
+      notifyListeners();
+      await loadImportBatches();
+      return true;
+    } catch (e) {
+      importActionError = e.toString();
+      isImportActing = false;
       notifyListeners();
       return false;
     }
