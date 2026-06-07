@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../models/admin_catalog_model.dart';
 import '../../models/admin_duplicate_model.dart';
 import '../../models/admin_import_batch_model.dart';
 import '../../models/admin_log_entry_model.dart';
@@ -86,6 +87,13 @@ class AdminProvider extends ChangeNotifier {
   bool isImportActing = false;
   String? importActionError;
   Map<String, dynamic>? lastImportActionResult;
+
+  // ── public catalog governance ─────────────────────────────────────────────
+  bool isLoadingCatalogPreview = false;
+  CatalogPreviewModel? catalogPreview;
+  String? catalogPreviewError;
+  bool isCatalogConfigActing = false;
+  String? catalogConfigError;
 
   // ── action state ──────────────────────────────────────────────────────────
   bool isActing = false;
@@ -620,6 +628,39 @@ class AdminProvider extends ChangeNotifier {
     } catch (e) {
       importActionError = e.toString();
       isImportActing = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  // ── public catalog governance ─────────────────────────────────────────────
+
+  Future<void> loadCatalogPreview({int limit = 500}) async {
+    isLoadingCatalogPreview = true;
+    catalogPreviewError = null;
+    notifyListeners();
+    try {
+      catalogPreview = await _service.getCatalogPreview(limit: limit);
+    } catch (e) {
+      catalogPreviewError = e.toString();
+    }
+    isLoadingCatalogPreview = false;
+    notifyListeners();
+  }
+
+  Future<bool> updateCatalogConfig(Map<String, dynamic> updates) async {
+    isCatalogConfigActing = true;
+    catalogConfigError = null;
+    notifyListeners();
+    try {
+      await _service.updateCatalogConfig(updates);
+      isCatalogConfigActing = false;
+      notifyListeners();
+      await loadCatalogPreview();
+      return true;
+    } catch (e) {
+      catalogConfigError = e.toString();
+      isCatalogConfigActing = false;
       notifyListeners();
       return false;
     }

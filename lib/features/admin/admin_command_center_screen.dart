@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/theme/app_theme.dart';
 import 'admin_import_intelligence_screen.dart';
+import 'admin_public_catalog_screen.dart';
 import 'admin_logs_screen.dart';
 import 'admin_moderation_marketplace_screen.dart';
 import 'admin_moderation_reels_screen.dart';
@@ -48,6 +49,7 @@ class _AdminBodyState extends State<_AdminBody> {
     'admin.imports',
     'admin.systemHealth',
     'admin.logs',
+    'admin.publicCatalog.title',
   ];
 
   static const _icons = [
@@ -61,6 +63,7 @@ class _AdminBodyState extends State<_AdminBody> {
     Icons.inventory_2_rounded,
     Icons.monitor_heart_rounded,
     Icons.history_rounded,
+    Icons.tune_rounded,
   ];
 
   @override
@@ -122,6 +125,7 @@ class _AdminBodyState extends State<_AdminBody> {
       const AdminImportIntelligenceScreen(),
       const AdminSystemHealthScreen(),
       const AdminLogsScreen(),
+      const AdminPublicCatalogScreen(),
     ];
 
     return Scaffold(

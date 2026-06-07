@@ -1,4 +1,5 @@
 import '../core/config/api_endpoints.dart';
+import '../models/admin_catalog_model.dart';
 import '../models/admin_dashboard_model.dart';
 import '../models/admin_duplicate_model.dart';
 import '../models/admin_import_batch_model.dart';
@@ -403,5 +404,29 @@ class AdminService {
     await _setToken();
     final response = await _api.get('/admin/logs', authorized: true, queryParameters: {'limit': limit});
     return AdminLogListModel.fromJson(_toMap(response));
+  }
+
+  // ── public catalog governance ─────────────────────────────────────────────
+
+  Future<CatalogPreviewModel> getCatalogPreview({int limit = 500}) async {
+    await _setToken();
+    final response = await _api.get(
+      '/admin/catalog/public-preview',
+      authorized: true,
+      queryParameters: {'limit': limit},
+    );
+    return CatalogPreviewModel.fromJson(_toMap(response));
+  }
+
+  Future<Map<String, dynamic>> updateCatalogConfig(Map<String, dynamic> updates) async {
+    await _setToken();
+    final response = await _api.patch(
+      '/admin/catalog/public-config',
+      authorized: true,
+      body: updates,
+    );
+    if (response is Map<String, dynamic>) return response;
+    if (response is Map) return Map<String, dynamic>.from(response);
+    return {'ok': true};
   }
 }
