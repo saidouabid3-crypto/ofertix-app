@@ -331,7 +331,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
       case 'JPY':
         return '¥${price.toStringAsFixed(0)}';
       default:
-        return c.isEmpty ? '$f€' : '$f $c';
+        return (c.isEmpty || c == 'GLOBAL') ? '$f€' : '$f $c';
     }
   }
 
@@ -665,23 +665,28 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _formatPrice(product.newPrice),
-                  style: const TextStyle(
-                    color: AppColors.orange,
-                    fontSize: 36,
+                  product.newPrice > 0
+                      ? _formatPrice(product.newPrice)
+                      : 'productTrust.priceNeedsReviewShort'.tr(),
+                  style: TextStyle(
+                    color: product.newPrice > 0
+                        ? AppColors.orange
+                        : const Color(0xFFFF9800),
+                    fontSize: product.newPrice > 0 ? 36 : 18,
                     fontWeight: FontWeight.w900,
                     height: 1,
                   ),
                 ),
-                Text(
-                  'product.approxPrice'.tr(),
-                  style: TextStyle(
-                    color: AppColors.orange.withValues(alpha: 0.65),
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.3,
+                if (product.newPrice > 0)
+                  Text(
+                    'product.approxPrice'.tr(),
+                    style: TextStyle(
+                      color: AppColors.orange.withValues(alpha: 0.65),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.3,
+                    ),
                   ),
-                ),
               ],
             ),
             if (hasDiscount) ...[
@@ -1248,22 +1253,27 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  _formatPrice(product.newPrice),
-                  style: const TextStyle(
-                    color: AppColors.orange,
-                    fontSize: 22,
+                  product.newPrice > 0
+                      ? _formatPrice(product.newPrice)
+                      : 'productTrust.priceNeedsReviewShort'.tr(),
+                  style: TextStyle(
+                    color: product.newPrice > 0
+                        ? AppColors.orange
+                        : const Color(0xFFFF9800),
+                    fontSize: product.newPrice > 0 ? 22 : 11,
                     fontWeight: FontWeight.w900,
                     height: 1,
                   ),
                 ),
-                Text(
-                  'product.approxPrice'.tr(),
-                  style: TextStyle(
-                    color: AppColors.orange.withValues(alpha: 0.65),
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
+                if (product.newPrice > 0)
+                  Text(
+                    'product.approxPrice'.tr(),
+                    style: TextStyle(
+                      color: AppColors.orange.withValues(alpha: 0.65),
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
-                ),
               ],
             ),
             const SizedBox(width: 16),
