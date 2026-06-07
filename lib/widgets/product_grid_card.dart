@@ -465,42 +465,35 @@ class _ProductGridCardState extends State<ProductGridCard> {
                                 distance != null)
                               const SizedBox(height: 6),
 
-                            Row(
-                              children: [
-                                _SoftPill(
-                                  text: verdictLabel,
-                                  icon: Icons.auto_awesome_rounded,
-                                  color: verdictColor,
-                                ),
-                                if (product.rating > 0) ...[
-                                  const SizedBox(width: 5),
-                                  _SoftPill(
-                                    text: product.rating.toStringAsFixed(1),
-                                    icon: Icons.star_rounded,
-                                    color: AppColors.orange,
-                                  ),
-                                ],
-                              ],
-                            ),
-
-                            const SizedBox(height: 4),
-
                             Builder(builder: (ctx) {
                               final ts = ProductTrustUi.resolve(product);
-                              if (ts == ProductTrustState.none) {
-                                return const SizedBox.shrink();
-                              }
-                              return Padding(
-                                padding: const EdgeInsets.only(bottom: 4),
-                                child: Row(children: [
+                              return Row(
+                                children: [
                                   _SoftPill(
-                                    text: ProductTrustUi.shortKey(ts).tr(),
-                                    icon: ProductTrustUi.icon(ts),
-                                    color: ProductTrustUi.color(ts),
+                                    text: verdictLabel,
+                                    icon: Icons.auto_awesome_rounded,
+                                    color: verdictColor,
                                   ),
-                                ]),
+                                  if (ts != ProductTrustState.none) ...[
+                                    const SizedBox(width: 5),
+                                    _SoftPill(
+                                      text: ProductTrustUi.shortKey(ts).tr(),
+                                      icon: ProductTrustUi.icon(ts),
+                                      color: ProductTrustUi.color(ts),
+                                    ),
+                                  ] else if (product.rating > 0) ...[
+                                    const SizedBox(width: 5),
+                                    _SoftPill(
+                                      text: product.rating.toStringAsFixed(1),
+                                      icon: Icons.star_rounded,
+                                      color: AppColors.orange,
+                                    ),
+                                  ],
+                                ],
                               );
                             }),
+
+                            const SizedBox(height: 6),
 
                             Text(
                               product.name,
