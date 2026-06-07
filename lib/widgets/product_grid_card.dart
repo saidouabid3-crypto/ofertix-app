@@ -10,6 +10,7 @@ import 'package:visibility_detector/visibility_detector.dart';
 
 import '../core/theme/app_theme.dart';
 import '../core/utils/price_utils.dart';
+import '../core/utils/product_trust_ui.dart';
 import '../models/ai_deal_brain_result.dart';
 import '../models/product.dart';
 import '../providers/watchlist_provider.dart';
@@ -482,7 +483,24 @@ class _ProductGridCardState extends State<ProductGridCard> {
                               ],
                             ),
 
-                            const SizedBox(height: 6),
+                            const SizedBox(height: 4),
+
+                            Builder(builder: (ctx) {
+                              final ts = ProductTrustUi.resolve(product);
+                              if (ts == ProductTrustState.none) {
+                                return const SizedBox.shrink();
+                              }
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 4),
+                                child: Row(children: [
+                                  _SoftPill(
+                                    text: ProductTrustUi.shortKey(ts).tr(),
+                                    icon: ProductTrustUi.icon(ts),
+                                    color: ProductTrustUi.color(ts),
+                                  ),
+                                ]),
+                              );
+                            }),
 
                             Text(
                               product.name,
@@ -535,17 +553,28 @@ class _ProductGridCardState extends State<ProductGridCard> {
                                   child: FittedBox(
                                     fit: BoxFit.scaleDown,
                                     alignment: Alignment.centerLeft,
-                                    child: Text(
-                                      PriceUtils.formatPrice(product.newPrice, product.currency),
-                                      maxLines: 1,
-                                      style: TextStyle(
-                                        color: AppColors.orange,
-                                        fontSize: compact ? 19 : 20,
-                                        height: 1,
-                                        fontWeight: FontWeight.w900,
-                                        letterSpacing: -0.7,
-                                      ),
-                                    ),
+                                    child: product.newPrice > 0
+                                        ? Text(
+                                            PriceUtils.formatPrice(product.newPrice, product.currency),
+                                            maxLines: 1,
+                                            style: TextStyle(
+                                              color: AppColors.orange,
+                                              fontSize: compact ? 19 : 20,
+                                              height: 1,
+                                              fontWeight: FontWeight.w900,
+                                              letterSpacing: -0.7,
+                                            ),
+                                          )
+                                        : Text(
+                                            'productTrust.priceNeedsReviewShort'.tr(),
+                                            maxLines: 1,
+                                            style: TextStyle(
+                                              color: const Color(0xFFFF9800),
+                                              fontSize: compact ? 11 : 11.5,
+                                              height: 1,
+                                              fontWeight: FontWeight.w800,
+                                            ),
+                                          ),
                                   ),
                                 ),
                                 if (hasDiscount) ...[

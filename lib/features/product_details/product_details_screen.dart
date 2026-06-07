@@ -17,6 +17,7 @@ import '../../services/price_truth_service.dart';
 import '../../services/product_service.dart';
 import '../../services/settings_service.dart';
 import '../../services/watchlist_service.dart';
+import '../../core/utils/product_trust_ui.dart';
 import '../../widgets/price_truth_card.dart';
 
 class ProductDetailsScreen extends StatefulWidget {
@@ -376,6 +377,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                         const SizedBox(height: 14),
                         PriceTruthCard(result: _priceTruth!),
                       ],
+                      ..._trustSectionWidgets(product),
                       const SizedBox(height: 18),
                       _buildBeforeBuy(),
                       if (hasDescription) ...[
@@ -427,6 +429,74 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                     _toggleFavorite,
                     color: isFavorite ? AppColors.red : Colors.white,
                   ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─── Trust Section ──────────────────────────────────────────────────────────
+
+  List<Widget> _trustSectionWidgets(Product product) {
+    final state = ProductTrustUi.resolve(product);
+    if (state == ProductTrustState.none) return const [];
+    return [
+      const SizedBox(height: 14),
+      _buildTrustSection(state),
+    ];
+  }
+
+  Widget _buildTrustSection(ProductTrustState state) {
+    final c = ProductTrustUi.color(state);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: c.withValues(alpha: 0.28)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(ProductTrustUi.icon(state), color: c, size: 18),
+              const SizedBox(width: 8),
+              Text(
+                'productTrust.title'.tr(),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 14,
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                decoration: BoxDecoration(
+                  color: c.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(99),
+                ),
+                child: Text(
+                  ProductTrustUi.shortKey(state).tr(),
+                  style: TextStyle(
+                    color: c,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            ProductTrustUi.messageKey(state).tr(),
+            style: const TextStyle(
+              color: AppColors.gray,
+              fontSize: 13,
+              height: 1.45,
+            ),
           ),
         ],
       ),

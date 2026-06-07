@@ -55,6 +55,19 @@ class Product {
   final List<dynamic> variants;
   final String fingerprint;
 
+  // Trust fields from Batch 13A/13D catalog governance
+  final String? trustStatus;
+  final String? priceConfidence;
+  final String? admissionStatus;
+  final String? riskLevel;
+  final List<String> qualityFlags;
+  final List<String> qualityReasons;
+  final bool? publicVisible;
+  final double? catalogRankScore;
+  final double? sourceTrustScoreAtImport;
+  final Map<String, dynamic>? mediaQuality;
+  final Map<String, dynamic>? linkHealth;
+
   const Product({
     required this.id,
     required this.name,
@@ -109,6 +122,17 @@ class Product {
     required this.hasCoupon,
     required this.variants,
     required this.fingerprint,
+    this.trustStatus,
+    this.priceConfidence,
+    this.admissionStatus,
+    this.riskLevel,
+    this.qualityFlags = const [],
+    this.qualityReasons = const [],
+    this.publicVisible,
+    this.catalogRankScore,
+    this.sourceTrustScoreAtImport,
+    this.mediaQuality,
+    this.linkHealth,
   });
 
   static double toDouble(dynamic value) {
@@ -335,6 +359,27 @@ class Product {
           ? List<dynamic>.from(map['variants'])
           : const [],
       fingerprint: map['fingerprint']?.toString() ?? '',
+      trustStatus: map['trustStatus']?.toString(),
+      priceConfidence: map['priceConfidence']?.toString(),
+      admissionStatus: map['admissionStatus']?.toString(),
+      riskLevel: map['riskLevel']?.toString(),
+      qualityFlags: toList(map['qualityFlags']),
+      qualityReasons: toList(map['qualityReasons']),
+      publicVisible: map.containsKey('publicVisible')
+          ? toBool(map['publicVisible'])
+          : null,
+      catalogRankScore: map['catalogRankScore'] != null
+          ? toDouble(map['catalogRankScore'])
+          : null,
+      sourceTrustScoreAtImport: map['sourceTrustScoreAtImport'] != null
+          ? toDouble(map['sourceTrustScoreAtImport'])
+          : null,
+      mediaQuality: map['mediaQuality'] is Map
+          ? Map<String, dynamic>.from(map['mediaQuality'] as Map)
+          : null,
+      linkHealth: map['linkHealth'] is Map
+          ? Map<String, dynamic>.from(map['linkHealth'] as Map)
+          : null,
     );
   }
 
@@ -425,6 +470,18 @@ class Product {
     'hasCoupon': hasCoupon,
     'variants': variants,
     'fingerprint': fingerprint,
+    if (trustStatus != null) 'trustStatus': trustStatus,
+    if (priceConfidence != null) 'priceConfidence': priceConfidence,
+    if (admissionStatus != null) 'admissionStatus': admissionStatus,
+    if (riskLevel != null) 'riskLevel': riskLevel,
+    'qualityFlags': qualityFlags,
+    'qualityReasons': qualityReasons,
+    if (publicVisible != null) 'publicVisible': publicVisible,
+    if (catalogRankScore != null) 'catalogRankScore': catalogRankScore,
+    if (sourceTrustScoreAtImport != null)
+      'sourceTrustScoreAtImport': sourceTrustScoreAtImport,
+    if (mediaQuality != null) 'mediaQuality': mediaQuality,
+    if (linkHealth != null) 'linkHealth': linkHealth,
   };
 }
 

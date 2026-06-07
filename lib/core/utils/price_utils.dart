@@ -19,7 +19,7 @@ class PriceUtils {
       case 'DZD':
         return '$f DZD';
       default:
-        return c.isEmpty ? '$f€' : '$f $c';
+        return (c.isEmpty || c == 'GLOBAL') ? '$f€' : '$f $c';
     }
   }
 }

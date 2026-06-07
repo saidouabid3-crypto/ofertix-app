@@ -1009,5 +1009,22 @@
   "admin.markBatchReview": "Marcar lote en revisión",
   "admin.markBatchReviewMessage": "Se marcará en revisión todos los productos de este lote. ¿Confirmas?",
   "admin.restoreBatchProducts": "Restaurar productos del lote",
-  "admin.restoreBatchProductsMessage": "Se restaurarán los productos ocultos de este lote a su estado anterior. ¿Confirmas?"
+  "admin.restoreBatchProductsMessage": "Se restaurarán los productos ocultos de este lote a su estado anterior. ¿Confirmas?",
+  "productTrust.title": "Confianza del producto",
+  "productTrust.verified": "Verificado por Ofertix",
+  "productTrust.verifiedShort": "Verificado",
+  "productTrust.priceNeedsReview": "Precio por revisar",
+  "productTrust.priceNeedsReviewShort": "Precio por revisar",
+  "productTrust.offerUnderReview": "Oferta en revisión",
+  "productTrust.offerUnderReviewShort": "En revisión",
+  "productTrust.sourceReliable": "Fuente confiable",
+  "productTrust.sourceReliableShort": "Fuente confiable",
+  "productTrust.limitedInfo": "Información limitada",
+  "productTrust.limitedInfoShort": "Info limitada",
+  "productTrust.verifiedMessage": "Ofertix ha revisado datos clave de este producto.",
+  "productTrust.priceReviewMessage": "El precio o la moneda necesitan revisión antes de comprar.",
+  "productTrust.reviewMessage": "Este producto está siendo revisado por calidad de datos.",
+  "productTrust.limitedInfoMessage": "Este producto tiene información limitada del proveedor.",
+  "productTrust.sourceReliableMessage": "Este producto proviene de una fuente con alta confiabilidad.",
+  "productTrust.noRawScore": "Puntuación no disponible"
 }

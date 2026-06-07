@@ -1009,5 +1009,22 @@
   "admin.markBatchReview": "Mark Batch for Review",
   "admin.markBatchReviewMessage": "All products from this batch will be marked for review. Confirm?",
   "admin.restoreBatchProducts": "Restore Batch Products",
-  "admin.restoreBatchProductsMessage": "Hidden products from this batch will be restored to their previous status. Confirm?"
+  "admin.restoreBatchProductsMessage": "Hidden products from this batch will be restored to their previous status. Confirm?",
+  "productTrust.title": "Product trust",
+  "productTrust.verified": "Verified by Ofertix",
+  "productTrust.verifiedShort": "Verified",
+  "productTrust.priceNeedsReview": "Price needs review",
+  "productTrust.priceNeedsReviewShort": "Price review",
+  "productTrust.offerUnderReview": "Offer under review",
+  "productTrust.offerUnderReviewShort": "Under review",
+  "productTrust.sourceReliable": "Reliable source",
+  "productTrust.sourceReliableShort": "Reliable source",
+  "productTrust.limitedInfo": "Limited information",
+  "productTrust.limitedInfoShort": "Limited info",
+  "productTrust.verifiedMessage": "Ofertix has reviewed key data for this product.",
+  "productTrust.priceReviewMessage": "The price or currency needs review before purchasing.",
+  "productTrust.reviewMessage": "This product is being reviewed for data quality.",
+  "productTrust.limitedInfoMessage": "This product has limited information from the provider.",
+  "productTrust.sourceReliableMessage": "This product comes from a highly trusted source.",
+  "productTrust.noRawScore": "Score not available"
 }

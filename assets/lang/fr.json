@@ -1009,5 +1009,22 @@
   "admin.markBatchReview": "Marquer lot en révision",
   "admin.markBatchReviewMessage": "Tous les produits de ce lot seront marqués en révision. Confirmer ?",
   "admin.restoreBatchProducts": "Restaurer produits du lot",
-  "admin.restoreBatchProductsMessage": "Les produits masqués de ce lot seront restaurés. Confirmer ?"
+  "admin.restoreBatchProductsMessage": "Les produits masqués de ce lot seront restaurés. Confirmer ?",
+  "productTrust.title": "Confiance du produit",
+  "productTrust.verified": "Vérifié par Ofertix",
+  "productTrust.verifiedShort": "Vérifié",
+  "productTrust.priceNeedsReview": "Prix à vérifier",
+  "productTrust.priceNeedsReviewShort": "Prix à vérifier",
+  "productTrust.offerUnderReview": "Offre en vérification",
+  "productTrust.offerUnderReviewShort": "En vérification",
+  "productTrust.sourceReliable": "Source fiable",
+  "productTrust.sourceReliableShort": "Source fiable",
+  "productTrust.limitedInfo": "Informations limitées",
+  "productTrust.limitedInfoShort": "Info limitées",
+  "productTrust.verifiedMessage": "Ofertix a vérifié les données clés de ce produit.",
+  "productTrust.priceReviewMessage": "Le prix ou la devise nécessite une vérification avant l'achat.",
+  "productTrust.reviewMessage": "Ce produit est en cours de vérification pour la qualité des données.",
+  "productTrust.limitedInfoMessage": "Ce produit dispose d'informations limitées du fournisseur.",
+  "productTrust.sourceReliableMessage": "Ce produit provient d'une source très fiable.",
+  "productTrust.noRawScore": "Score non disponible"
 }

@@ -1009,5 +1009,22 @@
   "admin.markBatchReview": "تحديد الدفعة للمراجعة",
   "admin.markBatchReviewMessage": "سيتم تحديد جميع منتجات هذه الدفعة للمراجعة. هل تؤكد؟",
   "admin.restoreBatchProducts": "استعادة منتجات الدفعة",
-  "admin.restoreBatchProductsMessage": "سيتم استعادة المنتجات المخفية في هذه الدفعة إلى حالتها السابقة. هل تؤكد؟"
+  "admin.restoreBatchProductsMessage": "سيتم استعادة المنتجات المخفية في هذه الدفعة إلى حالتها السابقة. هل تؤكد؟",
+  "productTrust.title": "موثوقية المنتج",
+  "productTrust.verified": "موثّق من Ofertix",
+  "productTrust.verifiedShort": "موثّق",
+  "productTrust.priceNeedsReview": "السعر يحتاج مراجعة",
+  "productTrust.priceNeedsReviewShort": "مراجعة السعر",
+  "productTrust.offerUnderReview": "العرض قيد المراجعة",
+  "productTrust.offerUnderReviewShort": "قيد المراجعة",
+  "productTrust.sourceReliable": "مصدر موثوق",
+  "productTrust.sourceReliableShort": "مصدر موثوق",
+  "productTrust.limitedInfo": "معلومات محدودة",
+  "productTrust.limitedInfoShort": "معلومات محدودة",
+  "productTrust.verifiedMessage": "راجع Ofertix البيانات الأساسية لهذا المنتج.",
+  "productTrust.priceReviewMessage": "السعر أو العملة يحتاجان مراجعة قبل الشراء.",
+  "productTrust.reviewMessage": "هذا المنتج قيد المراجعة لجودة البيانات.",
+  "productTrust.limitedInfoMessage": "هذا المنتج يحتوي على معلومات محدودة من المورّد.",
+  "productTrust.sourceReliableMessage": "هذا المنتج من مصدر عالي الموثوقية.",
+  "productTrust.noRawScore": "النقاط غير متاحة"
 }
