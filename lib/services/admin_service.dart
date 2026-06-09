@@ -540,4 +540,44 @@ class AdminService {
     );
     return _toMap(response);
   }
+
+  // ── catalog cache shield ───────────────────────────────────────────────────
+
+  Future<Map<String, dynamic>> getCacheStatus() async {
+    await _setToken();
+    final response = await _api.get(
+      '/admin/catalog/cache/status',
+      authorized: true,
+    );
+    return _toMap(response);
+  }
+
+  Future<Map<String, dynamic>> warmCache({
+    List<String>? countries,
+    int pages = 2,
+    int limit = 20,
+    bool includeTrending = true,
+  }) async {
+    await _setToken();
+    final response = await _api.post(
+      '/admin/catalog/cache/warm',
+      authorized: true,
+      body: {
+        'countries': countries ?? ['es', 'fr', 'us'],
+        'pages': pages,
+        'limit': limit,
+        'includeTrending': includeTrending,
+      },
+    );
+    return _toMap(response);
+  }
+
+  Future<Map<String, dynamic>> clearCache() async {
+    await _setToken();
+    final response = await _api.post(
+      '/admin/catalog/cache/clear',
+      authorized: true,
+    );
+    return _toMap(response);
+  }
 }

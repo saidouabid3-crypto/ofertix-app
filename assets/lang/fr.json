@@ -1102,5 +1102,19 @@
   "admin.catalogHealth.applyMessage": "Cette action met uniquement à jour les scores de confiance des sources. Elle ne modifiera aucun produit et ne masquera aucune offre.",
   "admin.catalogHealth.dryRunComplete": "Sources calculées",
   "admin.catalogHealth.updated": "Sources mises à jour",
-  "admin.catalogHealth.failed": "Échec du recalibrage de la confiance"
+  "admin.catalogHealth.failed": "Échec du recalibrage de la confiance",
+  "admin.cacheShield.title": "Cache Shield",
+  "admin.cacheShield.subtitle": "Cache catalogue en mémoire. Sert des résultats sauvegardés si Firestore est temporairement indisponible.",
+  "admin.cacheShield.entries": "Entrées",
+  "admin.cacheShield.hits": "Succès",
+  "admin.cacheShield.misses": "Échecs",
+  "admin.cacheShield.staleServed": "Obsolètes servis",
+  "admin.cacheShield.firestoreErrors": "Erreurs FS",
+  "admin.cacheShield.redisEnabled": "Redis",
+  "admin.cacheShield.refresh": "Actualiser le statut",
+  "admin.cacheShield.warm": "Préchauffer le cache",
+  "admin.cacheShield.clear": "Vider le cache",
+  "admin.cacheShield.warmSuccess": "Préchauffé",
+  "admin.cacheShield.warmFailed": "Échec du préchauffage",
+  "catalog.staleNotice": "Catalogue enregistré affiché"
 }

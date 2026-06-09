@@ -1102,5 +1102,19 @@
   "admin.catalogHealth.applyMessage": "This updates source trust scores only. It will not modify products or hide offers.",
   "admin.catalogHealth.dryRunComplete": "Sources calculated",
   "admin.catalogHealth.updated": "Sources updated",
-  "admin.catalogHealth.failed": "Source trust recalibration failed"
+  "admin.catalogHealth.failed": "Source trust recalibration failed",
+  "admin.cacheShield.title": "Cache Shield",
+  "admin.cacheShield.subtitle": "In-memory catalog cache. Serves stale results when Firestore is temporarily unavailable.",
+  "admin.cacheShield.entries": "Entries",
+  "admin.cacheShield.hits": "Hits",
+  "admin.cacheShield.misses": "Misses",
+  "admin.cacheShield.staleServed": "Stale served",
+  "admin.cacheShield.firestoreErrors": "FS errors",
+  "admin.cacheShield.redisEnabled": "Redis",
+  "admin.cacheShield.refresh": "Refresh status",
+  "admin.cacheShield.warm": "Warm cache",
+  "admin.cacheShield.clear": "Clear cache",
+  "admin.cacheShield.warmSuccess": "Warmed",
+  "admin.cacheShield.warmFailed": "Warm cache failed",
+  "catalog.staleNotice": "Showing saved catalog"
 }

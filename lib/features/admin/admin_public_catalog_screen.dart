@@ -30,6 +30,7 @@ class _AdminPublicCatalogScreenState extends State<AdminPublicCatalogScreen> {
       final provider = context.read<AdminProvider>();
       provider.loadCatalogPreview();
       provider.loadCatalogHealth();
+      provider.loadCacheStatus();
     });
   }
 
@@ -37,6 +38,7 @@ class _AdminPublicCatalogScreenState extends State<AdminPublicCatalogScreen> {
     await Future.wait([
       provider.loadCatalogPreview(),
       provider.loadCatalogHealth(),
+      provider.loadCacheStatus(),
     ]);
   }
 
@@ -69,6 +71,8 @@ class _AdminPublicCatalogScreenState extends State<AdminPublicCatalogScreen> {
             provider: provider,
             onApply: () => _confirmSourceTrustApply(provider),
           ),
+          const SizedBox(height: 16),
+          _CacheShieldCard(provider: provider),
           const SizedBox(height: 20),
           if (provider.isLoadingCatalogPreview && preview == null)
             const Center(
@@ -1024,4 +1028,147 @@ class _ErrorBox extends StatelessWidget {
       style: const TextStyle(color: AppColors.redOrange, fontSize: 12),
     ),
   );
+}
+
+// ─── Cache Shield Card ────────────────────────────────────────────────────────
+
+class _CacheShieldCard extends StatelessWidget {
+  final AdminProvider provider;
+
+  const _CacheShieldCard({required this.provider});
+
+  @override
+  Widget build(BuildContext context) {
+    final status = provider.cacheStatus;
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'admin.cacheShield.title'.tr(),
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 15,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'admin.cacheShield.subtitle'.tr(),
+            style: const TextStyle(
+              color: AppColors.gray,
+              fontSize: 11,
+              height: 1.35,
+            ),
+          ),
+          const SizedBox(height: 12),
+          if (provider.isLoadingCacheStatus && status == null)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.all(16),
+                child: CircularProgressIndicator(
+                  color: AppColors.orange,
+                  strokeWidth: 2,
+                ),
+              ),
+            )
+          else if (provider.cacheStatusError != null && status == null)
+            _ErrorBox(msg: provider.cacheStatusError!)
+          else if (status != null)
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _HealthMetric(
+                  label: 'admin.cacheShield.entries'.tr(),
+                  value: '${status['memoryCacheEntries'] ?? 0}',
+                ),
+                _HealthMetric(
+                  label: 'admin.cacheShield.hits'.tr(),
+                  value: '${status['cacheHitCount'] ?? 0}',
+                ),
+                _HealthMetric(
+                  label: 'admin.cacheShield.misses'.tr(),
+                  value: '${status['cacheMissCount'] ?? 0}',
+                ),
+                _HealthMetric(
+                  label: 'admin.cacheShield.staleServed'.tr(),
+                  value: '${status['staleServedCount'] ?? 0}',
+                ),
+                _HealthMetric(
+                  label: 'admin.cacheShield.firestoreErrors'.tr(),
+                  value: '${status['firestoreErrorCount'] ?? 0}',
+                ),
+                _HealthMetric(
+                  label: 'admin.cacheShield.redisEnabled'.tr(),
+                  value: (status['redisEnabled'] == true) ? '✓' : '✗',
+                ),
+              ],
+            ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              OutlinedButton.icon(
+                onPressed: provider.isLoadingCacheStatus
+                    ? null
+                    : provider.loadCacheStatus,
+                icon: const Icon(Icons.refresh_rounded, size: 16),
+                label: Text('admin.cacheShield.refresh'.tr()),
+              ),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.orange,
+                  foregroundColor: Colors.white,
+                ),
+                onPressed: provider.isWarmingCache ? null : () => provider.warmCache(),
+                icon: provider.isWarmingCache
+                    ? const SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(Icons.bolt_rounded, size: 16),
+                label: Text('admin.cacheShield.warm'.tr()),
+              ),
+              OutlinedButton.icon(
+                onPressed: provider.isClearingCache
+                    ? null
+                    : () => provider.clearCache(),
+                icon: const Icon(Icons.delete_sweep_outlined, size: 16),
+                label: Text('admin.cacheShield.clear'.tr()),
+              ),
+            ],
+          ),
+          if (provider.warmCacheResult != null) ...[
+            const SizedBox(height: 10),
+            Text(
+              '${'admin.cacheShield.warmSuccess'.tr()}: '
+              '${provider.warmCacheResult!['succeeded'] ?? 0}',
+              style: const TextStyle(
+                color: AppColors.green,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+          if (provider.warmCacheError != null) ...[
+            const SizedBox(height: 8),
+            _ErrorBox(msg: provider.warmCacheError!),
+          ],
+        ],
+      ),
+    );
+  }
 }

@@ -88,6 +88,15 @@ class AdminProvider extends ChangeNotifier {
   String? importActionError;
   Map<String, dynamic>? lastImportActionResult;
 
+  // ── catalog cache shield ──────────────────────────────────────────────────
+  bool isLoadingCacheStatus = false;
+  Map<String, dynamic>? cacheStatus;
+  String? cacheStatusError;
+  bool isWarmingCache = false;
+  Map<String, dynamic>? warmCacheResult;
+  String? warmCacheError;
+  bool isClearingCache = false;
+
   // ── public catalog governance ─────────────────────────────────────────────
   bool isLoadingCatalogPreview = false;
   CatalogPreviewModel? catalogPreview;
@@ -750,6 +759,56 @@ class AdminProvider extends ChangeNotifier {
     }
     isLoadingCatalogHealth = false;
     notifyListeners();
+  }
+
+  // ── catalog cache shield ──────────────────────────────────────────────────
+
+  Future<void> loadCacheStatus() async {
+    isLoadingCacheStatus = true;
+    cacheStatusError = null;
+    notifyListeners();
+    try {
+      cacheStatus = await _service.getCacheStatus();
+    } catch (e) {
+      cacheStatusError = e.toString();
+    }
+    isLoadingCacheStatus = false;
+    notifyListeners();
+  }
+
+  Future<bool> warmCache() async {
+    isWarmingCache = true;
+    warmCacheError = null;
+    warmCacheResult = null;
+    notifyListeners();
+    try {
+      warmCacheResult = await _service.warmCache();
+      isWarmingCache = false;
+      notifyListeners();
+      await loadCacheStatus();
+      return true;
+    } catch (e) {
+      warmCacheError = e.toString();
+      isWarmingCache = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> clearCache() async {
+    isClearingCache = true;
+    notifyListeners();
+    try {
+      await _service.clearCache();
+      isClearingCache = false;
+      notifyListeners();
+      await loadCacheStatus();
+      return true;
+    } catch (e) {
+      isClearingCache = false;
+      notifyListeners();
+      return false;
+    }
   }
 
   Future<bool> recalibrateSourceTrust({bool dryRun = true}) async {

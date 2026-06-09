@@ -1102,5 +1102,19 @@
   "admin.catalogHealth.applyMessage": "Esto actualizará la puntuación de confianza de las fuentes. No modificará productos ni ocultará ofertas.",
   "admin.catalogHealth.dryRunComplete": "Fuentes calculadas",
   "admin.catalogHealth.updated": "Fuentes actualizadas",
-  "admin.catalogHealth.failed": "No se pudo recalibrar la confianza"
+  "admin.catalogHealth.failed": "No se pudo recalibrar la confianza",
+  "admin.cacheShield.title": "Cache Shield",
+  "admin.cacheShield.subtitle": "Caché de catálogo en memoria. Sirve resultados guardados si Firestore no está disponible.",
+  "admin.cacheShield.entries": "Entradas",
+  "admin.cacheShield.hits": "Aciertos",
+  "admin.cacheShield.misses": "Fallos",
+  "admin.cacheShield.staleServed": "Servidos obsoletos",
+  "admin.cacheShield.firestoreErrors": "Errores FS",
+  "admin.cacheShield.redisEnabled": "Redis",
+  "admin.cacheShield.refresh": "Actualizar estado",
+  "admin.cacheShield.warm": "Calentar caché",
+  "admin.cacheShield.clear": "Limpiar caché",
+  "admin.cacheShield.warmSuccess": "Calentado",
+  "admin.cacheShield.warmFailed": "Error al calentar caché",
+  "catalog.staleNotice": "Mostrando catálogo guardado"
 }

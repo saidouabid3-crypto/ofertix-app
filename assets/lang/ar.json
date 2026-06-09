@@ -1102,5 +1102,19 @@
   "admin.catalogHealth.applyMessage": "سيتم تحديث نقاط الثقة للمصادر فقط. لن يتم تعديل المنتجات أو إخفاء العروض.",
   "admin.catalogHealth.dryRunComplete": "المصادر المحسوبة",
   "admin.catalogHealth.updated": "المصادر المحدثة",
-  "admin.catalogHealth.failed": "فشلت إعادة معايرة ثقة المصادر"
+  "admin.catalogHealth.failed": "فشلت إعادة معايرة ثقة المصادر",
+  "admin.cacheShield.title": "درع الكاش",
+  "admin.cacheShield.subtitle": "كاش الكتالوج في الذاكرة. يعرض النتائج المحفوظة عند عدم توفر Firestore مؤقتاً.",
+  "admin.cacheShield.entries": "المدخلات",
+  "admin.cacheShield.hits": "الإصابات",
+  "admin.cacheShield.misses": "الأخطاء",
+  "admin.cacheShield.staleServed": "قديم مُقدَّم",
+  "admin.cacheShield.firestoreErrors": "أخطاء FS",
+  "admin.cacheShield.redisEnabled": "Redis",
+  "admin.cacheShield.refresh": "تحديث الحالة",
+  "admin.cacheShield.warm": "تسخين الكاش",
+  "admin.cacheShield.clear": "مسح الكاش",
+  "admin.cacheShield.warmSuccess": "تم التسخين",
+  "admin.cacheShield.warmFailed": "فشل تسخين الكاش",
+  "catalog.staleNotice": "يتم عرض كتالوج محفوظ"
 }
