@@ -8,6 +8,7 @@ class CatalogGovernanceConfig {
   final bool hideMissingLink;
   final bool hideMissingImage;
   final bool hideMissingPrice;
+  final bool hideNeedsReview;
   final bool demoteNeedsReview;
   final bool demoteLimitedInfo;
   final bool strictMode;
@@ -17,13 +18,14 @@ class CatalogGovernanceConfig {
   const CatalogGovernanceConfig({
     this.publicFilteringEnabled = false,
     this.smartRankingEnabled = true,
-    this.hideQuarantined = true,
-    this.hideHiddenDuplicates = true,
-    this.hideRejected = true,
-    this.hideExplicitPublicInvisible = true,
+    this.hideQuarantined = false,
+    this.hideHiddenDuplicates = false,
+    this.hideRejected = false,
+    this.hideExplicitPublicInvisible = false,
     this.hideMissingLink = false,
     this.hideMissingImage = false,
     this.hideMissingPrice = false,
+    this.hideNeedsReview = false,
     this.demoteNeedsReview = true,
     this.demoteLimitedInfo = true,
     this.strictMode = false,
@@ -41,13 +43,14 @@ class CatalogGovernanceConfig {
     return CatalogGovernanceConfig(
       publicFilteringEnabled: b('publicFilteringEnabled', false),
       smartRankingEnabled: b('smartRankingEnabled', true),
-      hideQuarantined: b('hideQuarantined', true),
-      hideHiddenDuplicates: b('hideHiddenDuplicates', true),
-      hideRejected: b('hideRejected', true),
-      hideExplicitPublicInvisible: b('hideExplicitPublicInvisible', true),
+      hideQuarantined: b('hideQuarantined', false),
+      hideHiddenDuplicates: b('hideHiddenDuplicates', false),
+      hideRejected: b('hideRejected', false),
+      hideExplicitPublicInvisible: b('hideExplicitPublicInvisible', false),
       hideMissingLink: b('hideMissingLink', false),
       hideMissingImage: b('hideMissingImage', false),
       hideMissingPrice: b('hideMissingPrice', false),
+      hideNeedsReview: b('hideNeedsReview', false),
       demoteNeedsReview: b('demoteNeedsReview', true),
       demoteLimitedInfo: b('demoteLimitedInfo', true),
       strictMode: b('strictMode', false),
@@ -66,6 +69,7 @@ class CatalogGovernanceConfig {
     'hideMissingLink': hideMissingLink,
     'hideMissingImage': hideMissingImage,
     'hideMissingPrice': hideMissingPrice,
+    'hideNeedsReview': hideNeedsReview,
     'demoteNeedsReview': demoteNeedsReview,
     'demoteLimitedInfo': demoteLimitedInfo,
     'strictMode': strictMode,
@@ -80,11 +84,17 @@ class CatalogPreviewModel {
   final int trustedCount;
   final int needsReviewCount;
   final int quarantinedCount;
+  final int rejectedCount;
+  final int publicInvisibleCount;
   final int priceReviewCount;
+  final int missingPriceCount;
   final int missingLinkCount;
   final int missingImageCount;
   final int hiddenDuplicateCount;
+  final int strictHiddenNeedsReviewCount;
   final Map<String, int> hiddenByReason;
+  final List<Map<String, dynamic>> visibleSamples;
+  final List<Map<String, dynamic>> hiddenSamples;
   final String? generatedAt;
   final String? error;
 
@@ -96,11 +106,17 @@ class CatalogPreviewModel {
     this.trustedCount = 0,
     this.needsReviewCount = 0,
     this.quarantinedCount = 0,
+    this.rejectedCount = 0,
+    this.publicInvisibleCount = 0,
     this.priceReviewCount = 0,
+    this.missingPriceCount = 0,
     this.missingLinkCount = 0,
     this.missingImageCount = 0,
     this.hiddenDuplicateCount = 0,
+    this.strictHiddenNeedsReviewCount = 0,
     this.hiddenByReason = const {},
+    this.visibleSamples = const [],
+    this.hiddenSamples = const [],
     this.generatedAt,
     this.error,
   });
@@ -109,6 +125,14 @@ class CatalogPreviewModel {
     if (v is int) return v;
     if (v is num) return v.toInt();
     return 0;
+  }
+
+  static List<Map<String, dynamic>> _samples(dynamic raw) {
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList();
   }
 
   factory CatalogPreviewModel.fromJson(Map<String, dynamic> j) {
@@ -131,11 +155,17 @@ class CatalogPreviewModel {
       trustedCount: _i(j['trustedCount']),
       needsReviewCount: _i(j['needsReviewCount']),
       quarantinedCount: _i(j['quarantinedCount']),
+      rejectedCount: _i(j['rejectedCount']),
+      publicInvisibleCount: _i(j['publicInvisibleCount']),
       priceReviewCount: _i(j['priceReviewCount']),
+      missingPriceCount: _i(j['missingPriceCount']),
       missingLinkCount: _i(j['missingLinkCount']),
       missingImageCount: _i(j['missingImageCount']),
       hiddenDuplicateCount: _i(j['hiddenDuplicateCount']),
+      strictHiddenNeedsReviewCount: _i(j['strictHiddenNeedsReviewCount']),
       hiddenByReason: reasons,
+      visibleSamples: _samples(j['topVisibleSamples'] ?? j['visibleSamples']),
+      hiddenSamples: _samples(j['hiddenSamples']),
       generatedAt: j['generatedAt']?.toString(),
       error: j['error']?.toString(),
     );
