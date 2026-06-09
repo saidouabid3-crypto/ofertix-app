@@ -53,7 +53,9 @@ class AdminSourceTrustModel {
       source: j['source']?.toString(),
       store: j['store']?.toString(),
       domain: j['domain']?.toString(),
-      sourceTrustScore: _i(j['sourceTrustScore']) == 0 ? 100 : _i(j['sourceTrustScore']),
+      sourceTrustScore: j.containsKey('sourceTrustScore')
+          ? _i(j['sourceTrustScore'])
+          : 100,
       status: j['status']?.toString() ?? 'ok',
       totalImported: _i(j['totalImported']),
       totalFailed: _i(j['totalFailed']),
@@ -101,7 +103,10 @@ class AdminSourceTrustListModel {
     final list = j['items'];
     return AdminSourceTrustListModel(
       items: list is List
-          ? list.whereType<Map<String, dynamic>>().map(AdminSourceTrustModel.fromJson).toList()
+          ? list
+                .whereType<Map<String, dynamic>>()
+                .map(AdminSourceTrustModel.fromJson)
+                .toList()
           : [],
       total: AdminSourceTrustModel._i(j['total']),
     );

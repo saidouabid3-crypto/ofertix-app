@@ -171,3 +171,103 @@ class CatalogPreviewModel {
     );
   }
 }
+
+class CatalogHealthSummary {
+  final int totalProducts;
+  final int trustedProducts;
+  final int needsReviewProducts;
+  final int missingPriceProducts;
+  final int missingImageProducts;
+  final int missingLinkProducts;
+  final int hiddenDuplicates;
+  final int rejectedProducts;
+  final int quarantinedProducts;
+  final int publicVisibleFalse;
+  final int sourcesCount;
+  final int weakSourcesCount;
+  final int watchSourcesCount;
+  final int strongSourcesCount;
+  final double averageTrustScore;
+  final String? generatedAt;
+
+  const CatalogHealthSummary({
+    this.totalProducts = 0,
+    this.trustedProducts = 0,
+    this.needsReviewProducts = 0,
+    this.missingPriceProducts = 0,
+    this.missingImageProducts = 0,
+    this.missingLinkProducts = 0,
+    this.hiddenDuplicates = 0,
+    this.rejectedProducts = 0,
+    this.quarantinedProducts = 0,
+    this.publicVisibleFalse = 0,
+    this.sourcesCount = 0,
+    this.weakSourcesCount = 0,
+    this.watchSourcesCount = 0,
+    this.strongSourcesCount = 0,
+    this.averageTrustScore = 0,
+    this.generatedAt,
+  });
+
+  static int _int(dynamic value) {
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
+  static double _double(dynamic value) {
+    if (value is num) return value.toDouble();
+    return double.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
+  factory CatalogHealthSummary.fromJson(Map<String, dynamic> json) {
+    return CatalogHealthSummary(
+      totalProducts: _int(json['totalProducts']),
+      trustedProducts: _int(json['trustedProducts']),
+      needsReviewProducts: _int(json['needsReviewProducts']),
+      missingPriceProducts: _int(json['missingPriceProducts']),
+      missingImageProducts: _int(json['missingImageProducts']),
+      missingLinkProducts: _int(json['missingLinkProducts']),
+      hiddenDuplicates: _int(json['hiddenDuplicates']),
+      rejectedProducts: _int(json['rejectedProducts']),
+      quarantinedProducts: _int(json['quarantinedProducts']),
+      publicVisibleFalse: _int(json['publicVisibleFalse']),
+      sourcesCount: _int(json['sourcesCount']),
+      weakSourcesCount: _int(json['weakSourcesCount']),
+      watchSourcesCount: _int(json['watchSourcesCount']),
+      strongSourcesCount: _int(json['strongSourcesCount']),
+      averageTrustScore: _double(json['averageTrustScore']),
+      generatedAt: json['generatedAt']?.toString(),
+    );
+  }
+}
+
+class CatalogHealthModel {
+  final CatalogHealthSummary summary;
+  final List<Map<String, dynamic>> topWeakSources;
+  final List<Map<String, dynamic>> topStrongSources;
+
+  const CatalogHealthModel({
+    required this.summary,
+    this.topWeakSources = const [],
+    this.topStrongSources = const [],
+  });
+
+  static List<Map<String, dynamic>> _sources(dynamic value) {
+    if (value is! List) return const [];
+    return value
+        .whereType<Map>()
+        .map((item) => Map<String, dynamic>.from(item))
+        .toList();
+  }
+
+  factory CatalogHealthModel.fromJson(Map<String, dynamic> json) {
+    final rawSummary = json['summary'];
+    return CatalogHealthModel(
+      summary: rawSummary is Map
+          ? CatalogHealthSummary.fromJson(Map<String, dynamic>.from(rawSummary))
+          : const CatalogHealthSummary(),
+      topWeakSources: _sources(json['topWeakSources']),
+      topStrongSources: _sources(json['topStrongSources']),
+    );
+  }
+}

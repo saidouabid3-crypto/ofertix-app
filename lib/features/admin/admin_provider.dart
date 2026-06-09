@@ -94,6 +94,12 @@ class AdminProvider extends ChangeNotifier {
   String? catalogPreviewError;
   bool isCatalogConfigActing = false;
   String? catalogConfigError;
+  bool isLoadingCatalogHealth = false;
+  CatalogHealthModel? catalogHealth;
+  String? catalogHealthError;
+  bool isRecalibratingSourceTrust = false;
+  Map<String, dynamic>? lastSourceTrustRecalibration;
+  String? sourceTrustRecalibrationError;
 
   // ── action state ──────────────────────────────────────────────────────────
   bool isActing = false;
@@ -227,7 +233,11 @@ class AdminProvider extends ChangeNotifier {
 
   // ── reel actions ──────────────────────────────────────────────────────────
 
-  Future<bool> moderateReel(String reelId, String action, {String? reason}) async {
+  Future<bool> moderateReel(
+    String reelId,
+    String action, {
+    String? reason,
+  }) async {
     isActing = true;
     actionError = null;
     notifyListeners();
@@ -256,7 +266,11 @@ class AdminProvider extends ChangeNotifier {
 
   // ── marketplace actions ───────────────────────────────────────────────────
 
-  Future<bool> moderateMarketplaceItem(String itemId, String action, {String? reason}) async {
+  Future<bool> moderateMarketplaceItem(
+    String itemId,
+    String action, {
+    String? reason,
+  }) async {
     isActing = true;
     actionError = null;
     notifyListeners();
@@ -285,7 +299,11 @@ class AdminProvider extends ChangeNotifier {
 
   // ── report actions ────────────────────────────────────────────────────────
 
-  Future<bool> actOnReport(String reportId, String action, {String? note}) async {
+  Future<bool> actOnReport(
+    String reportId,
+    String action, {
+    String? note,
+  }) async {
     isActing = true;
     actionError = null;
     notifyListeners();
@@ -312,7 +330,12 @@ class AdminProvider extends ChangeNotifier {
 
   // ── user actions ──────────────────────────────────────────────────────────
 
-  Future<bool> actOnUser(String uid, String action, {String? reason, String? role}) async {
+  Future<bool> actOnUser(
+    String uid,
+    String action, {
+    String? reason,
+    String? role,
+  }) async {
     isActing = true;
     actionError = null;
     notifyListeners();
@@ -347,7 +370,11 @@ class AdminProvider extends ChangeNotifier {
 
   // ── product actions ───────────────────────────────────────────────────────
 
-  Future<bool> actOnProduct(String productId, String action, {String? reason}) async {
+  Future<bool> actOnProduct(
+    String productId,
+    String action, {
+    String? reason,
+  }) async {
     isActing = true;
     actionError = null;
     notifyListeners();
@@ -382,7 +409,11 @@ class AdminProvider extends ChangeNotifier {
     lastScanSummary = null;
     notifyListeners();
     try {
-      final result = await _service.scanProductQuality(dryRun: true, limit: limit, write: false);
+      final result = await _service.scanProductQuality(
+        dryRun: true,
+        limit: limit,
+        write: false,
+      );
       lastScanSummary = result;
       isScanLoading = false;
       notifyListeners();
@@ -395,13 +426,19 @@ class AdminProvider extends ChangeNotifier {
     }
   }
 
-  Future<ProductTrustScanSummaryModel?> applyProductQualityScan({int limit = 100}) async {
+  Future<ProductTrustScanSummaryModel?> applyProductQualityScan({
+    int limit = 100,
+  }) async {
     isScanLoading = true;
     scanError = null;
     lastScanSummary = null;
     notifyListeners();
     try {
-      final result = await _service.scanProductQuality(dryRun: false, limit: limit, write: true);
+      final result = await _service.scanProductQuality(
+        dryRun: false,
+        limit: limit,
+        write: true,
+      );
       lastScanSummary = result;
       isScanLoading = false;
       notifyListeners();
@@ -423,7 +460,10 @@ class AdminProvider extends ChangeNotifier {
     notifyListeners();
     try {
       final s = status ?? selectedDuplicateStatusFilter;
-      final result = await _service.getProductDuplicateGroups(status: s, limit: 50);
+      final result = await _service.getProductDuplicateGroups(
+        status: s,
+        limit: 50,
+      );
       duplicateGroups = result.groups;
     } catch (e) {
       duplicatesError = e.toString();
@@ -432,13 +472,19 @@ class AdminProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<AdminDuplicateScanSummaryModel?> runDuplicateDryRunScan({int limit = 300}) async {
+  Future<AdminDuplicateScanSummaryModel?> runDuplicateDryRunScan({
+    int limit = 300,
+  }) async {
     isDuplicateScanLoading = true;
     duplicateScanError = null;
     lastDuplicateScanSummary = null;
     notifyListeners();
     try {
-      final result = await _service.scanProductDuplicates(dryRun: true, limit: limit, write: false);
+      final result = await _service.scanProductDuplicates(
+        dryRun: true,
+        limit: limit,
+        write: false,
+      );
       lastDuplicateScanSummary = result;
       isDuplicateScanLoading = false;
       notifyListeners();
@@ -451,13 +497,19 @@ class AdminProvider extends ChangeNotifier {
     }
   }
 
-  Future<AdminDuplicateScanSummaryModel?> applyDuplicateScan({int limit = 300}) async {
+  Future<AdminDuplicateScanSummaryModel?> applyDuplicateScan({
+    int limit = 300,
+  }) async {
     isDuplicateScanLoading = true;
     duplicateScanError = null;
     lastDuplicateScanSummary = null;
     notifyListeners();
     try {
-      final result = await _service.scanProductDuplicates(dryRun: false, limit: limit, write: true);
+      final result = await _service.scanProductDuplicates(
+        dryRun: false,
+        limit: limit,
+        write: true,
+      );
       lastDuplicateScanSummary = result;
       isDuplicateScanLoading = false;
       notifyListeners();
@@ -471,7 +523,11 @@ class AdminProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> markDuplicateMaster(String groupId, String productId, {String? note}) async {
+  Future<bool> markDuplicateMaster(
+    String groupId,
+    String productId, {
+    String? note,
+  }) async {
     isActing = true;
     actionError = null;
     notifyListeners();
@@ -489,12 +545,20 @@ class AdminProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> hideDuplicate(String productId, String masterProductId, {String? note}) async {
+  Future<bool> hideDuplicate(
+    String productId,
+    String masterProductId, {
+    String? note,
+  }) async {
     isActing = true;
     actionError = null;
     notifyListeners();
     try {
-      await _service.hideDuplicateProduct(productId, masterProductId, note: note);
+      await _service.hideDuplicateProduct(
+        productId,
+        masterProductId,
+        note: note,
+      );
       isActing = false;
       notifyListeners();
       await loadDuplicateGroups();
@@ -579,7 +643,10 @@ class AdminProvider extends ChangeNotifier {
     lastImportActionResult = null;
     notifyListeners();
     try {
-      final result = await _service.hideImportBatchProducts(batchId, note: note);
+      final result = await _service.hideImportBatchProducts(
+        batchId,
+        note: note,
+      );
       lastImportActionResult = result;
       isImportActing = false;
       notifyListeners();
@@ -613,13 +680,19 @@ class AdminProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> restoreImportBatchProducts(String batchId, {String? note}) async {
+  Future<bool> restoreImportBatchProducts(
+    String batchId, {
+    String? note,
+  }) async {
     isImportActing = true;
     importActionError = null;
     lastImportActionResult = null;
     notifyListeners();
     try {
-      final result = await _service.restoreImportBatchProducts(batchId, note: note);
+      final result = await _service.restoreImportBatchProducts(
+        batchId,
+        note: note,
+      );
       lastImportActionResult = result;
       isImportActing = false;
       notifyListeners();
@@ -661,6 +734,41 @@ class AdminProvider extends ChangeNotifier {
     } catch (e) {
       catalogConfigError = e.toString();
       isCatalogConfigActing = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<void> loadCatalogHealth() async {
+    isLoadingCatalogHealth = true;
+    catalogHealthError = null;
+    notifyListeners();
+    try {
+      catalogHealth = await _service.getCatalogHealth();
+    } catch (e) {
+      catalogHealthError = e.toString();
+    }
+    isLoadingCatalogHealth = false;
+    notifyListeners();
+  }
+
+  Future<bool> recalibrateSourceTrust({bool dryRun = true}) async {
+    isRecalibratingSourceTrust = true;
+    sourceTrustRecalibrationError = null;
+    notifyListeners();
+    try {
+      lastSourceTrustRecalibration = await _service.recalibrateSourceTrust(
+        dryRun: dryRun,
+      );
+      isRecalibratingSourceTrust = false;
+      notifyListeners();
+      if (!dryRun) {
+        await Future.wait([loadCatalogHealth(), loadSourceTrust()]);
+      }
+      return true;
+    } catch (e) {
+      sourceTrustRecalibrationError = e.toString();
+      isRecalibratingSourceTrust = false;
       notifyListeners();
       return false;
     }

@@ -48,7 +48,10 @@ class AdminService {
 
   Future<AdminDashboardModel> getDashboard() async {
     await _setToken();
-    final response = await _api.get(ApiEndpoints.adminDashboard, authorized: true);
+    final response = await _api.get(
+      ApiEndpoints.adminDashboard,
+      authorized: true,
+    );
     return AdminDashboardModel.fromJson(_toMap(response));
   }
 
@@ -62,7 +65,10 @@ class AdminService {
 
   // ── moderation: reels ─────────────────────────────────────────────────────
 
-  Future<AdminModerationListModel> getModerationReels({String status = 'pending', int limit = 50}) async {
+  Future<AdminModerationListModel> getModerationReels({
+    String status = 'pending',
+    int limit = 50,
+  }) async {
     await _setToken();
     final response = await _api.get(
       '/admin/moderation/reels',
@@ -101,12 +107,18 @@ class AdminService {
 
   Future<void> restoreReel(String reelId) async {
     await _setToken();
-    await _api.post('/admin/moderation/reels/$reelId/restore', authorized: true);
+    await _api.post(
+      '/admin/moderation/reels/$reelId/restore',
+      authorized: true,
+    );
   }
 
   // ── moderation: marketplace ───────────────────────────────────────────────
 
-  Future<AdminModerationListModel> getModerationMarketplace({String status = 'pending', int limit = 50}) async {
+  Future<AdminModerationListModel> getModerationMarketplace({
+    String status = 'pending',
+    int limit = 50,
+  }) async {
     await _setToken();
     final response = await _api.get(
       '/admin/moderation/marketplace',
@@ -145,7 +157,10 @@ class AdminService {
 
   Future<void> restoreMarketplaceItem(String itemId) async {
     await _setToken();
-    await _api.post('/admin/moderation/marketplace/$itemId/restore', authorized: true);
+    await _api.post(
+      '/admin/moderation/marketplace/$itemId/restore',
+      authorized: true,
+    );
   }
 
   // ── reports ───────────────────────────────────────────────────────────────
@@ -162,24 +177,40 @@ class AdminService {
 
   Future<void> resolveReport(String reportId, {String? note}) async {
     await _setToken();
-    await _api.post('/admin/reports/$reportId/resolve', authorized: true, body: {'note': note});
+    await _api.post(
+      '/admin/reports/$reportId/resolve',
+      authorized: true,
+      body: {'note': note},
+    );
   }
 
   Future<void> dismissReport(String reportId, {String? note}) async {
     await _setToken();
-    await _api.post('/admin/reports/$reportId/dismiss', authorized: true, body: {'note': note});
+    await _api.post(
+      '/admin/reports/$reportId/dismiss',
+      authorized: true,
+      body: {'note': note},
+    );
   }
 
   Future<void> addReportNote(String reportId, String note) async {
     await _setToken();
-    await _api.post('/admin/reports/$reportId/note', authorized: true, body: {'note': note});
+    await _api.post(
+      '/admin/reports/$reportId/note',
+      authorized: true,
+      body: {'note': note},
+    );
   }
 
   // ── users ─────────────────────────────────────────────────────────────────
 
   Future<AdminUserListModel> getUsers({int limit = 50}) async {
     await _setToken();
-    final response = await _api.get('/admin/users', authorized: true, queryParameters: {'limit': limit});
+    final response = await _api.get(
+      '/admin/users',
+      authorized: true,
+      queryParameters: {'limit': limit},
+    );
     return AdminUserListModel.fromJson(_toMap(response));
   }
 
@@ -206,12 +237,19 @@ class AdminService {
 
   Future<void> removeSellerVerification(String uid) async {
     await _setToken();
-    await _api.post('/admin/users/$uid/remove-seller-verification', authorized: true);
+    await _api.post(
+      '/admin/users/$uid/remove-seller-verification',
+      authorized: true,
+    );
   }
 
   Future<void> banUser(String uid, {String? reason}) async {
     await _setToken();
-    await _api.post('/admin/users/$uid/ban', authorized: true, body: {'reason': reason});
+    await _api.post(
+      '/admin/users/$uid/ban',
+      authorized: true,
+      body: {'reason': reason},
+    );
   }
 
   Future<void> unbanUser(String uid) async {
@@ -221,20 +259,34 @@ class AdminService {
 
   Future<void> changeUserRole(String uid, String role) async {
     await _setToken();
-    await _api.post('/admin/users/$uid/role', authorized: true, body: {'role': role});
+    await _api.post(
+      '/admin/users/$uid/role',
+      authorized: true,
+      body: {'role': role},
+    );
   }
 
   // ── product quality ───────────────────────────────────────────────────────
 
-  Future<AdminProductQualityListModel> getProductQuality({int limit = 50}) async {
+  Future<AdminProductQualityListModel> getProductQuality({
+    int limit = 50,
+  }) async {
     await _setToken();
-    final response = await _api.get('/admin/products/quality', authorized: true, queryParameters: {'limit': limit});
+    final response = await _api.get(
+      '/admin/products/quality',
+      authorized: true,
+      queryParameters: {'limit': limit},
+    );
     return AdminProductQualityListModel.fromJson(_toMap(response));
   }
 
   Future<void> hideProduct(String productId, {String? reason}) async {
     await _setToken();
-    await _api.post('/admin/products/$productId/hide', authorized: true, body: {'reason': reason});
+    await _api.post(
+      '/admin/products/$productId/hide',
+      authorized: true,
+      body: {'reason': reason},
+    );
   }
 
   Future<void> restoreProduct(String productId) async {
@@ -244,7 +296,11 @@ class AdminService {
 
   Future<void> markProductReview(String productId, {String? reason}) async {
     await _setToken();
-    await _api.post('/admin/products/$productId/mark-review', authorized: true, body: {'reason': reason});
+    await _api.post(
+      '/admin/products/$productId/mark-review',
+      authorized: true,
+      body: {'reason': reason},
+    );
   }
 
   Future<void> markProductSafe(String productId) async {
@@ -254,7 +310,10 @@ class AdminService {
 
   Future<void> refreshProductQuality(String productId) async {
     await _setToken();
-    await _api.post('/admin/products/$productId/quality/refresh', authorized: true);
+    await _api.post(
+      '/admin/products/$productId/quality/refresh',
+      authorized: true,
+    );
   }
 
   Future<ProductTrustScanSummaryModel> scanProductQuality({
@@ -300,7 +359,11 @@ class AdminService {
     return AdminDuplicateGroupListModel.fromJson(_toMap(response));
   }
 
-  Future<void> markDuplicateMaster(String groupId, String productId, {String? note}) async {
+  Future<void> markDuplicateMaster(
+    String groupId,
+    String productId, {
+    String? note,
+  }) async {
     await _setToken();
     await _api.post(
       '/admin/products/duplicates/$groupId/mark-master',
@@ -309,7 +372,11 @@ class AdminService {
     );
   }
 
-  Future<void> hideDuplicateProduct(String productId, String masterProductId, {String? note}) async {
+  Future<void> hideDuplicateProduct(
+    String productId,
+    String masterProductId, {
+    String? note,
+  }) async {
     await _setToken();
     await _api.post(
       '/admin/products/$productId/duplicates/hide',
@@ -329,7 +396,10 @@ class AdminService {
 
   Future<void> restoreDuplicateProduct(String productId) async {
     await _setToken();
-    await _api.post('/admin/products/$productId/duplicates/restore', authorized: true);
+    await _api.post(
+      '/admin/products/$productId/duplicates/restore',
+      authorized: true,
+    );
   }
 
   // ── import batches ────────────────────────────────────────────────────────
@@ -346,11 +416,17 @@ class AdminService {
 
   Future<AdminImportBatchModel> getImportBatchDetails(String batchId) async {
     await _setToken();
-    final response = await _api.get('/admin/imports/batches/$batchId', authorized: true);
+    final response = await _api.get(
+      '/admin/imports/batches/$batchId',
+      authorized: true,
+    );
     return AdminImportBatchModel.fromJson(_toMap(response));
   }
 
-  Future<Map<String, dynamic>> hideImportBatchProducts(String batchId, {String? note}) async {
+  Future<Map<String, dynamic>> hideImportBatchProducts(
+    String batchId, {
+    String? note,
+  }) async {
     await _setToken();
     final response = await _api.post(
       '/admin/imports/batches/$batchId/hide-products',
@@ -360,7 +436,10 @@ class AdminService {
     return _toMap(response);
   }
 
-  Future<Map<String, dynamic>> markImportBatchReview(String batchId, {String? note}) async {
+  Future<Map<String, dynamic>> markImportBatchReview(
+    String batchId, {
+    String? note,
+  }) async {
     await _setToken();
     final response = await _api.post(
       '/admin/imports/batches/$batchId/mark-review',
@@ -370,7 +449,10 @@ class AdminService {
     return _toMap(response);
   }
 
-  Future<Map<String, dynamic>> restoreImportBatchProducts(String batchId, {String? note}) async {
+  Future<Map<String, dynamic>> restoreImportBatchProducts(
+    String batchId, {
+    String? note,
+  }) async {
     await _setToken();
     final response = await _api.post(
       '/admin/imports/batches/$batchId/restore-products',
@@ -402,7 +484,11 @@ class AdminService {
 
   Future<AdminLogListModel> getAdminLogs({int limit = 50}) async {
     await _setToken();
-    final response = await _api.get('/admin/logs', authorized: true, queryParameters: {'limit': limit});
+    final response = await _api.get(
+      '/admin/logs',
+      authorized: true,
+      queryParameters: {'limit': limit},
+    );
     return AdminLogListModel.fromJson(_toMap(response));
   }
 
@@ -418,7 +504,9 @@ class AdminService {
     return CatalogPreviewModel.fromJson(_toMap(response));
   }
 
-  Future<Map<String, dynamic>> updateCatalogConfig(Map<String, dynamic> updates) async {
+  Future<Map<String, dynamic>> updateCatalogConfig(
+    Map<String, dynamic> updates,
+  ) async {
     await _setToken();
     final response = await _api.patch(
       '/admin/catalog/public-config',
@@ -428,5 +516,28 @@ class AdminService {
     if (response is Map<String, dynamic>) return response;
     if (response is Map) return Map<String, dynamic>.from(response);
     return {'ok': true};
+  }
+
+  Future<CatalogHealthModel> getCatalogHealth() async {
+    await _setToken();
+    final response = await _api.get('/admin/catalog/health', authorized: true);
+    return CatalogHealthModel.fromJson(_toMap(response));
+  }
+
+  Future<Map<String, dynamic>> recalibrateSourceTrust({
+    String? sourceKey,
+    bool dryRun = true,
+  }) async {
+    await _setToken();
+    final response = await _api.post(
+      '/admin/catalog/recalibrate-source-trust',
+      authorized: true,
+      body: {
+        if (sourceKey != null && sourceKey.trim().isNotEmpty)
+          'sourceKey': sourceKey.trim(),
+        'dryRun': dryRun,
+      },
+    );
+    return _toMap(response);
   }
 }

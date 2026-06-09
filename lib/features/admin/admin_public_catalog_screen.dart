@@ -27,8 +27,17 @@ class _AdminPublicCatalogScreenState extends State<AdminPublicCatalogScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<AdminProvider>().loadCatalogPreview();
+      final provider = context.read<AdminProvider>();
+      provider.loadCatalogPreview();
+      provider.loadCatalogHealth();
     });
+  }
+
+  Future<void> _refreshAll(AdminProvider provider) async {
+    await Future.wait([
+      provider.loadCatalogPreview(),
+      provider.loadCatalogHealth(),
+    ]);
   }
 
   @override
@@ -39,7 +48,7 @@ class _AdminPublicCatalogScreenState extends State<AdminPublicCatalogScreen> {
 
     return RefreshIndicator(
       color: AppColors.orange,
-      onRefresh: provider.loadCatalogPreview,
+      onRefresh: () => _refreshAll(provider),
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -56,6 +65,11 @@ class _AdminPublicCatalogScreenState extends State<AdminPublicCatalogScreen> {
             onTap: provider.loadCatalogPreview,
           ),
           const SizedBox(height: 16),
+          _CatalogHealthCard(
+            provider: provider,
+            onApply: () => _confirmSourceTrustApply(provider),
+          ),
+          const SizedBox(height: 20),
           if (provider.isLoadingCatalogPreview && preview == null)
             const Center(
               child: Padding(
@@ -399,6 +413,46 @@ class _AdminPublicCatalogScreenState extends State<AdminPublicCatalogScreen> {
     await provider.updateCatalogConfig({key: value});
   }
 
+  Future<void> _confirmSourceTrustApply(AdminProvider provider) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: AppColors.card,
+        title: Text(
+          'admin.catalogHealth.applyTitle'.tr(),
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        content: Text(
+          'admin.catalogHealth.applyMessage'.tr(),
+          style: const TextStyle(color: AppColors.gray),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(
+              'common.cancel'.tr(),
+              style: const TextStyle(color: AppColors.gray),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.orange),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(
+              'admin.catalogHealth.apply'.tr(),
+              style: const TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && mounted) {
+      await provider.recalibrateSourceTrust(dryRun: false);
+    }
+  }
+
   String _reasonLabel(String reason) {
     const keys = {
       'missing_link': 'admin.publicCatalog.reasonMissingLink',
@@ -415,6 +469,204 @@ class _AdminPublicCatalogScreenState extends State<AdminPublicCatalogScreen> {
     final key = keys[reason];
     return key == null ? reason : key.tr();
   }
+}
+
+class _CatalogHealthCard extends StatelessWidget {
+  final AdminProvider provider;
+  final VoidCallback onApply;
+
+  const _CatalogHealthCard({required this.provider, required this.onApply});
+
+  @override
+  Widget build(BuildContext context) {
+    final health = provider.catalogHealth?.summary;
+    final actionResult = provider.lastSourceTrustRecalibration;
+    final updated = actionResult?['updatedSources'] ?? 0;
+    final recalibrated = actionResult?['recalibratedSources'] ?? 0;
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'admin.catalogHealth.title'.tr(),
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 15,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'admin.catalogHealth.subtitle'.tr(),
+            style: const TextStyle(
+              color: AppColors.gray,
+              fontSize: 11,
+              height: 1.35,
+            ),
+          ),
+          const SizedBox(height: 12),
+          if (provider.isLoadingCatalogHealth && health == null)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.all(16),
+                child: CircularProgressIndicator(
+                  color: AppColors.orange,
+                  strokeWidth: 2,
+                ),
+              ),
+            )
+          else if (provider.catalogHealthError != null && health == null)
+            _ErrorBox(msg: provider.catalogHealthError!)
+          else if (health != null)
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _HealthMetric(
+                  label: 'admin.catalogHealth.totalProducts'.tr(),
+                  value: '${health.totalProducts}',
+                ),
+                _HealthMetric(
+                  label: 'admin.catalogHealth.trusted'.tr(),
+                  value: '${health.trustedProducts}',
+                ),
+                _HealthMetric(
+                  label: 'admin.catalogHealth.needsReview'.tr(),
+                  value: '${health.needsReviewProducts}',
+                ),
+                _HealthMetric(
+                  label: 'admin.catalogHealth.missingPrice'.tr(),
+                  value: '${health.missingPriceProducts}',
+                ),
+                _HealthMetric(
+                  label: 'admin.catalogHealth.missingImage'.tr(),
+                  value: '${health.missingImageProducts}',
+                ),
+                _HealthMetric(
+                  label: 'admin.catalogHealth.missingLink'.tr(),
+                  value: '${health.missingLinkProducts}',
+                ),
+                _HealthMetric(
+                  label: 'admin.catalogHealth.weakSources'.tr(),
+                  value: '${health.weakSourcesCount}',
+                ),
+                _HealthMetric(
+                  label: 'admin.catalogHealth.averageTrust'.tr(),
+                  value: health.averageTrustScore.toStringAsFixed(1),
+                ),
+              ],
+            ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              OutlinedButton.icon(
+                onPressed: provider.isLoadingCatalogHealth
+                    ? null
+                    : provider.loadCatalogHealth,
+                icon: const Icon(Icons.refresh_rounded, size: 16),
+                label: Text('admin.catalogHealth.refresh'.tr()),
+              ),
+              OutlinedButton.icon(
+                onPressed: provider.isRecalibratingSourceTrust
+                    ? null
+                    : () => provider.recalibrateSourceTrust(dryRun: true),
+                icon: const Icon(Icons.science_outlined, size: 16),
+                label: Text('admin.catalogHealth.dryRun'.tr()),
+              ),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.orange,
+                  foregroundColor: Colors.white,
+                ),
+                onPressed: provider.isRecalibratingSourceTrust ? null : onApply,
+                icon: provider.isRecalibratingSourceTrust
+                    ? const SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(Icons.tune_rounded, size: 16),
+                label: Text('admin.catalogHealth.apply'.tr()),
+              ),
+            ],
+          ),
+          if (actionResult != null) ...[
+            const SizedBox(height: 10),
+            Text(
+              actionResult['dryRun'] == true
+                  ? '${'admin.catalogHealth.dryRunComplete'.tr()}: '
+                        '$recalibrated'
+                  : '${'admin.catalogHealth.updated'.tr()}: $updated',
+              style: const TextStyle(
+                color: AppColors.green,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+          if (provider.sourceTrustRecalibrationError != null) ...[
+            const SizedBox(height: 10),
+            _ErrorBox(msg: provider.sourceTrustRecalibrationError!),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _HealthMetric extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _HealthMetric({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) => ConstrainedBox(
+    constraints: const BoxConstraints(minWidth: 105, maxWidth: 155),
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: AppColors.gray,
+              fontSize: 10,
+              height: 1.2,
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 class _SectionTitle extends StatelessWidget {
