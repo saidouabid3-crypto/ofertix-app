@@ -6,7 +6,8 @@ class TrendingRepository {
 
   Stream<List<Product>> getTrending({String countryCode = 'es'}) {
     return _repository.getProducts(countryCode: countryCode).map((products) {
-      final trending = products.where((p) => p.isTrending).toList();
+      // Phase 1: products with real engagement signals.
+      var trending = products.where((p) => p.isTrending).toList();
 
       trending.sort((a, b) {
         final scoreA = a.views + a.clicks + a.sales;
@@ -14,7 +15,21 @@ class TrendingRepository {
         return scoreB.compareTo(scoreA);
       });
 
-      return trending;
+      if (trending.isNotEmpty) return trending;
+
+      // Phase 2 fallback: no engagement data yet (new catalog).
+      // Surface the highest-discount hot/featured products so the screen
+      // is never empty while the catalog is bootstrapping.
+      final fallback = products
+          .where((p) => p.isHot || p.featured || p.discount >= 30)
+          .toList();
+      fallback.sort((a, b) => b.discount.compareTo(a.discount));
+      if (fallback.isNotEmpty) return fallback.take(40).toList();
+
+      // Phase 3: absolute fallback — top 40 by discount.
+      final all = [...products];
+      all.sort((a, b) => b.discount.compareTo(a.discount));
+      return all.take(40).toList();
     });
   }
 }
