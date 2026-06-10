@@ -17,6 +17,8 @@ class ApiEndpoints {
   static String productDetail(String productId) => '/product-detail/$productId';
   static String productDetailForCountry(String productId, String country) =>
       _withQuery(productDetail(productId), {'country': country});
+  static String productDealVerdict(String productId, String country) =>
+      _withQuery('/api/products/$productId/deal-verdict', {'country': country});
 
   // --- AI search / recommendations -----------------------------------------
   static const String aiChat = '/api/ai/chat';

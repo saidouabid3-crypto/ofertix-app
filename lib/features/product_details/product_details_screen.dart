@@ -6,12 +6,14 @@ import 'package:share_plus/share_plus.dart';
 import '../../core/errors/app_exception.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/ai_deal_brain_result.dart';
+import '../../models/deal_verdict.dart';
 import '../../models/price_truth_result.dart';
 import '../../models/product.dart';
 import '../../services/affiliate_service.dart';
 import '../../services/ai_service.dart';
 import '../../services/alert_service.dart';
 import '../../services/auth_service.dart';
+import '../../services/deal_verdict_service.dart';
 import '../../services/favorite_service.dart';
 import '../../services/price_truth_service.dart';
 import '../../services/product_service.dart';
@@ -19,6 +21,7 @@ import '../../services/settings_service.dart';
 import '../../services/watchlist_service.dart';
 import '../../core/utils/product_trust_ui.dart';
 import '../../widgets/price_truth_card.dart';
+import '../../widgets/deal_verdict_card.dart';
 
 class ProductDetailsScreen extends StatefulWidget {
   final Product product;
@@ -47,6 +50,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
   String? aiErrorKey;
   int _imageIndex = 0;
   PriceTruthResult? _priceTruth;
+  DealVerdict? _dealVerdict;
 
   // New state
   bool _descriptionExpanded = false;
@@ -61,6 +65,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
     _loadFavoriteState();
     _loadWatchState();
     _loadPriceTruth();
+    _loadDealVerdict();
     _loadSimilarProducts();
   }
 
@@ -86,6 +91,19 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
       if (!mounted) return;
       setState(() => _priceTruth = result);
     } catch (_) {}
+  }
+
+  Future<void> _loadDealVerdict() async {
+    if (widget.product.id.trim().isEmpty) return;
+    try {
+      final result = await DealVerdictService.instance.getForProduct(
+        widget.product.id,
+      );
+      if (!mounted) return;
+      setState(() => _dealVerdict = result);
+    } catch (_) {
+      // Verdict is advisory; Product Details and the offer action stay usable.
+    }
   }
 
   Future<void> _loadFavoriteState() async {
@@ -116,8 +134,8 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
             writeFailed
                 ? 'common.saveFailed'.tr()
                 : nowSaved
-                    ? 'product.favorite.added'.tr()
-                    : 'product.favorite.removed'.tr(),
+                ? 'product.favorite.added'.tr()
+                : 'product.favorite.removed'.tr(),
           ),
           duration: const Duration(seconds: 2),
           behavior: SnackBarBehavior.floating,
@@ -185,10 +203,10 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
       final msg = writeFailed
           ? 'common.saveFailed'.tr()
           : isGuest && nowWatching
-              ? 'watchlist.guestSaved'.tr()
-              : nowWatching
-                  ? 'product.watchlist.added'.tr()
-                  : 'product.watchlist.removed'.tr();
+          ? 'watchlist.guestSaved'.tr()
+          : nowWatching
+          ? 'product.watchlist.added'.tr()
+          : 'product.watchlist.removed'.tr();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(msg),
@@ -271,8 +289,10 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
     final product = widget.product;
     final urlStr = product.affiliateUrl.trim();
 
-    debugPrint('[ProductDetails] openLink: id=${product.id} '
-        'affiliateUrl=${urlStr.isNotEmpty ? "present(${urlStr.length}ch)" : "EMPTY"}');
+    debugPrint(
+      '[ProductDetails] openLink: id=${product.id} '
+      'affiliateUrl=${urlStr.isNotEmpty ? "present(${urlStr.length}ch)" : "EMPTY"}',
+    );
 
     if (urlStr.isEmpty) {
       if (!mounted) return;
@@ -347,9 +367,12 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
         product.description.isNotEmpty &&
         product.description != product.name &&
         product.description != product.fullTitle;
-    final hasDiscount = product.discount > 0 && product.oldPrice > product.newPrice;
-    final galleryH =
-        (MediaQuery.sizeOf(context).height * 0.40).clamp(260.0, 380.0);
+    final hasDiscount =
+        product.discount > 0 && product.oldPrice > product.newPrice;
+    final galleryH = (MediaQuery.sizeOf(context).height * 0.40).clamp(
+      260.0,
+      380.0,
+    );
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -360,7 +383,12 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
             slivers: [
               // ── 1. Image gallery — no text over image ──
               SliverToBoxAdapter(
-                child: _buildGallery(images, galleryH, hasDiscount, product.discount),
+                child: _buildGallery(
+                  images,
+                  galleryH,
+                  hasDiscount,
+                  product.discount,
+                ),
               ),
 
               // ── 2. Product info + all content ──
@@ -376,6 +404,10 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                       if (_priceTruth != null) ...[
                         const SizedBox(height: 14),
                         PriceTruthCard(result: _priceTruth!),
+                      ],
+                      if (_dealVerdict != null) ...[
+                        const SizedBox(height: 14),
+                        DealVerdictCard(verdict: _dealVerdict!),
                       ],
                       ..._trustSectionWidgets(product),
                       const SizedBox(height: 18),
@@ -413,7 +445,9 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
             top: MediaQuery.paddingOf(context).top + 8,
             right: 12,
             child: _isFavoriteLoading
-                ? _iconButton(null, null,
+                ? _iconButton(
+                    null,
+                    null,
                     child: const SizedBox(
                       width: 18,
                       height: 18,
@@ -421,7 +455,8 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                         strokeWidth: 2,
                         color: Colors.white,
                       ),
-                    ))
+                    ),
+                  )
                 : _iconButton(
                     isFavorite
                         ? Icons.favorite_rounded
@@ -440,10 +475,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
   List<Widget> _trustSectionWidgets(Product product) {
     final state = ProductTrustUi.resolve(product);
     if (state == ProductTrustState.none) return const [];
-    return [
-      const SizedBox(height: 14),
-      _buildTrustSection(state),
-    ];
+    return [const SizedBox(height: 14), _buildTrustSection(state)];
   }
 
   Widget _buildTrustSection(ProductTrustState state) {
@@ -567,7 +599,10 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
               bottom: 12,
               right: 12,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.black54,
                   borderRadius: BorderRadius.circular(20),
@@ -589,7 +624,10 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
               bottom: 12,
               left: 12,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.green,
                   borderRadius: BorderRadius.circular(99),
@@ -610,25 +648,22 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
   }
 
   Widget _cachedImg(String url) => CachedNetworkImage(
-        imageUrl: url,
-        fit: BoxFit.contain,
-        color: const Color(0xFF161622),
-        colorBlendMode: BlendMode.dstOver,
-        placeholder: (_, __) => const Center(
-          child: CircularProgressIndicator(
-            color: AppColors.orange,
-            strokeWidth: 2,
-          ),
-        ),
-        errorWidget: (_, __, ___) => Container(
-          color: const Color(0xFF161622),
-          child: const Icon(
-            Icons.image_not_supported_rounded,
-            color: Colors.white24,
-            size: 60,
-          ),
-        ),
-      );
+    imageUrl: url,
+    fit: BoxFit.contain,
+    color: const Color(0xFF161622),
+    colorBlendMode: BlendMode.dstOver,
+    placeholder: (_, __) => const Center(
+      child: CircularProgressIndicator(color: AppColors.orange, strokeWidth: 2),
+    ),
+    errorWidget: (_, __, ___) => Container(
+      color: const Color(0xFF161622),
+      child: const Icon(
+        Icons.image_not_supported_rounded,
+        color: Colors.white24,
+        size: 60,
+      ),
+    ),
+  );
 
   // ─── Product Header (title, store, price) ──────────────────────────────────
 
@@ -1036,9 +1071,8 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
         ),
         const SizedBox(height: 8),
         GestureDetector(
-          onTap: () => setState(
-            () => _descriptionExpanded = !_descriptionExpanded,
-          ),
+          onTap: () =>
+              setState(() => _descriptionExpanded = !_descriptionExpanded),
           child: Text(
             _descriptionExpanded
                 ? 'product.seeLess'.tr()
@@ -1062,8 +1096,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
         Expanded(
           child: OutlinedButton.icon(
             style: OutlinedButton.styleFrom(
-              foregroundColor:
-                  _isWatching ? AppColors.orange : AppColors.gray,
+              foregroundColor: _isWatching ? AppColors.orange : AppColors.gray,
               side: BorderSide(
                 color: _isWatching
                     ? AppColors.orange
@@ -1102,9 +1135,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
           child: OutlinedButton.icon(
             style: OutlinedButton.styleFrom(
               foregroundColor: AppColors.orange,
-              side: BorderSide(
-                color: AppColors.orange.withValues(alpha: 0.55),
-              ),
+              side: BorderSide(color: AppColors.orange.withValues(alpha: 0.55)),
               padding: const EdgeInsets.symmetric(vertical: 13),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
@@ -1322,8 +1353,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
           color: Colors.black.withValues(alpha: 0.45),
           shape: BoxShape.circle,
         ),
-        child: child ??
-            Icon(icon!, color: color ?? Colors.white, size: 22),
+        child: child ?? Icon(icon!, color: color ?? Colors.white, size: 22),
       ),
     );
   }
@@ -1493,7 +1523,9 @@ class _PriceAlertSheetState extends State<_PriceAlertSheet> {
             const SizedBox(height: 14),
             TextField(
               controller: _priceController,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
               style: const TextStyle(color: Colors.white, fontSize: 16),
               decoration: InputDecoration(
                 labelText: 'product.priceAlert.targetPrice'.tr(),
