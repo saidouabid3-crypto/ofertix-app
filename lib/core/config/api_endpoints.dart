@@ -40,6 +40,7 @@ class ApiEndpoints {
   static const String aiBrainHistory = '/ai/brain/history';
 
   // --- Home feed / i18n / market -------------------------------------------
+  static const String productSearch = '/api/products/search';
   static const String homeFeed = '/home-feed';
   static String homeFeedForCountry({
     required String country,
