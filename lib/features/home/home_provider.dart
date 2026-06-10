@@ -20,12 +20,20 @@ class HomeProvider extends ChangeNotifier {
   List<Product> featuredProducts = [];
   List<Product> nearbyProducts = [];
   List<LocalStoreModel> localStores = [];
+  // Discovery sections (Batch 14A)
+  List<Product> forYouToday = [];
+  List<Product> verifiedDeals = [];
+  List<Product> freshArrivals = [];
 
   Position? userPosition;
   bool isLoading = true;
   String? errorMessage;
 
   int userPoints = 0;
+
+  void markProductSeen(Product product) {
+    _homeFeedService.markSeen(product.id);
+  }
 
   Future<void> initialize({String? countryCode}) async {
     isLoading = true;
@@ -56,6 +64,10 @@ class HomeProvider extends ChangeNotifier {
       featuredProducts = [...homeFeed.topRated, ...homeFeed.bestSellers];
       nearbyProducts = _filterNearbyProducts(products);
       localStores = await _loadLocalStores(country);
+      // Discovery
+      forYouToday = homeFeed.forYouToday;
+      verifiedDeals = homeFeed.verifiedDeals;
+      freshArrivals = homeFeed.freshArrivals;
     } catch (e) {
       errorMessage = e.toString();
       final fallback = await _repository
@@ -66,6 +78,9 @@ class HomeProvider extends ChangeNotifier {
       featuredProducts = fallback.where((p) => p.featured).toList();
       nearbyProducts = _filterNearbyProducts(fallback);
       localStores = await _loadLocalStores(country);
+      forYouToday = [];
+      verifiedDeals = [];
+      freshArrivals = [];
     }
 
     isLoading = false;
@@ -91,8 +106,9 @@ class HomeProvider extends ChangeNotifier {
         permission = await Geolocator.requestPermission();
       }
       if (permission == LocationPermission.deniedForever ||
-          permission == LocationPermission.denied)
+          permission == LocationPermission.denied) {
         return;
+      }
       userPosition = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
           accuracy: LocationAccuracy.high,
@@ -107,8 +123,9 @@ class HomeProvider extends ChangeNotifier {
     final position = userPosition;
     if (position == null) return [];
     return allProducts.where((product) {
-      if (product.isOnline || product.lat == 0.0 || product.lng == 0.0)
+      if (product.isOnline || product.lat == 0.0 || product.lng == 0.0) {
         return false;
+      }
       final distance = Geolocator.distanceBetween(
         position.latitude,
         position.longitude,
@@ -121,8 +138,9 @@ class HomeProvider extends ChangeNotifier {
 
   double? getDistance(Product product) {
     final position = userPosition;
-    if (position == null || product.lat == 0.0 || product.lng == 0.0)
+    if (position == null || product.lat == 0.0 || product.lng == 0.0) {
       return null;
+    }
     final meters = Geolocator.distanceBetween(
       position.latitude,
       position.longitude,

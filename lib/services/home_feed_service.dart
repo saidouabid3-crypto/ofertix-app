@@ -10,6 +10,15 @@ class HomeFeedService {
 
   final ApiService _api = ApiService.instance;
 
+  // In-memory seen product IDs for this session (max 50, non-private)
+  final List<String> _seenIds = [];
+
+  void markSeen(String productId) {
+    if (productId.isEmpty || _seenIds.contains(productId)) return;
+    _seenIds.add(productId);
+    if (_seenIds.length > 50) _seenIds.removeAt(0);
+  }
+
   Future<String> _country([String countryCode = 'auto']) async {
     if (countryCode == 'auto' || countryCode == 'global') {
       return CountryService.instance.getCurrentCountry();
@@ -17,20 +26,33 @@ class HomeFeedService {
     return countryCode;
   }
 
+  /// Deterministic session variant A/B/C/D based on current UTC date.
+  String _sessionVariant() {
+    final day = DateTime.now().toUtc().toIso8601String().substring(0, 10);
+    final code = day.codeUnits.fold(0, (a, b) => a + b);
+    return 'ABCD'[code % 4];
+  }
+
   Future<HomeFeed> getHomeFeed({
     String countryCode = 'auto',
     String? userId,
   }) async {
     final country = await _country(countryCode);
+    final variant = _sessionVariant();
+    final seenParam = _seenIds.isNotEmpty ? _seenIds.join(',') : null;
+
     final response = await _api.get(
       ApiEndpoints.homeFeedForCountry(
         country: country,
-        limit: 30,
+        limit: 40,
         userId: userId,
+        variant: variant,
+        seenIds: seenParam,
       ),
     );
-    if (response is Map)
+    if (response is Map) {
       return HomeFeed.fromMap(Map<String, dynamic>.from(response));
+    }
     return HomeFeed.empty();
   }
 
@@ -54,6 +76,7 @@ class HomeFeedService {
   }
 
   Future<void> trackProductView(Product product) async {
+    markSeen(product.id);
     try {
       await _api.post(
         ApiEndpoints.eventProductView,
@@ -67,6 +90,7 @@ class HomeFeedService {
   }
 
   Future<void> trackOfferClick(Product product) async {
+    markSeen(product.id);
     try {
       await _api.post(
         ApiEndpoints.eventOfferClick,

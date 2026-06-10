@@ -45,10 +45,14 @@ class ApiEndpoints {
     required String country,
     int limit = 30,
     String? userId,
+    String? variant,
+    String? seenIds,
   }) => _withQuery(homeFeed, {
     'country': country,
     'limit': limit,
     'userId': userId,
+    'variant': variant,
+    'seenIds': seenIds,
   });
 
   static const String i18nCountries = '/i18n/countries';

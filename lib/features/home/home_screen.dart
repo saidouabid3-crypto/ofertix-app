@@ -5,6 +5,7 @@ import 'package:easy_localization/easy_localization.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/product.dart';
 import '../../models/ofertix_ad_model.dart';
+import '../../services/home_feed_service.dart';
 import '../../widgets/daily_ai_hunt_section.dart';
 import '../../widgets/product_grid_card.dart';
 import '../../widgets/ofertix_ad_slot.dart';
@@ -29,6 +30,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> openProduct(Product product) async {
+    // Track seen before opening so the next feed refresh demotes it
+    HomeFeedService.instance.markSeen(product.id);
     await Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => ProductDetailsScreen(product: product)),
@@ -161,6 +164,30 @@ class _HomeScreenState extends State<HomeScreen> {
                           const DailyAiHuntSection(),
 
                           SizedBox(height: 20),
+
+                          // ── Discovery: Para ti hoy ─────────────────────
+                          if (provider.forYouToday.isNotEmpty) ...[
+                            _SectionHeader(
+                              icon: Icons.auto_awesome_rounded,
+                              iconColor: AppColors.orange,
+                              title: 'home.discovery.forYouToday'.tr(),
+                              action: 'common.viewAll'.tr(),
+                              onTap: () =>
+                                  Navigator.pushNamed(context, '/deals'),
+                            ),
+                            SizedBox(height: 6),
+                            _DiscoveryBadge(
+                              label: 'home.discovery.updatedDaily'.tr(),
+                            ),
+                            SizedBox(height: 8),
+                            _HorizontalProducts(
+                              products: provider.forYouToday.take(8).toList(),
+                              userPosition: provider.userPosition,
+                              emptyText: 'home.discovery.emptySmartFeed'.tr(),
+                              onProductTap: openProduct,
+                            ),
+                            SizedBox(height: 20),
+                          ],
 
                           _SectionHeader(
                             icon: Icons.public_rounded,
@@ -1020,6 +1047,46 @@ class _AdSlot extends StatelessWidget {
           Icon(Icons.open_in_new_rounded, color: Color(0xFF9AA1AA), size: 14),
         ],
       ),
+    );
+  }
+}
+
+class _DiscoveryBadge extends StatelessWidget {
+  final String label;
+
+  const _DiscoveryBadge({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          padding: EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+          decoration: BoxDecoration(
+            color: AppColors.orange.withValues(alpha: 0.10),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: AppColors.orange.withValues(alpha: 0.25),
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.refresh_rounded,
+                  color: AppColors.orange, size: 11),
+              SizedBox(width: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  color: AppColors.orange,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

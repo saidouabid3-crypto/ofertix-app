@@ -53,6 +53,15 @@ class HomeFeed {
   final List<Product> recentlyAdded;
   final List<Product> surpriseDeals;
   final List<Product> recommended;
+  // Discovery sections (Batch 14A)
+  final List<Product> verifiedDeals;
+  final List<Product> bestDiscountToday;
+  final List<Product> freshArrivals;
+  final List<Product> trendingNow;
+  final List<Product> notSeenRecently;
+  final List<Product> forYouToday;
+  final String seedDay;
+  final String variant;
   final List<HomeFacet> stores;
   final List<HomeFacet> categories;
   final List<Product> products;
@@ -71,6 +80,14 @@ class HomeFeed {
     required this.recentlyAdded,
     required this.surpriseDeals,
     required this.recommended,
+    this.verifiedDeals = const [],
+    this.bestDiscountToday = const [],
+    this.freshArrivals = const [],
+    this.trendingNow = const [],
+    this.notSeenRecently = const [],
+    this.forYouToday = const [],
+    this.seedDay = '',
+    this.variant = 'A',
     required this.stores,
     required this.categories,
     required this.products,
@@ -127,6 +144,8 @@ class HomeFeed {
     return HomeFeed(
       country: map['country']?.toString() ?? 'es',
       currency: map['currency']?.toString() ?? 'EUR',
+      seedDay: map['seedDay']?.toString() ?? '',
+      variant: map['variant']?.toString() ?? 'A',
       aiStatus: HomeAiStatus.fromMap(
         map['aiStatus'] is Map
             ? Map<String, dynamic>.from(map['aiStatus'])
@@ -142,6 +161,12 @@ class HomeFeed {
       recentlyAdded: parseProducts(sections['recentlyAdded']),
       surpriseDeals: parseProducts(sections['surpriseDeals']),
       recommended: parseProducts(sections['recommended']),
+      verifiedDeals: parseProducts(sections['verifiedDeals']),
+      bestDiscountToday: parseProducts(sections['bestDiscountToday']),
+      freshArrivals: parseProducts(sections['freshArrivals']),
+      trendingNow: parseProducts(sections['trendingNow']),
+      notSeenRecently: parseProducts(sections['notSeenRecently']),
+      forYouToday: parseProducts(sections['forYouToday']),
       stores: parseFacets(map['stores']),
       categories: parseFacets(map['categories']),
       products: parseProducts(map['products']),
