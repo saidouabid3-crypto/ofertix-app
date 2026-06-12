@@ -1,5 +1,10 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:convert';
+import 'dart:io';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:http/http.dart' as http;
+
+import '../core/config/api_config.dart';
 import '../core/config/api_endpoints.dart';
 import '../models/marketplace_item.dart';
 import 'api_service.dart';
@@ -106,6 +111,24 @@ class MarketplaceService {
           .doc(userId)
           .set({'userId': userId, 'createdAt': FieldValue.serverTimestamp()});
     }
+  }
+
+  /// Upload a local image file to the backend (Cloudinary via server-side).
+  /// Returns the public https URL on success, or null on failure.
+  Future<String?> uploadImage(File imageFile, String token) async {
+    try {
+      final uri = ApiConfig.uri(ApiEndpoints.marketplaceUploadImage);
+      final request = http.MultipartRequest('POST', uri)
+        ..headers['Authorization'] = 'Bearer $token'
+        ..files.add(await http.MultipartFile.fromPath('file', imageFile.path));
+      final streamed = await request.send().timeout(const Duration(seconds: 30));
+      final response = await http.Response.fromStream(streamed);
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        return data['url'] as String?;
+      }
+    } catch (_) {}
+    return null;
   }
 
   Future<void> reportItem(String itemId, String userId, String reason) async {
