@@ -1176,5 +1176,19 @@
   "dealVerdict.reason.shipping_uncertain": "يجب تأكيد تكلفة الشحن أو توفره.",
   "dealVerdict.reason.price_check_missing": "وقت آخر تحقق من السعر غير متاح.",
   "dealVerdict.reason.price_check_old": "قد يكون التحقق المتاح من السعر قديماً.",
-  "dealVerdict.reason.price_history_unavailable": "لا يوجد سجل أسعار موثق لهذا القرار."
+  "dealVerdict.reason.price_history_unavailable": "لا يوجد سجل أسعار موثق لهذا القرار.",
+  "dealVerdict.confidence": "الثقة",
+  "dealVerdict.discountRisk": "مخاطر الخصم",
+  "dealVerdict.reasons": "الأسباب",
+  "dealVerdict.warnings": "تحذيرات",
+  "dealVerdict.showMore": "عرض المزيد",
+  "dealVerdict.showLess": "عرض أقل",
+  "dealVerdict.loading": "جارٍ تحليل العرض…",
+  "dealVerdict.unavailable": "القرار غير متاح",
+  "dealVerdict.confirmFinalPrice": "تأكد من السعر النهائي في المتجر",
+  "dealVerdict.approxPriceNote": "السعر تقريبي — تأكد من السعر النهائي في المتجر",
+  "dealVerdict.priceReview": "السعر بحاجة للمراجعة",
+  "dealVerdict.openStoreHint": "افتح المتجر وأكد السعر النهائي والشحن والتوفر.",
+  "dealVerdict.goodSignals": "مؤشرات جيدة متاحة",
+  "dealVerdict.needsChecking": "يحتاج تحقق"
 }

@@ -1176,5 +1176,19 @@
   "dealVerdict.reason.shipping_uncertain": "Shipping cost or availability should be confirmed.",
   "dealVerdict.reason.price_check_missing": "The last price check time is unavailable.",
   "dealVerdict.reason.price_check_old": "The available price check may be out of date.",
-  "dealVerdict.reason.price_history_unavailable": "No verified price history is available for this verdict."
+  "dealVerdict.reason.price_history_unavailable": "No verified price history is available for this verdict.",
+  "dealVerdict.confidence": "Confidence",
+  "dealVerdict.discountRisk": "Discount risk",
+  "dealVerdict.reasons": "Reasons",
+  "dealVerdict.warnings": "Warnings",
+  "dealVerdict.showMore": "Show more",
+  "dealVerdict.showLess": "Show less",
+  "dealVerdict.loading": "Analysing deal…",
+  "dealVerdict.unavailable": "Verdict unavailable",
+  "dealVerdict.confirmFinalPrice": "Confirm the final price in store",
+  "dealVerdict.approxPriceNote": "Approx. price — confirm final price in store",
+  "dealVerdict.priceReview": "Price to review",
+  "dealVerdict.openStoreHint": "Open the store and confirm final price, shipping and availability.",
+  "dealVerdict.goodSignals": "Good signals available",
+  "dealVerdict.needsChecking": "Needs checking"
 }

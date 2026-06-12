@@ -51,6 +51,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
   int _imageIndex = 0;
   PriceTruthResult? _priceTruth;
   DealVerdict? _dealVerdict;
+  bool _isVerdictLoading = false;
 
   // New state
   bool _descriptionExpanded = false;
@@ -95,13 +96,19 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
 
   Future<void> _loadDealVerdict() async {
     if (widget.product.id.trim().isEmpty) return;
+    setState(() => _isVerdictLoading = true);
     try {
       final result = await DealVerdictService.instance.getForProduct(
         widget.product.id,
       );
       if (!mounted) return;
-      setState(() => _dealVerdict = result);
+      setState(() {
+        _dealVerdict = result;
+        _isVerdictLoading = false;
+      });
     } catch (_) {
+      if (!mounted) return;
+      setState(() => _isVerdictLoading = false);
       // Verdict is advisory; Product Details and the offer action stay usable.
     }
   }
@@ -405,9 +412,12 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                         const SizedBox(height: 14),
                         PriceTruthCard(result: _priceTruth!),
                       ],
-                      if (_dealVerdict != null) ...[
+                      if (_isVerdictLoading || _dealVerdict != null) ...[
                         const SizedBox(height: 14),
-                        DealVerdictCard(verdict: _dealVerdict!),
+                        DealVerdictCard(
+                          verdict: _dealVerdict,
+                          isLoading: _isVerdictLoading,
+                        ),
                       ],
                       ..._trustSectionWidgets(product),
                       const SizedBox(height: 18),
@@ -714,7 +724,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                 ),
                 if (product.newPrice > 0)
                   Text(
-                    'product.approxPrice'.tr(),
+                    'dealVerdict.approxPriceNote'.tr(),
                     style: TextStyle(
                       color: AppColors.orange.withValues(alpha: 0.65),
                       fontSize: 11,
