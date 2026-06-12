@@ -35,7 +35,8 @@ class HomeProvider extends ChangeNotifier {
     _homeFeedService.markSeen(product.id);
   }
 
-  Future<void> initialize({String? countryCode}) async {
+  Future<void> initialize({String? countryCode, bool isRefresh = false}) async {
+    if (isRefresh) _homeFeedService.rotateVariant();
     isLoading = true;
     errorMessage = null;
     notifyListeners();
@@ -68,6 +69,10 @@ class HomeProvider extends ChangeNotifier {
       forYouToday = homeFeed.forYouToday;
       verifiedDeals = homeFeed.verifiedDeals;
       freshArrivals = homeFeed.freshArrivals;
+      // Mark top visible products as seen so next refresh demotes them
+      for (final p in [...homeFeed.heroDeals, ...homeFeed.forYouToday]) {
+        _homeFeedService.markSeen(p.id);
+      }
     } catch (e) {
       errorMessage = e.toString();
       final fallback = await _repository

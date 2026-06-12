@@ -86,7 +86,7 @@ class _HomeScreenState extends State<HomeScreen> {
             body: SafeArea(
               child: RefreshIndicator(
                 color: AppColors.orange,
-                onRefresh: provider.initialize,
+                onRefresh: () => provider.initialize(isRefresh: true),
                 child: CustomScrollView(
                   physics: AlwaysScrollableScrollPhysics(),
                   keyboardDismissBehavior:

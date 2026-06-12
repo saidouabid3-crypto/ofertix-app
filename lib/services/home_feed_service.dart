@@ -1,3 +1,7 @@
+import 'dart:math';
+
+import 'package:shared_preferences/shared_preferences.dart';
+
 import '../core/config/api_endpoints.dart';
 import '../models/home_feed.dart';
 import '../models/product.dart';
@@ -10,13 +14,47 @@ class HomeFeedService {
 
   final ApiService _api = ApiService.instance;
 
-  // In-memory seen product IDs for this session (max 50, non-private)
+  static const String _seenKey = 'ofertix_seen_products_v1';
+  static const int _maxSeen = 80;
+  static const int _maxSeenParam = 50;
+
+  // In-session seen product IDs — persisted via SharedPreferences across restarts
   final List<String> _seenIds = [];
+  bool _seenLoaded = false;
+
+  // Variant cycles on pull-to-refresh; initialized to random 0-9 on first run
+  int _variantIndex = Random().nextInt(10);
+
+  /// Called by HomeProvider before re-fetching on pull-to-refresh.
+  void rotateVariant() {
+    _variantIndex = (_variantIndex + 1) % 10;
+  }
+
+  String _sessionVariant() => _variantIndex.toString();
+
+  Future<void> _ensureSeenLoaded() async {
+    if (_seenLoaded) return;
+    _seenLoaded = true;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final stored = prefs.getStringList(_seenKey) ?? [];
+      for (final id in stored.take(_maxSeen)) {
+        if (!_seenIds.contains(id)) _seenIds.add(id);
+      }
+    } catch (_) {}
+  }
 
   void markSeen(String productId) {
     if (productId.isEmpty || _seenIds.contains(productId)) return;
     _seenIds.add(productId);
-    if (_seenIds.length > 50) _seenIds.removeAt(0);
+    if (_seenIds.length > _maxSeen) _seenIds.removeAt(0);
+    _persistSeen();
+  }
+
+  void _persistSeen() {
+    SharedPreferences.getInstance().then((prefs) {
+      prefs.setStringList(_seenKey, List<String>.from(_seenIds));
+    }).catchError((_) {});
   }
 
   Future<String> _country([String countryCode = 'auto']) async {
@@ -26,20 +64,19 @@ class HomeFeedService {
     return countryCode;
   }
 
-  /// Deterministic session variant A/B/C/D based on current UTC date.
-  String _sessionVariant() {
-    final day = DateTime.now().toUtc().toIso8601String().substring(0, 10);
-    final code = day.codeUnits.fold(0, (a, b) => a + b);
-    return 'ABCD'[code % 4];
-  }
-
   Future<HomeFeed> getHomeFeed({
     String countryCode = 'auto',
     String? userId,
   }) async {
+    await _ensureSeenLoaded();
     final country = await _country(countryCode);
     final variant = _sessionVariant();
-    final seenParam = _seenIds.isNotEmpty ? _seenIds.join(',') : null;
+
+    // Send the most recently seen IDs (last _maxSeenParam, capped)
+    final recentSeen = _seenIds.length > _maxSeenParam
+        ? _seenIds.sublist(_seenIds.length - _maxSeenParam)
+        : List<String>.from(_seenIds);
+    final seenParam = recentSeen.isNotEmpty ? recentSeen.join(',') : null;
 
     final response = await _api.get(
       ApiEndpoints.homeFeedForCountry(
