@@ -631,6 +631,8 @@
   "sell.maxPhotos": "Maximum 6 photos",
   "sell.uploadingPhotos": "Uploading photos...",
   "sell.submitListing": "Submit listing",
+  "sell.submitFailed": "Could not submit listing. Please try again.",
+  "sell.listingFormSubtitle": "Add photos, details and price. Sent for review.",
   "sell.submittingListing": "Submitting...",
   "sell.sentForReview": "Listing sent for review!",
   "sell.sentForReviewSubtitle": "It will appear in the marketplace once approved by the Ofertix team.",

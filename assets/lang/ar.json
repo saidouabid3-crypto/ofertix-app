@@ -631,6 +631,8 @@
   "sell.maxPhotos": "الحد الأقصى 6 صور",
   "sell.uploadingPhotos": "جارٍ رفع الصور...",
   "sell.submitListing": "نشر الإعلان",
+  "sell.submitFailed": "تعذّر نشر الإعلان. حاول مجدداً.",
+  "sell.listingFormSubtitle": "أضف صوراً وتفاصيل وسعراً. سيُرسل للمراجعة.",
   "sell.submittingListing": "جارٍ الإرسال...",
   "sell.sentForReview": "تم إرسال إعلانك للمراجعة!",
   "sell.sentForReviewSubtitle": "سيظهر في السوق بعد موافقة فريق أوفيرتكس.",

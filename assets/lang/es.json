@@ -631,6 +631,8 @@
   "sell.maxPhotos": "Máximo 6 fotos",
   "sell.uploadingPhotos": "Subiendo fotos...",
   "sell.submitListing": "Publicar anuncio",
+  "sell.submitFailed": "No se pudo publicar el anuncio. Inténtalo de nuevo.",
+  "sell.listingFormSubtitle": "Añade fotos, detalles y precio. Se envía a revisión.",
   "sell.submittingListing": "Enviando...",
   "sell.sentForReview": "¡Anuncio enviado a revisión!",
   "sell.sentForReviewSubtitle": "Aparecerá en el marketplace una vez aprobado por el equipo de Ofertix.",

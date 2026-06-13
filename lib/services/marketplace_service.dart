@@ -83,17 +83,38 @@ class MarketplaceService {
   }
 
   Future<String> createItem(MarketplaceItem item) async {
-    final data = item.toMap()
-      ..addAll({'createdAt': FieldValue.serverTimestamp(), 'isActive': true});
+    // API body: ISO timestamp is JSON-serializable; FieldValue is Firestore-only.
+    final apiBody = Map<String, dynamic>.from(item.toMap())
+      ..['createdAt'] = item.createdAt?.toIso8601String()
+                        ?? DateTime.now().toIso8601String();
+
+    if (kDebugMode) {
+      final imgs = apiBody['images'];
+      final count = imgs is List ? imgs.length : 0;
+      final first = imgs is List && imgs.isNotEmpty ? imgs.first : 'none';
+      debugPrint('[SellCreate] images=$count  firstUrl=$first');
+      debugPrint('[SellCreate] POST ${ApiEndpoints.marketplaceItems}');
+    }
+
     try {
       final response = await _api.post(
         ApiEndpoints.marketplaceItems,
-        body: data,
+        body: apiBody,
         authorized: true,
       );
+      if (kDebugMode) debugPrint('[SellCreate] status=200  id=${response['id']}');
       return response['id']?.toString() ?? '';
-    } catch (_) {
-      final doc = await _firestore.collection(_collection).add(data);
+    } catch (e) {
+      if (kDebugMode) debugPrint('[SellCreate] API failed: $e');
+      // Firestore fallback uses FieldValue for server timestamp.
+      final fsData = item.toMap()
+        ..addAll({
+          'createdAt': FieldValue.serverTimestamp(),
+          'status': 'pending',
+          'isActive': false,
+          'visibleToUsers': false,
+        });
+      final doc = await _firestore.collection(_collection).add(fsData);
       return doc.id;
     }
   }
@@ -162,8 +183,11 @@ class MarketplaceService {
       }
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final url = data['url'] as String?;
+        final body = jsonDecode(response.body) as Map<String, dynamic>;
+        // ApiEnvelopeMiddleware wraps responses as {success, data, error}.
+        // After the backend pre-envelopes, the URL is at body['data']['url'].
+        // Support both shapes for robustness.
+        final url = _extractUrl(body);
         return (url: url, error: url == null ? 'UPLOAD_FAILED' : null);
       }
 
@@ -181,6 +205,21 @@ class MarketplaceService {
       if (kDebugMode) debugPrint('[SellUpload] exception=$e');
       return (url: null, error: 'UPLOAD_FAILED');
     }
+  }
+
+  /// Extract the image URL from the API envelope response.
+  /// Supports:
+  ///   body['data']['url']   — standard post-fix envelope
+  ///   body['url']           — direct (legacy / before middleware)
+  static String? _extractUrl(Map<String, dynamic> body) {
+    final data = body['data'];
+    if (data is Map) {
+      final u = data['url'];
+      if (u is String && u.isNotEmpty) return u;
+    }
+    final direct = body['url'];
+    if (direct is String && direct.isNotEmpty) return direct;
+    return null;
   }
 
   static String _mimeFromPath(String path) {

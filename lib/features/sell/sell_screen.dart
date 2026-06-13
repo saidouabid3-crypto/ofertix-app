@@ -320,7 +320,7 @@ class _AddMarketplaceItemScreenState extends State<AddMarketplaceItemScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al enviar: $e')),
+        SnackBar(content: Text('sell.submitFailed'.tr())),
       );
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -1050,9 +1050,7 @@ class _FormHero extends StatelessWidget {
                 ),
                 SizedBox(height: 4),
                 Text(
-                  'auto.sell_sell_screen.backend_render_primero_firebase_fallba'
-                      .tr()
-                      .tr(),
+                  'sell.listingFormSubtitle'.tr(),
                   style: TextStyle(
                     color: ui.muted,
                     fontSize: 12,
