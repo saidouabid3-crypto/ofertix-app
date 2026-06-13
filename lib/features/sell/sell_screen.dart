@@ -14,11 +14,12 @@ import '../../services/country_service.dart';
 import '../../services/profile_service.dart';
 import '../profile/creator_profile_screen.dart';
 import '../marketplace/marketplace_item_detail_screen.dart';
+import '../marketplace/marketplace_listing_form_screen.dart';
 import '../marketplace/marketplace_my_listings_screen.dart';
 import '../marketplace/marketplace_messages_screen.dart';
 
 class SellScreen extends StatefulWidget {
-  SellScreen({super.key});
+  const SellScreen({super.key});
 
   @override
   State<SellScreen> createState() => _SellScreenState();
@@ -31,7 +32,7 @@ class _SellScreenState extends State<SellScreen> {
   @override
   void initState() {
     super.initState();
-    if (kDebugMode) debugPrint('[SellFlowVersion] 15C-D');
+    if (kDebugMode) debugPrint('[SellFlowVersion] 16A');
     _future = _loadItems();
   }
 
@@ -50,8 +51,13 @@ class _SellScreenState extends State<SellScreen> {
   }
 
   Future<void> _reload() async {
-    setState(() => _future = _loadItems());
-    await _future;
+    final next = _loadItems();
+    if (mounted) setState(() { _future = next; });
+    try {
+      await next;
+    } catch (_) {
+      // FutureBuilder snapshot.hasError handles the error display.
+    }
   }
 
   Future<void> _openAddItem() async {
@@ -61,11 +67,11 @@ class _SellScreenState extends State<SellScreen> {
       ).showSnackBar(SnackBar(content: Text('profile.loginRequired'.tr())));
       return;
     }
-    final itemId = await Navigator.push<String>(
+    final item = await Navigator.push<MarketplaceItem>(
       context,
-      MaterialPageRoute(builder: (_) => AddMarketplaceItemScreen()),
+      MaterialPageRoute(builder: (_) => const MarketplaceListingFormScreen()),
     );
-    if (!mounted || itemId == null || itemId.isEmpty) return;
+    if (!mounted || item == null || item.id.isEmpty) return;
     await _reload();
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -190,7 +196,7 @@ class _SellScreenState extends State<SellScreen> {
 }
 
 class AddMarketplaceItemScreen extends StatefulWidget {
-  AddMarketplaceItemScreen({super.key});
+  const AddMarketplaceItemScreen({super.key});
 
   @override
   State<AddMarketplaceItemScreen> createState() =>
@@ -373,10 +379,11 @@ class _AddMarketplaceItemScreenState extends State<AddMarketplaceItemScreen> {
     );
 
     try {
-      final itemId = await MarketplaceService.instance.createItem(
-        item,
+      final created = await MarketplaceService.instance.createItem(
+        item.toListingPayload(),
         token: token,
       );
+      final itemId = created.id;
       if (kDebugMode) {
         debugPrint(
           '[SellSubmit] success  id=$itemId  status=pending  isActive=false  visibleToUsers=false',
@@ -994,7 +1001,7 @@ class _MarketplaceCard extends StatelessWidget {
 }
 
 class _EmptyMarketplace extends StatelessWidget {
-  _EmptyMarketplace();
+  const _EmptyMarketplace();
 
   @override
   Widget build(BuildContext context) {
@@ -1120,7 +1127,7 @@ class _SellerLine extends StatelessWidget {
 class _SectionTitle extends StatelessWidget {
   final String title;
   final String subtitle;
-  _SectionTitle({required this.title, required this.subtitle});
+  const _SectionTitle({required this.title, required this.subtitle});
 
   @override
   Widget build(BuildContext context) {
@@ -1204,7 +1211,7 @@ class _FormHero extends StatelessWidget {
 }
 
 class _CountryNotice extends StatelessWidget {
-  _CountryNotice({required this.countryCode, required this.currency});
+  const _CountryNotice({required this.countryCode, required this.currency});
 
   final String countryCode;
   final String currency;
@@ -1248,7 +1255,7 @@ class _Field extends StatelessWidget {
   final TextInputType? keyboardType;
   final String? Function(String?)? validator;
 
-  _Field({
+  const _Field({
     required this.controller,
     required this.label,
     required this.icon,
