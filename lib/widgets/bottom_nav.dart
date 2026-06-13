@@ -35,15 +35,12 @@ class BottomNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final outerBg = isDark ? AppColors.background : Colors.white;
     final pillBg = isDark ? AppColors.card2 : Colors.white;
     final shadowColor = isDark
         ? Colors.black.withValues(alpha: 0.35)
         : Colors.black.withValues(alpha: 0.10);
 
-    return ColoredBox(
-      color: outerBg,
-      child: SafeArea(
+    return SafeArea(
       top: false,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
@@ -86,7 +83,9 @@ class BottomNav extends StatelessWidget {
                           selected ? _activeIcons[i] : _icons[i],
                           color: selected
                               ? AppColors.orange
-                              : isDark ? AppColors.gray : const Color(0xFF7C848E),
+                              : isDark
+                              ? AppColors.gray
+                              : const Color(0xFF7C848E),
                           size: 22,
                         ),
                       ),
@@ -98,7 +97,9 @@ class BottomNav extends StatelessWidget {
                         style: TextStyle(
                           color: selected
                               ? AppColors.orange
-                              : isDark ? AppColors.gray : const Color(0xFF7C848E),
+                              : isDark
+                              ? AppColors.gray
+                              : const Color(0xFF7C848E),
                           fontSize: 9.5,
                           fontWeight: selected
                               ? FontWeight.w800
@@ -113,7 +114,6 @@ class BottomNav extends StatelessWidget {
           ),
         ),
       ),
-    ),
     );
   }
 }

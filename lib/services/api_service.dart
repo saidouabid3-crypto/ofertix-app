@@ -151,14 +151,12 @@ class ApiService {
   }) async {
     final response = await get(
       ApiEndpoints.products,
-      queryParameters: {
-        'page': page,
-        'limit': limit,
-        'country': countryCode,
-      },
+      queryParameters: {'page': page, 'limit': limit, 'country': countryCode},
     );
 
-    final rawItems = response is Map ? response['products'] ?? response['items'] : response;
+    final rawItems = response is Map
+        ? response['products'] ?? response['items']
+        : response;
     final products = rawItems is List
         ? rawItems.whereType<Map>().map((item) {
             final data = Map<String, dynamic>.from(item);
@@ -167,8 +165,10 @@ class ApiService {
         : <Product>[];
 
     final total = response is Map
-        ? int.tryParse('${response['count'] ?? response['total'] ?? products.length}') ??
-            products.length
+        ? int.tryParse(
+                '${response['count'] ?? response['total'] ?? products.length}',
+              ) ??
+              products.length
         : products.length;
     final hasMore = response is Map
         ? response['hasMore'] == true || response['has_more'] == true
@@ -183,10 +183,7 @@ class ApiService {
   }) async {
     await post(
       ApiEndpoints.eventOfferClick,
-      body: {
-        'productId': productId,
-        'store': store,
-      },
+      body: {'productId': productId, 'store': store},
     );
   }
 
@@ -197,15 +194,13 @@ class ApiService {
   }) async {
     final response = await post(
       ApiEndpoints.eventOfferClick,
-      body: {
-        'productId': productId,
-        'store': store,
-        'url': originalUrl,
-      },
+      body: {'productId': productId, 'store': store, 'url': originalUrl},
     );
 
     if (response is Map) {
-      return (response['affiliateUrl'] ?? response['affiliate_url'] ?? response['url'])
+      return (response['affiliateUrl'] ??
+              response['affiliate_url'] ??
+              response['url'])
           ?.toString();
     }
 
@@ -220,29 +215,23 @@ class ApiService {
     Map<String, String>? extraHeaders,
     Duration? timeout,
   }) {
-    return _send(
-      () async {
-        final request = http.MultipartRequest(
-          'POST',
-          ApiConfig.uri(endpoint),
-        );
+    return _send(() async {
+      final request = http.MultipartRequest('POST', ApiConfig.uri(endpoint));
 
-        request.headers.addAll(
-          _headers(
-            authorized: authorized,
-            extraHeaders: extraHeaders,
-            jsonBody: false,
-          ),
-        );
+      request.headers.addAll(
+        _headers(
+          authorized: authorized,
+          extraHeaders: extraHeaders,
+          jsonBody: false,
+        ),
+      );
 
-        request.fields.addAll(fields);
-        request.files.addAll(files);
+      request.fields.addAll(fields);
+      request.files.addAll(files);
 
-        final streamed = await request.send();
-        return http.Response.fromStream(streamed);
-      },
-      timeout: timeout ?? const Duration(seconds: 120),
-    );
+      final streamed = await request.send();
+      return http.Response.fromStream(streamed);
+    }, timeout: timeout ?? const Duration(seconds: 120));
   }
 
   /// NDJSON AI stream (`application/x-ndjson`). Each line is a JSON object.
@@ -253,10 +242,7 @@ class ApiService {
     Map<String, String>? extraHeaders,
     Duration? timeout,
   }) async* {
-    final request = http.Request(
-      'POST',
-      ApiConfig.uri(endpoint),
-    );
+    final request = http.Request('POST', ApiConfig.uri(endpoint));
     request.headers.addAll(
       _headers(authorized: authorized, extraHeaders: extraHeaders),
     );
@@ -297,7 +283,9 @@ class ApiService {
     }
   }
 
-  PaymentRequiredException _paymentRequiredFromStream(http.StreamedResponse response) {
+  PaymentRequiredException _paymentRequiredFromStream(
+    http.StreamedResponse response,
+  ) {
     // Best-effort parse; stream body may be empty for 402.
     return const PaymentRequiredException(
       'Daily AI limit reached. Upgrade to Ofertix Premium for unlimited queries.',
@@ -348,7 +336,12 @@ class ApiService {
       if (statusCode == 402) {
         throw PaymentRequiredException(message, code: 'ai_quota_exceeded');
       }
-      throw NetworkException(message, statusCode: statusCode, code: 'api_error');
+      throw NetworkException(
+        message,
+        statusCode: statusCode,
+        code: 'api_error',
+        cause: decoded,
+      );
     }
     return envelope.data ?? decoded;
   }
@@ -364,7 +357,9 @@ class ApiService {
       return decoded;
     }
 
-    if (decoded is Map && decoded.containsKey('success') && decoded['success'] != true) {
+    if (decoded is Map &&
+        decoded.containsKey('success') &&
+        decoded['success'] != true) {
       final message = decoded['error']?.toString() ?? 'Request failed';
       if (statusCode == 402) {
         final meta = decoded['data'] is Map
@@ -373,15 +368,24 @@ class ApiService {
         throw PaymentRequiredException(
           message,
           code: 'ai_quota_exceeded',
-          limit: meta['limit'] is int ? meta['limit'] as int : int.tryParse('${meta['limit']}'),
-          used: meta['used'] is int ? meta['used'] as int : int.tryParse('${meta['used']}'),
+          limit: meta['limit'] is int
+              ? meta['limit'] as int
+              : int.tryParse('${meta['limit']}'),
+          used: meta['used'] is int
+              ? meta['used'] as int
+              : int.tryParse('${meta['used']}'),
           resetsAt: meta['resetsAt']?.toString(),
         );
       }
       if (statusCode == 403 && message.startsWith('USER_BANNED')) {
         throw const BannedAccountException();
       }
-      throw NetworkException(message, statusCode: statusCode, code: 'api_error');
+      throw NetworkException(
+        message,
+        statusCode: statusCode,
+        code: 'api_error',
+        cause: decoded,
+      );
     }
 
     final backendMessage = decoded is Map
@@ -400,10 +404,12 @@ class ApiService {
           hasMessage ? safeMessage : 'Bad request.',
           statusCode: statusCode,
           code: 'bad_request',
+          cause: decoded,
         );
       case 401:
         throw UnauthorizedException(
           hasMessage ? safeMessage : 'Please log in again.',
+          cause: decoded,
         );
       case 402:
         Map<String, dynamic> meta = {};
@@ -415,8 +421,12 @@ class ApiService {
               ? safeMessage
               : 'Daily AI limit reached. Upgrade to Ofertix Premium for unlimited queries.',
           code: 'ai_quota_exceeded',
-          limit: meta['limit'] is int ? meta['limit'] as int : int.tryParse('${meta['limit']}'),
-          used: meta['used'] is int ? meta['used'] as int : int.tryParse('${meta['used']}'),
+          limit: meta['limit'] is int
+              ? meta['limit'] as int
+              : int.tryParse('${meta['limit']}'),
+          used: meta['used'] is int
+              ? meta['used'] as int
+              : int.tryParse('${meta['used']}'),
           resetsAt: meta['resetsAt']?.toString(),
         );
       case 403:
@@ -425,21 +435,25 @@ class ApiService {
         }
         throw ForbiddenException(
           hasMessage ? safeMessage : 'You do not have permission to do this.',
+          cause: decoded,
         );
       case 404:
         throw NotFoundException(
           hasMessage ? safeMessage : 'Resource not found.',
+          cause: decoded,
         );
       case >= 500:
         throw ServerException(
           hasMessage ? safeMessage : 'Server error. Please try again later.',
           statusCode: statusCode,
+          cause: decoded,
         );
       default:
         throw NetworkException(
           hasMessage ? safeMessage : 'Request failed.',
           statusCode: statusCode,
           code: 'http_$statusCode',
+          cause: decoded,
         );
     }
   }

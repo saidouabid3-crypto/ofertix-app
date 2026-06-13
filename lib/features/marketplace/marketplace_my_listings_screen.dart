@@ -40,8 +40,10 @@ class _MarketplaceMyListingsScreenState
         backgroundColor: bg,
         appBar: _appBar(text, bg),
         body: Center(
-          child: Text('profile.loginRequired'.tr(),
-              style: TextStyle(color: text)),
+          child: Text(
+            'profile.loginRequired'.tr(),
+            style: TextStyle(color: text),
+          ),
         ),
       );
     }
@@ -57,19 +59,25 @@ class _MarketplaceMyListingsScreenState
               child: CircularProgressIndicator(color: AppColors.orange),
             );
           }
+          if (snap.hasError) {
+            return _MyListingsError(
+              isDark: isDark,
+              onRetry: () => setState(() => _future = _load()),
+            );
+          }
           final items = snap.data ?? [];
           if (items.isEmpty) {
             return _EmptyMyListings(isDark: isDark);
           }
           return RefreshIndicator(
             color: AppColors.orange,
-            onRefresh: () async =>
-                setState(() => _future = _load()),
+            onRefresh: () async => setState(() => _future = _load()),
             child: ListView.separated(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 40),
               itemCount: items.length,
               separatorBuilder: (_, __) => const SizedBox(height: 10),
-              itemBuilder: (_, i) => _MyListingCard(item: items[i], isDark: isDark),
+              itemBuilder: (_, i) =>
+                  _MyListingCard(item: items[i], isDark: isDark),
             ),
           );
         },
@@ -78,14 +86,14 @@ class _MarketplaceMyListingsScreenState
   }
 
   AppBar _appBar(Color text, Color bg) => AppBar(
-        title: Text(
-          'marketplace.myListings'.tr(),
-          style: TextStyle(color: text, fontWeight: FontWeight.w900),
-        ),
-        backgroundColor: bg,
-        iconTheme: IconThemeData(color: text),
-        elevation: 0,
-      );
+    title: Text(
+      'marketplace.myListings'.tr(),
+      style: TextStyle(color: text, fontWeight: FontWeight.w900),
+    ),
+    backgroundColor: bg,
+    iconTheme: IconThemeData(color: text),
+    elevation: 0,
+  );
 }
 
 class _MyListingCard extends StatelessWidget {
@@ -105,7 +113,8 @@ class _MyListingCard extends StatelessWidget {
       onTap: () => Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => MarketplaceItemDetailScreen(item: item),
+          builder: (_) =>
+              MarketplaceItemDetailScreen(item: item, showOwnerStatus: true),
         ),
       ),
       child: Container(
@@ -118,39 +127,59 @@ class _MyListingCard extends StatelessWidget {
           children: [
             // Thumbnail
             ClipRRect(
-              borderRadius:
-                  const BorderRadius.horizontal(left: Radius.circular(20)),
+              borderRadius: const BorderRadius.horizontal(
+                left: Radius.circular(20),
+              ),
               child: SizedBox(
                 width: 90,
                 height: 90,
                 child: item.hasImage
-                    ? Image.network(item.mainImage, fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => _placeholder())
+                    ? Image.network(
+                        item.mainImage,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => _placeholder(),
+                      )
                     : _placeholder(),
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 12,
+                  horizontal: 4,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(item.title,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                            color: text,
-                            fontWeight: FontWeight.w800,
-                            fontSize: 14)),
+                    Text(
+                      item.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: text,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 14,
+                      ),
+                    ),
                     const SizedBox(height: 4),
-                    Text(item.formattedPrice,
-                        style: TextStyle(
-                            color: AppColors.orange,
-                            fontWeight: FontWeight.w900,
-                            fontSize: 15)),
+                    Text(
+                      item.formattedPrice,
+                      style: TextStyle(
+                        color: AppColors.orange,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 15,
+                      ),
+                    ),
                     const SizedBox(height: 6),
                     _StatusChip(status: item.status),
+                    if (item.createdAt != null) ...[
+                      const SizedBox(height: 5),
+                      Text(
+                        _formatDate(item.createdAt!),
+                        style: TextStyle(color: muted, fontSize: 11),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -165,11 +194,21 @@ class _MyListingCard extends StatelessWidget {
   }
 
   Widget _placeholder() => Container(
-        color: AppColors.orange.withValues(alpha: .10),
-        child: Center(
-            child: Icon(Icons.shopping_bag_rounded,
-                color: AppColors.orange, size: 32)),
-      );
+    color: AppColors.orange.withValues(alpha: .10),
+    child: Center(
+      child: Icon(
+        Icons.shopping_bag_rounded,
+        color: AppColors.orange,
+        size: 32,
+      ),
+    ),
+  );
+
+  String _formatDate(DateTime date) {
+    final local = date.toLocal();
+    return '${local.day.toString().padLeft(2, '0')}/'
+        '${local.month.toString().padLeft(2, '0')}/${local.year}';
+  }
 }
 
 class _StatusChip extends StatelessWidget {
@@ -190,7 +229,10 @@ class _StatusChip extends StatelessWidget {
       child: Text(
         key.tr(),
         style: TextStyle(
-            color: color, fontSize: 11, fontWeight: FontWeight.w800),
+          color: color,
+          fontSize: 11,
+          fontWeight: FontWeight.w800,
+        ),
       ),
     );
   }
@@ -209,10 +251,6 @@ class _StatusChip extends StatelessWidget {
         return (AppColors.orange, 'marketplace.statusPending');
     }
   }
-}
-
-extension on MarketplaceItem {
-  String get status => isActive ? 'approved' : 'pending';
 }
 
 class _EmptyMyListings extends StatelessWidget {
@@ -237,7 +275,10 @@ class _EmptyMyListings extends StatelessWidget {
               'marketplace.myListingsEmpty'.tr(),
               textAlign: TextAlign.center,
               style: TextStyle(
-                  color: text, fontSize: 17, fontWeight: FontWeight.w900),
+                color: text,
+                fontSize: 17,
+                fontWeight: FontWeight.w900,
+              ),
             ),
             const SizedBox(height: 8),
             Text(
@@ -245,6 +286,38 @@ class _EmptyMyListings extends StatelessWidget {
               textAlign: TextAlign.center,
               style: TextStyle(color: muted, fontSize: 13),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MyListingsError extends StatelessWidget {
+  final bool isDark;
+  final VoidCallback onRetry;
+
+  const _MyListingsError({required this.isDark, required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    final text = isDark ? AppColors.text : AppColors.lightText;
+    final muted = isDark ? AppColors.gray : AppColors.lightGray;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.cloud_off_rounded, color: muted, size: 48),
+            const SizedBox(height: 12),
+            Text(
+              'marketplace.listingUnavailable'.tr(),
+              textAlign: TextAlign.center,
+              style: TextStyle(color: text, fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 8),
+            TextButton(onPressed: onRetry, child: Text('common.retry'.tr())),
           ],
         ),
       ),

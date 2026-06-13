@@ -8,8 +8,13 @@ import '../../core/config/api_config.dart';
 
 class MarketplaceItemDetailScreen extends StatelessWidget {
   final MarketplaceItem item;
+  final bool showOwnerStatus;
 
-  const MarketplaceItemDetailScreen({super.key, required this.item});
+  const MarketplaceItemDetailScreen({
+    super.key,
+    required this.item,
+    this.showOwnerStatus = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -81,11 +86,23 @@ class MarketplaceItemDetailScreen extends StatelessWidget {
             // City + condition chips
             Row(
               children: [
-                _Chip(icon: Icons.location_on_rounded, label: item.city.isEmpty ? '—' : item.city, color: AppColors.green),
+                _Chip(
+                  icon: Icons.location_on_rounded,
+                  label: item.city.isEmpty ? '—' : item.city,
+                  color: AppColors.green,
+                ),
                 const SizedBox(width: 8),
-                _Chip(icon: Icons.verified_rounded, label: _conditionLabel(item.condition), color: AppColors.orange),
+                _Chip(
+                  icon: Icons.verified_rounded,
+                  label: _conditionLabel(item.condition),
+                  color: AppColors.orange,
+                ),
               ],
             ),
+            if (showOwnerStatus) ...[
+              const SizedBox(height: 10),
+              _StatusChip(status: item.status),
+            ],
             const SizedBox(height: 14),
             // Description
             if (item.description.isNotEmpty) ...[
@@ -109,14 +126,14 @@ class MarketplaceItemDetailScreen extends StatelessWidget {
               onTap: item.sellerId.isEmpty
                   ? null
                   : () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => CreatorProfileScreen(
-                            creatorId: item.sellerId,
-                            baseUrl: ApiConfig.baseUrl,
-                          ),
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => CreatorProfileScreen(
+                          creatorId: item.sellerId,
+                          baseUrl: ApiConfig.baseUrl,
                         ),
                       ),
+                    ),
               child: Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
@@ -143,7 +160,10 @@ class MarketplaceItemDetailScreen extends StatelessWidget {
                         children: [
                           Text(
                             item.sellerName.isNotEmpty ? item.sellerName : '—',
-                            style: TextStyle(color: text, fontWeight: FontWeight.w800),
+                            style: TextStyle(
+                              color: text,
+                              fontWeight: FontWeight.w800,
+                            ),
                           ),
                           if (item.sellerUsername.isNotEmpty)
                             Text(
@@ -154,7 +174,11 @@ class MarketplaceItemDetailScreen extends StatelessWidget {
                       ),
                     ),
                     if (item.sellerVerified)
-                      Icon(Icons.verified_rounded, color: AppColors.orange, size: 18),
+                      Icon(
+                        Icons.verified_rounded,
+                        color: AppColors.orange,
+                        size: 18,
+                      ),
                     Icon(Icons.chevron_right_rounded, color: muted),
                   ],
                 ),
@@ -165,10 +189,10 @@ class MarketplaceItemDetailScreen extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: () => _contactSeller(context),
+                onPressed: null,
                 icon: const Icon(Icons.chat_bubble_outline_rounded),
                 label: Text(
-                  'marketplace.contactSeller'.tr(),
+                  'marketplace.messagesComingSoon'.tr(),
                   style: const TextStyle(fontWeight: FontWeight.w900),
                 ),
                 style: ElevatedButton.styleFrom(
@@ -187,21 +211,15 @@ class MarketplaceItemDetailScreen extends StatelessWidget {
     );
   }
 
-  void _contactSeller(BuildContext context) {
-    // Messages backend exists; for now show a snackbar directing to the Messages tab.
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('marketplace.messagesComingSoon'.tr()),
-        duration: const Duration(seconds: 3),
-      ),
-    );
-  }
-
   Widget _imagePlaceholder() {
     return Container(
       color: AppColors.orange.withValues(alpha: .10),
       child: Center(
-        child: Icon(Icons.shopping_bag_rounded, color: AppColors.orange, size: 64),
+        child: Icon(
+          Icons.shopping_bag_rounded,
+          color: AppColors.orange,
+          size: 64,
+        ),
       ),
     );
   }
@@ -214,6 +232,40 @@ class MarketplaceItemDetailScreen extends StatelessWidget {
       'used_fair': 'Aceptable',
     };
     return map[condition] ?? condition;
+  }
+}
+
+class _StatusChip extends StatelessWidget {
+  final String status;
+
+  const _StatusChip({required this.status});
+
+  @override
+  Widget build(BuildContext context) {
+    final normalized = status.toLowerCase();
+    final Color color;
+    final String labelKey;
+    switch (normalized) {
+      case 'approved':
+      case 'active':
+      case 'published':
+        color = AppColors.green;
+        labelKey = 'marketplace.statusApproved';
+      case 'rejected':
+        color = AppColors.red;
+        labelKey = 'marketplace.statusRejected';
+      case 'hidden':
+        color = AppColors.gray;
+        labelKey = 'marketplace.statusHidden';
+      default:
+        color = AppColors.orange;
+        labelKey = 'marketplace.statusPending';
+    }
+    return _Chip(
+      icon: Icons.admin_panel_settings_outlined,
+      label: labelKey.tr(),
+      color: color,
+    );
   }
 }
 
@@ -237,7 +289,14 @@ class _Chip extends StatelessWidget {
         children: [
           Icon(icon, color: color, size: 14),
           const SizedBox(width: 4),
-          Text(label, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w700)),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
         ],
       ),
     );

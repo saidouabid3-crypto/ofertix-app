@@ -37,6 +37,7 @@ class _AppShellState extends State<AppShell> {
     ];
 
     return Scaffold(
+      extendBody: true,
       body: IndexedStack(index: currentIndex, children: pages),
 
       bottomNavigationBar: BottomNav(

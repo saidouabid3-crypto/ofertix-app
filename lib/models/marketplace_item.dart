@@ -24,6 +24,7 @@ class MarketplaceItem {
   final int views;
   final int favorites;
   final DateTime? createdAt;
+  final String status;
 
   const MarketplaceItem({
     required this.id,
@@ -51,6 +52,7 @@ class MarketplaceItem {
     required this.views,
     required this.favorites,
     required this.createdAt,
+    this.status = '',
   });
 
   factory MarketplaceItem.fromMap(Map<String, dynamic> map, String id) {
@@ -98,9 +100,17 @@ class MarketplaceItem {
       views: _toInt(map['views']),
       favorites: _toInt(map['favorites']),
       createdAt: _toDate(map['createdAt'] ?? map['created_at']),
+      status: () {
+        final s = map['status']?.toString() ?? '';
+        if (s.isNotEmpty) return s;
+        return _toBool(map['isActive'] ?? map['is_active'] ?? false)
+            ? 'approved'
+            : 'pending';
+      }(),
     );
   }
   Map<String, dynamic> toMap() => {
+    'status': status,
     'sellerId': sellerId,
     'sellerName': sellerName,
     'sellerUsername': sellerUsername,

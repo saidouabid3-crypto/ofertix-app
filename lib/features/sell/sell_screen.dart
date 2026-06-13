@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:image_picker/image_picker.dart';
@@ -30,16 +31,22 @@ class _SellScreenState extends State<SellScreen> {
   @override
   void initState() {
     super.initState();
+    if (kDebugMode) debugPrint('[SellFlowVersion] 15C-D');
     _future = _loadItems();
   }
 
   Future<List<MarketplaceItem>> _loadItems() async {
     final country = await CountryService.instance.getCurrentCountry();
-    final normalized = country.trim().isEmpty ? 'global' : country.trim().toLowerCase();
+    final normalized = country.trim().isEmpty
+        ? 'global'
+        : country.trim().toLowerCase();
     if (mounted && _countryCode != normalized) {
       setState(() => _countryCode = normalized);
     }
-    return MarketplaceService.instance.fetchItems(limit: 20, countryCode: normalized);
+    return MarketplaceService.instance.fetchItems(
+      limit: 20,
+      countryCode: normalized,
+    );
   }
 
   Future<void> _reload() async {
@@ -49,22 +56,41 @@ class _SellScreenState extends State<SellScreen> {
 
   Future<void> _openAddItem() async {
     if (FirebaseAuth.instance.currentUser == null) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('profile.loginRequired'.tr())));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('profile.loginRequired'.tr())));
       return;
     }
-    final created = await Navigator.push<bool>(
+    final itemId = await Navigator.push<String>(
       context,
       MaterialPageRoute(builder: (_) => AddMarketplaceItemScreen()),
     );
-    if (created == true) await _reload();
+    if (!mounted || itemId == null || itemId.isEmpty) return;
+    await _reload();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('sell.sentForReview'.tr()),
+        duration: const Duration(seconds: 5),
+        backgroundColor: AppColors.green,
+        action: SnackBarAction(
+          label: 'marketplace.myListings'.tr(),
+          textColor: Colors.white,
+          onPressed: _openMyListings,
+        ),
+      ),
+    );
   }
 
-  void _openMyListings() =>
-      Navigator.push(context, MaterialPageRoute(builder: (_) => const MarketplaceMyListingsScreen()));
+  void _openMyListings() => Navigator.push(
+    context,
+    MaterialPageRoute(builder: (_) => const MarketplaceMyListingsScreen()),
+  );
 
-  void _openMessages() =>
-      Navigator.push(context, MaterialPageRoute(builder: (_) => const MarketplaceMessagesScreen()));
+  void _openMessages() => Navigator.push(
+    context,
+    MaterialPageRoute(builder: (_) => const MarketplaceMessagesScreen()),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -86,23 +112,29 @@ class _SellScreenState extends State<SellScreen> {
                 // ── Action tiles: Vender / Mis anuncios / Mensajes ──────
                 Row(
                   children: [
-                    Expanded(child: _ActionTile(
-                      icon: Icons.add_business_rounded,
-                      label: 'marketplace.sell'.tr(),
-                      onTap: _openAddItem,
-                    )),
+                    Expanded(
+                      child: _ActionTile(
+                        icon: Icons.add_business_rounded,
+                        label: 'marketplace.sell'.tr(),
+                        onTap: _openAddItem,
+                      ),
+                    ),
                     const SizedBox(width: 10),
-                    Expanded(child: _ActionTile(
-                      icon: Icons.list_alt_rounded,
-                      label: 'marketplace.myListings'.tr(),
-                      onTap: _openMyListings,
-                    )),
+                    Expanded(
+                      child: _ActionTile(
+                        icon: Icons.list_alt_rounded,
+                        label: 'marketplace.myListings'.tr(),
+                        onTap: _openMyListings,
+                      ),
+                    ),
                     const SizedBox(width: 10),
-                    Expanded(child: _ActionTile(
-                      icon: Icons.chat_bubble_outline_rounded,
-                      label: 'marketplace.messages'.tr(),
-                      onTap: _openMessages,
-                    )),
+                    Expanded(
+                      child: _ActionTile(
+                        icon: Icons.chat_bubble_outline_rounded,
+                        label: 'marketplace.messages'.tr(),
+                        onTap: _openMessages,
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 22),
@@ -121,8 +153,15 @@ class _SellScreenState extends State<SellScreen> {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const Padding(
                         padding: EdgeInsets.all(32),
-                        child: Center(child: CircularProgressIndicator(color: AppColors.orange)),
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            color: AppColors.orange,
+                          ),
+                        ),
                       );
+                    }
+                    if (snapshot.hasError) {
+                      return _MarketplaceLoadError(onRetry: _reload);
                     }
                     final items = snapshot.data ?? const <MarketplaceItem>[];
                     if (items.isEmpty) return _EmptyMarketplace();
@@ -130,12 +169,13 @@ class _SellScreenState extends State<SellScreen> {
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
                       itemCount: items.length,
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        mainAxisSpacing: 12,
-                        crossAxisSpacing: 12,
-                        childAspectRatio: .72,
-                      ),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            mainAxisSpacing: 12,
+                            crossAxisSpacing: 12,
+                            childAspectRatio: .72,
+                          ),
                       itemBuilder: (_, i) => _MarketplaceCard(item: items[i]),
                     );
                   },
@@ -227,6 +267,12 @@ class _AddMarketplaceItemScreenState extends State<AddMarketplaceItemScreen> {
     setState(() => _photosError = _selectedImages.isEmpty);
     if (_selectedImages.isEmpty) return;
     if (!_formKey.currentState!.validate()) return;
+    if (kDebugMode) {
+      final uid = FirebaseAuth.instance.currentUser?.uid ?? 'not-authenticated';
+      debugPrint(
+        '[SellSubmit] start  images=${_selectedImages.length}  user=$uid',
+      );
+    }
     setState(() => _saving = true);
 
     if (_loadingCountry) await _loadSellerCountry();
@@ -235,9 +281,9 @@ class _AddMarketplaceItemScreenState extends State<AddMarketplaceItemScreen> {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       setState(() => _saving = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('profile.loginRequired'.tr())),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('profile.loginRequired'.tr())));
       return;
     }
 
@@ -250,30 +296,44 @@ class _AddMarketplaceItemScreenState extends State<AddMarketplaceItemScreen> {
 
     if (token == null) {
       if (!mounted) return;
-      setState(() { _saving = false; _uploadingImages = false; });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('profile.loginRequired'.tr())),
-      );
+      setState(() {
+        _saving = false;
+        _uploadingImages = false;
+      });
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('profile.loginRequired'.tr())));
       return;
     }
 
     final imageUrls = <String>[];
     for (final xFile in _selectedImages) {
-      final result = await MarketplaceService.instance.uploadImage(xFile, token);
+      final result = await MarketplaceService.instance.uploadImage(
+        xFile,
+        token,
+      );
       if (result.url == null) {
         if (!mounted) return;
-        setState(() { _saving = false; _uploadingImages = false; });
+        setState(() {
+          _saving = false;
+          _uploadingImages = false;
+        });
         final msgKey = result.error == 'IMAGE_TOO_LARGE'
             ? 'sell.imageTooLarge'
             : 'sell.imageUploadFailed';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(msgKey.tr())),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(msgKey.tr())));
         return;
       }
       imageUrls.add(result.url!);
     }
     setState(() => _uploadingImages = false);
+    if (kDebugMode && imageUrls.isNotEmpty) {
+      debugPrint(
+        '[SellUpload] parsedUrl=${imageUrls.first}  total=${imageUrls.length}',
+      );
+    }
 
     final sellerProfile = await ProfileService.instance.getCurrentProfile();
     final sellerCountry = _sellerCountryCode == 'global'
@@ -313,21 +373,23 @@ class _AddMarketplaceItemScreenState extends State<AddMarketplaceItemScreen> {
     );
 
     try {
-      await MarketplaceService.instance.createItem(item);
-      if (!mounted) return;
-      Navigator.pop(context, true);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('sell.sentForReview'.tr()),
-          duration: const Duration(seconds: 5),
-          backgroundColor: AppColors.green,
-        ),
+      final itemId = await MarketplaceService.instance.createItem(
+        item,
+        token: token,
       );
+      if (kDebugMode) {
+        debugPrint(
+          '[SellSubmit] success  id=$itemId  status=pending  isActive=false  visibleToUsers=false',
+        );
+      }
+      if (!mounted) return;
+      Navigator.pop(context, itemId);
     } catch (e) {
+      if (kDebugMode) debugPrint('[SellSubmit] failed  error=$e');
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('sell.submitFailed'.tr())),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('sell.submitFailed'.tr())));
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -478,8 +540,8 @@ class _AddMarketplaceItemScreenState extends State<AddMarketplaceItemScreen> {
                     _uploadingImages
                         ? 'sell.uploadingPhotos'.tr()
                         : _saving
-                            ? 'sell.submittingListing'.tr()
-                            : 'sell.submitListing'.tr(),
+                        ? 'sell.submittingListing'.tr()
+                        : 'sell.submitListing'.tr(),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -516,7 +578,11 @@ class _ImagePickerSection extends StatelessWidget {
       children: [
         Row(
           children: [
-            Icon(Icons.photo_library_rounded, color: AppColors.orange, size: 20),
+            Icon(
+              Icons.photo_library_rounded,
+              color: AppColors.orange,
+              size: 20,
+            ),
             const SizedBox(width: 8),
             Text(
               'sell.addPhotos'.tr(),
@@ -566,8 +632,11 @@ class _ImagePickerSection extends StatelessWidget {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.add_a_photo_rounded,
-                            color: AppColors.orange, size: 28),
+                        Icon(
+                          Icons.add_a_photo_rounded,
+                          color: AppColors.orange,
+                          size: 28,
+                        ),
                         const SizedBox(height: 4),
                         Text(
                           'sell.addPhotos'.tr(),
@@ -607,7 +676,9 @@ class _ImagePickerSection extends StatelessWidget {
                         left: 4,
                         child: Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 2),
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: AppColors.orange,
                             borderRadius: BorderRadius.circular(8),
@@ -634,8 +705,11 @@ class _ImagePickerSection extends StatelessWidget {
                             color: Colors.black54,
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(Icons.close_rounded,
-                              color: Colors.white, size: 14),
+                          child: const Icon(
+                            Icons.close_rounded,
+                            color: Colors.white,
+                            size: 14,
+                          ),
                         ),
                       ),
                     ),
@@ -736,7 +810,11 @@ class _MarketplaceHeader extends StatelessWidget {
             gradient: AppColors.orangeGradient,
             borderRadius: BorderRadius.circular(16),
           ),
-          child: const Icon(Icons.storefront_rounded, color: Colors.white, size: 24),
+          child: const Icon(
+            Icons.storefront_rounded,
+            color: Colors.white,
+            size: 24,
+          ),
         ),
         const SizedBox(width: 12),
         Column(
@@ -752,7 +830,11 @@ class _MarketplaceHeader extends StatelessWidget {
             ),
             Text(
               'marketplace.subtitle'.tr(),
-              style: TextStyle(color: ui.muted, fontSize: 12, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                color: ui.muted,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ],
         ),
@@ -765,7 +847,11 @@ class _ActionTile extends StatelessWidget {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
-  const _ActionTile({required this.icon, required this.label, required this.onTap});
+  const _ActionTile({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -812,96 +898,98 @@ class _MarketplaceCard extends StatelessWidget {
     return GestureDetector(
       onTap: () => Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => MarketplaceItemDetailScreen(item: item)),
+        MaterialPageRoute(
+          builder: (_) => MarketplaceItemDetailScreen(item: item),
+        ),
       ),
       child: Container(
-      decoration: BoxDecoration(
-        color: ui.card.withValues(alpha: .88),
-        borderRadius: BorderRadius.circular(26),
-        border: Border.all(color: ui.border),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Container(
-              width: double.infinity,
-              color: AppColors.orange.withValues(alpha: .10),
-              child: item.hasImage
-                  ? Image.network(
-                      item.mainImage,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Icon(
+        decoration: BoxDecoration(
+          color: ui.card.withValues(alpha: .88),
+          borderRadius: BorderRadius.circular(26),
+          border: Border.all(color: ui.border),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Container(
+                width: double.infinity,
+                color: AppColors.orange.withValues(alpha: .10),
+                child: item.hasImage
+                    ? Image.network(
+                        item.mainImage,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Icon(
+                          Icons.shopping_bag_rounded,
+                          color: AppColors.orange,
+                          size: 44,
+                        ),
+                      )
+                    : Icon(
                         Icons.shopping_bag_rounded,
                         color: AppColors.orange,
                         size: 44,
                       ),
-                    )
-                  : Icon(
-                      Icons.shopping_bag_rounded,
-                      color: AppColors.orange,
-                      size: 44,
-                    ),
+              ),
             ),
-          ),
-          Padding(
-            padding: EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item.title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: ui.text,
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w900,
-                    height: 1.1,
-                  ),
-                ),
-                SizedBox(height: 6),
-                Text(
-                  item.formattedPrice,
-                  style: TextStyle(
-                    color: AppColors.orange,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                SizedBox(height: 8),
-                _SellerLine(item: item),
-                SizedBox(height: 5),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.location_on_rounded,
-                      color: AppColors.green,
-                      size: 14,
+            Padding(
+              padding: EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: ui.text,
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w900,
+                      height: 1.1,
                     ),
-                    SizedBox(width: 3),
-                    Expanded(
-                      child: Text(
-                        item.city.isEmpty ? 'España' : item.city,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: ui.muted,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
+                  ),
+                  SizedBox(height: 6),
+                  Text(
+                    item.formattedPrice,
+                    style: TextStyle(
+                      color: AppColors.orange,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  SizedBox(height: 8),
+                  _SellerLine(item: item),
+                  SizedBox(height: 5),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.location_on_rounded,
+                        color: AppColors.green,
+                        size: 14,
+                      ),
+                      SizedBox(width: 3),
+                      Expanded(
+                        child: Text(
+                          item.city.isEmpty ? 'España' : item.city,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: ui.muted,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              ],
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
-      ),
-    ),   // Container (child of GestureDetector)
-    );   // GestureDetector
+          ],
+        ),
+      ), // Container (child of GestureDetector)
+    ); // GestureDetector
   }
 }
 
@@ -936,6 +1024,32 @@ class _EmptyMarketplace extends StatelessWidget {
             textAlign: TextAlign.center,
             style: TextStyle(color: ui.muted, fontWeight: FontWeight.w700),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MarketplaceLoadError extends StatelessWidget {
+  final Future<void> Function() onRetry;
+
+  const _MarketplaceLoadError({required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    final ui = _SellUi.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 32),
+      child: Column(
+        children: [
+          Icon(Icons.cloud_off_rounded, color: ui.muted, size: 42),
+          const SizedBox(height: 10),
+          Text(
+            'marketplace.listingUnavailable'.tr(),
+            style: TextStyle(color: ui.text, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 8),
+          TextButton(onPressed: onRetry, child: Text('common.retry'.tr())),
         ],
       ),
     );

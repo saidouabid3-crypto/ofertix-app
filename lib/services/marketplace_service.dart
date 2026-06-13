@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../core/config/api_config.dart';
 import '../core/config/api_endpoints.dart';
+import '../core/errors/app_exception.dart';
 import '../models/marketplace_item.dart';
 import 'api_service.dart';
 
@@ -15,10 +16,7 @@ class MarketplaceService {
   MarketplaceService._();
   static final MarketplaceService instance = MarketplaceService._();
 
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final ApiService _api = ApiService.instance;
-
-  static const String _collection = 'marketplace_items';
 
   Future<List<MarketplaceItem>> fetchItems({
     int limit = 30,
@@ -26,48 +24,29 @@ class MarketplaceService {
     String? category,
     String countryCode = 'global',
   }) async {
-    try {
-      final response = await _api.get(
-        ApiEndpoints.marketplaceItemsList(
-          limit: limit,
-          city: city,
-          category: category,
-          country: countryCode.trim().isNotEmpty && countryCode != 'global'
-              ? countryCode.trim().toLowerCase()
-              : null,
-        ),
-      );
-      final list = response is List
-          ? response
-          : response['items'] as List? ?? const [];
-      final items = list
-          .map(
-            (e) => MarketplaceItem.fromMap(
-              Map<String, dynamic>.from(e),
-              e['id']?.toString() ?? '',
-            ),
-          )
-          .toList();
+    final response = await _api.get(
+      ApiEndpoints.marketplaceItemsList(
+        limit: limit,
+        city: city,
+        category: category,
+        country: countryCode.trim().isNotEmpty && countryCode != 'global'
+            ? countryCode.trim().toLowerCase()
+            : null,
+      ),
+    );
+    final list = response is List
+        ? response
+        : response['items'] as List? ?? const [];
+    final items = list
+        .map(
+          (e) => MarketplaceItem.fromMap(
+            Map<String, dynamic>.from(e),
+            e['id']?.toString() ?? '',
+          ),
+        )
+        .toList();
 
-      return _filterByCountry(items, countryCode);
-    } catch (_) {
-      Query<Map<String, dynamic>> ref = _firestore
-          .collection(_collection)
-          .where('isActive', isEqualTo: true);
-      if (city != null && city.trim().isNotEmpty)
-        ref = ref.where('city', isEqualTo: city.trim());
-      if (category != null && category.trim().isNotEmpty)
-        ref = ref.where('category', isEqualTo: category.trim());
-      final snap = await ref
-          .orderBy('createdAt', descending: true)
-          .limit(limit)
-          .get();
-      final items = snap.docs
-          .map((d) => MarketplaceItem.fromMap(d.data(), d.id))
-          .toList();
-
-      return _filterByCountry(items, countryCode);
-    }
+    return _filterByCountry(items, countryCode);
   }
 
   List<MarketplaceItem> _filterByCountry(
@@ -82,18 +61,28 @@ class MarketplaceService {
         .toList();
   }
 
-  Future<String> createItem(MarketplaceItem item) async {
-    // API body: ISO timestamp is JSON-serializable; FieldValue is Firestore-only.
+  Future<String> createItem(
+    MarketplaceItem item, {
+    required String token,
+  }) async {
+    // API body uses an ISO timestamp so the backend receives plain JSON.
     final apiBody = Map<String, dynamic>.from(item.toMap())
-      ..['createdAt'] = item.createdAt?.toIso8601String()
-                        ?? DateTime.now().toIso8601String();
+      ..['createdAt'] =
+          item.createdAt?.toIso8601String() ?? DateTime.now().toIso8601String();
 
     if (kDebugMode) {
       final imgs = apiBody['images'];
       final count = imgs is List ? imgs.length : 0;
       final first = imgs is List && imgs.isNotEmpty ? imgs.first : 'none';
-      debugPrint('[SellCreate] images=$count  firstUrl=$first');
-      debugPrint('[SellCreate] POST ${ApiEndpoints.marketplaceItems}');
+      debugPrint('[SellCreate] images=$count');
+      debugPrint('[SellCreate] firstUrl=$first');
+      debugPrint(
+        '[SellCreate] endpoint=${ApiConfig.uri(ApiEndpoints.marketplaceItems)}',
+      );
+      debugPrint(
+        '[SellCreate] payloadOwnerFields=sellerId,userId,ownerId '
+        '(backend-owned)',
+      );
     }
 
     try {
@@ -101,60 +90,81 @@ class MarketplaceService {
         ApiEndpoints.marketplaceItems,
         body: apiBody,
         authorized: true,
+        extraHeaders: {'Authorization': 'Bearer $token'},
       );
-      if (kDebugMode) debugPrint('[SellCreate] status=200  id=${response['id']}');
-      return response['id']?.toString() ?? '';
+      final itemId = response['id']?.toString() ?? '';
+      if (kDebugMode) {
+        debugPrint('[SellCreate] status=200');
+        debugPrint('[SellCreate] body=${jsonEncode(response)}');
+      }
+      if (itemId.isEmpty) {
+        throw const NetworkException(
+          'Marketplace create response did not include an item id.',
+          code: 'missing_item_id',
+          cause: 'response.id was empty',
+        );
+      }
+      return itemId;
     } catch (e) {
-      if (kDebugMode) debugPrint('[SellCreate] API failed: $e');
-      // Firestore fallback uses FieldValue for server timestamp.
-      final fsData = item.toMap()
-        ..addAll({
-          'createdAt': FieldValue.serverTimestamp(),
-          'status': 'pending',
-          'isActive': false,
-          'visibleToUsers': false,
-        });
-      final doc = await _firestore.collection(_collection).add(fsData);
-      return doc.id;
+      if (kDebugMode) {
+        final status = _statusCode(e);
+        final body = e is AppException ? e.cause : e;
+        final code = e is AppException ? e.code : null;
+        debugPrint('[SellCreate] status=$status');
+        debugPrint('[SellCreate] body=$body');
+        debugPrint('[SellSubmit] failed step=create code=${code ?? status}');
+      }
+      rethrow;
     }
   }
 
   Future<void> favoriteItem(String itemId, String userId) async {
-    try {
-      await _api.post(
-        ApiEndpoints.marketplaceItemFavorite(itemId),
-        body: {'userId': userId},
-        authorized: true,
-      );
-    } catch (_) {
-      await _firestore
-          .collection(_collection)
-          .doc(itemId)
-          .collection('favorites')
-          .doc(userId)
-          .set({'userId': userId, 'createdAt': FieldValue.serverTimestamp()});
-    }
+    await _api.post(
+      ApiEndpoints.marketplaceItemFavorite(itemId),
+      body: {'userId': userId},
+      authorized: true,
+    );
   }
 
   /// Fetch authenticated seller's own items (pending + approved + rejected + hidden).
   Future<List<MarketplaceItem>> fetchMyItems({int limit = 50}) async {
+    if (kDebugMode)
+      debugPrint('[MyListings] GET ${ApiEndpoints.marketplaceMyItems}');
     try {
+      final token = await FirebaseAuth.instance.currentUser?.getIdToken();
+      if (token == null || token.isEmpty) {
+        throw const UnauthorizedException('Authentication is required.');
+      }
       final response = await _api.get(
         ApiEndpoints.marketplaceMyItems,
         authorized: true,
         queryParameters: {'limit': limit},
+        extraHeaders: {'Authorization': 'Bearer $token'},
       );
       final list = response is List
           ? response
           : response['items'] as List? ?? const [];
-      return list
-          .map((e) => MarketplaceItem.fromMap(
-                Map<String, dynamic>.from(e as Map),
-                e['id']?.toString() ?? '',
-              ))
+      final items = list
+          .map(
+            (e) => MarketplaceItem.fromMap(
+              Map<String, dynamic>.from(e as Map),
+              e['id']?.toString() ?? '',
+            ),
+          )
           .toList();
-    } catch (_) {
-      return [];
+      if (kDebugMode) {
+        final ids = items.take(5).map((i) => i.id).join(',');
+        debugPrint('[MyListings] status=200  count=${items.length}  ids=$ids');
+      }
+      return items;
+    } catch (e) {
+      if (kDebugMode) {
+        final status = _statusCode(e);
+        final body = e is AppException ? e.cause : e;
+        debugPrint('[MyListings] status=$status');
+        debugPrint('[MyListings] body=$body');
+      }
+      rethrow;
     }
   }
 
@@ -175,7 +185,9 @@ class MarketplaceService {
     // Determine MIME type: prefer xFile.mimeType, fall back to extension.
     const allowed = {'image/jpeg', 'image/png', 'image/webp'};
     final rawMime = xFile.mimeType?.toLowerCase() ?? _mimeFromPath(xFile.path);
-    final mime = allowed.contains(rawMime) ? rawMime : _mimeFromPath(xFile.path);
+    final mime = allowed.contains(rawMime)
+        ? rawMime
+        : _mimeFromPath(xFile.path);
     if (!allowed.contains(mime)) {
       if (kDebugMode) debugPrint('[SellUpload] unsupported MIME: $mime');
       return (url: null, error: 'INVALID_TYPE');
@@ -184,7 +196,9 @@ class MarketplaceService {
     try {
       final uri = ApiConfig.uri(ApiEndpoints.marketplaceUploadImage);
       if (kDebugMode) {
-        debugPrint('[SellUpload] POST $uri  file=${xFile.name}  bytes=$bytes  mime=$mime');
+        debugPrint(
+          '[SellUpload] POST $uri  file=${xFile.name}  bytes=$bytes  mime=$mime',
+        );
       }
 
       final request = http.MultipartRequest('POST', uri)
@@ -197,11 +211,15 @@ class MarketplaceService {
           ),
         );
 
-      final streamed = await request.send().timeout(const Duration(seconds: 30));
+      final streamed = await request.send().timeout(
+        const Duration(seconds: 30),
+      );
       final response = await http.Response.fromStream(streamed);
 
       if (kDebugMode) {
-        debugPrint('[SellUpload] status=${response.statusCode}  body=${response.body}');
+        debugPrint(
+          '[SellUpload] status=${response.statusCode}  body=${response.body}',
+        );
       }
 
       if (response.statusCode == 200) {
@@ -256,19 +274,18 @@ class MarketplaceService {
   }
 
   Future<void> reportItem(String itemId, String userId, String reason) async {
-    try {
-      await _api.post(
-        ApiEndpoints.marketplaceItemReport(itemId),
-        body: {'userId': userId, 'reason': reason},
-        authorized: true,
-      );
-    } catch (_) {
-      await _firestore.collection('item_reports').add({
-        'itemId': itemId,
-        'userId': userId,
-        'reason': reason,
-        'createdAt': FieldValue.serverTimestamp(),
-      });
-    }
+    await _api.post(
+      ApiEndpoints.marketplaceItemReport(itemId),
+      body: {'userId': userId, 'reason': reason},
+      authorized: true,
+    );
+  }
+
+  static int? _statusCode(Object error) {
+    if (error is NetworkException) return error.statusCode;
+    if (error is UnauthorizedException) return 401;
+    if (error is ForbiddenException) return 403;
+    if (error is NotFoundException) return 404;
+    return null;
   }
 }
