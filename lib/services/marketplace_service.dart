@@ -136,6 +136,28 @@ class MarketplaceService {
     }
   }
 
+  /// Fetch authenticated seller's own items (pending + approved + rejected + hidden).
+  Future<List<MarketplaceItem>> fetchMyItems({int limit = 50}) async {
+    try {
+      final response = await _api.get(
+        ApiEndpoints.marketplaceMyItems,
+        authorized: true,
+        queryParameters: {'limit': limit},
+      );
+      final list = response is List
+          ? response
+          : response['items'] as List? ?? const [];
+      return list
+          .map((e) => MarketplaceItem.fromMap(
+                Map<String, dynamic>.from(e as Map),
+                e['id']?.toString() ?? '',
+              ))
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
   /// Upload an image picked from the gallery to the backend (Cloudinary via
   /// server-side). Returns a record: url is set on success, error code is set
   /// on failure ('IMAGE_TOO_LARGE', 'INVALID_TYPE', 'UPLOAD_FAILED', …).

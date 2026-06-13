@@ -34,8 +34,15 @@ class BottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final outerBg = isDark ? AppColors.background : Colors.white;
+    final pillBg = isDark ? AppColors.card2 : Colors.white;
+    final shadowColor = isDark
+        ? Colors.black.withValues(alpha: 0.35)
+        : Colors.black.withValues(alpha: 0.10);
+
     return ColoredBox(
-      color: Colors.white,
+      color: outerBg,
       child: SafeArea(
       top: false,
       child: Padding(
@@ -43,11 +50,11 @@ class BottomNav extends StatelessWidget {
         child: Container(
           height: 68,
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: pillBg,
             borderRadius: BorderRadius.circular(26),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.10),
+                color: shadowColor,
                 blurRadius: 20,
                 offset: const Offset(0, 4),
               ),
@@ -79,7 +86,7 @@ class BottomNav extends StatelessWidget {
                           selected ? _activeIcons[i] : _icons[i],
                           color: selected
                               ? AppColors.orange
-                              : const Color(0xFF7C848E),
+                              : isDark ? AppColors.gray : const Color(0xFF7C848E),
                           size: 22,
                         ),
                       ),
@@ -91,7 +98,7 @@ class BottomNav extends StatelessWidget {
                         style: TextStyle(
                           color: selected
                               ? AppColors.orange
-                              : const Color(0xFF7C848E),
+                              : isDark ? AppColors.gray : const Color(0xFF7C848E),
                           fontSize: 9.5,
                           fontWeight: selected
                               ? FontWeight.w800

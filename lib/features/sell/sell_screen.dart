@@ -8,13 +8,13 @@ import 'package:image_picker/image_picker.dart';
 import '../../core/config/api_config.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/marketplace_item.dart';
-import '../../models/ofertix_ad_model.dart';
 import '../../services/marketplace_service.dart';
 import '../../services/country_service.dart';
 import '../../services/profile_service.dart';
-import '../../widgets/pro_max/ofertix_logo_mark.dart';
-import '../../widgets/ofertix_ad_slot.dart';
 import '../profile/creator_profile_screen.dart';
+import '../marketplace/marketplace_item_detail_screen.dart';
+import '../marketplace/marketplace_my_listings_screen.dart';
+import '../marketplace/marketplace_messages_screen.dart';
 
 class SellScreen extends StatefulWidget {
   SellScreen({super.key});
@@ -24,7 +24,6 @@ class SellScreen extends StatefulWidget {
 }
 
 class _SellScreenState extends State<SellScreen> {
-  final MarketplaceService _service = MarketplaceService.instance;
   late Future<List<MarketplaceItem>> _future;
   String _countryCode = 'global';
 
@@ -36,15 +35,11 @@ class _SellScreenState extends State<SellScreen> {
 
   Future<List<MarketplaceItem>> _loadItems() async {
     final country = await CountryService.instance.getCurrentCountry();
-    final normalizedCountry = country.trim().isEmpty
-        ? 'global'
-        : country.trim().toLowerCase();
-
-    if (mounted && _countryCode != normalizedCountry) {
-      setState(() => _countryCode = normalizedCountry);
+    final normalized = country.trim().isEmpty ? 'global' : country.trim().toLowerCase();
+    if (mounted && _countryCode != normalized) {
+      setState(() => _countryCode = normalized);
     }
-
-    return _service.fetchItems(limit: 20, countryCode: normalizedCountry);
+    return MarketplaceService.instance.fetchItems(limit: 20, countryCode: normalized);
   }
 
   Future<void> _reload() async {
@@ -54,12 +49,10 @@ class _SellScreenState extends State<SellScreen> {
 
   Future<void> _openAddItem() async {
     if (FirebaseAuth.instance.currentUser == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('profile.loginRequired'.tr())));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('profile.loginRequired'.tr())));
       return;
     }
-
     final created = await Navigator.push<bool>(
       context,
       MaterialPageRoute(builder: (_) => AddMarketplaceItemScreen()),
@@ -67,21 +60,17 @@ class _SellScreenState extends State<SellScreen> {
     if (created == true) await _reload();
   }
 
+  void _openMyListings() =>
+      Navigator.push(context, MaterialPageRoute(builder: (_) => const MarketplaceMyListingsScreen()));
+
+  void _openMessages() =>
+      Navigator.push(context, MaterialPageRoute(builder: (_) => const MarketplaceMessagesScreen()));
+
   @override
   Widget build(BuildContext context) {
     final ui = _SellUi.of(context);
     return Scaffold(
       backgroundColor: ui.background,
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _openAddItem,
-        backgroundColor: AppColors.orange,
-        foregroundColor: Colors.white,
-        icon: Icon(Icons.add_business_rounded),
-        label: Text(
-          'auto.sell_sell_screen.vender'.tr(),
-          style: TextStyle(fontWeight: FontWeight.w900),
-        ),
-      ),
       body: Container(
         decoration: BoxDecoration(gradient: ui.gradient),
         child: SafeArea(
@@ -89,48 +78,65 @@ class _SellScreenState extends State<SellScreen> {
             color: AppColors.orange,
             onRefresh: _reload,
             child: ListView(
-              padding: EdgeInsets.fromLTRB(16, 14, 16, 120),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
               children: [
-                OfertixLogoMark(subtitle: 'Marketplace real'),
-                SizedBox(height: 18),
-                _SellerHero(onAdd: _openAddItem),
-                SizedBox(height: 16),
-                OfertixAdSlot(placement: OfertixAdPlacement.sellTop),
-                SizedBox(height: 22),
-                _SectionTitle(
-                  title: 'Marketplace Ofertix',
-                  subtitle: _countryCode == 'global'
-                      ? 'sell.marketplaceSubtitleGlobal'.tr()
-                      : 'Solo anuncios disponibles para ${_countryCode.toUpperCase()}',
+                // ── Compact header ──────────────────────────────────────
+                _MarketplaceHeader(ui: ui),
+                const SizedBox(height: 18),
+                // ── Action tiles: Vender / Mis anuncios / Mensajes ──────
+                Row(
+                  children: [
+                    Expanded(child: _ActionTile(
+                      icon: Icons.add_business_rounded,
+                      label: 'marketplace.sell'.tr(),
+                      onTap: _openAddItem,
+                    )),
+                    const SizedBox(width: 10),
+                    Expanded(child: _ActionTile(
+                      icon: Icons.list_alt_rounded,
+                      label: 'marketplace.myListings'.tr(),
+                      onTap: _openMyListings,
+                    )),
+                    const SizedBox(width: 10),
+                    Expanded(child: _ActionTile(
+                      icon: Icons.chat_bubble_outline_rounded,
+                      label: 'marketplace.messages'.tr(),
+                      onTap: _openMessages,
+                    )),
+                  ],
                 ),
-                SizedBox(height: 12),
+                const SizedBox(height: 22),
+                // ── Section header ───────────────────────────────────────
+                _SectionTitle(
+                  title: 'marketplace.availableListings'.tr(),
+                  subtitle: _countryCode == 'global'
+                      ? ''
+                      : _countryCode.toUpperCase(),
+                ),
+                const SizedBox(height: 12),
+                // ── Public listings grid ─────────────────────────────────
                 FutureBuilder<List<MarketplaceItem>>(
                   future: _future,
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
-                      return Padding(
+                      return const Padding(
                         padding: EdgeInsets.all(32),
-                        child: Center(
-                          child: CircularProgressIndicator(
-                            color: AppColors.orange,
-                          ),
-                        ),
+                        child: Center(child: CircularProgressIndicator(color: AppColors.orange)),
                       );
                     }
                     final items = snapshot.data ?? const <MarketplaceItem>[];
                     if (items.isEmpty) return _EmptyMarketplace();
                     return GridView.builder(
                       shrinkWrap: true,
-                      physics: NeverScrollableScrollPhysics(),
+                      physics: const NeverScrollableScrollPhysics(),
                       itemCount: items.length,
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 2,
                         mainAxisSpacing: 12,
                         crossAxisSpacing: 12,
-                        childAspectRatio: .66,
+                        childAspectRatio: .72,
                       ),
-                      itemBuilder: (_, index) =>
-                          _MarketplaceCard(item: items[index]),
+                      itemBuilder: (_, i) => _MarketplaceCard(item: items[i]),
                     );
                   },
                 ),
@@ -713,73 +719,84 @@ class _SellUi {
   }
 }
 
-class _SellerHero extends StatelessWidget {
-  final VoidCallback onAdd;
-  _SellerHero({required this.onAdd});
+// ── Marketplace hub widgets ───────────────────────────────────────────────────
+
+class _MarketplaceHeader extends StatelessWidget {
+  final _SellUi ui;
+  const _MarketplaceHeader({required this.ui});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        gradient: AppColors.orangeGradient,
-        borderRadius: BorderRadius.circular(32),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.orange.withValues(alpha: .25),
-            blurRadius: 30,
-            offset: Offset(0, 16),
+    return Row(
+      children: [
+        Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            gradient: AppColors.orangeGradient,
+            borderRadius: BorderRadius.circular(16),
           ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 62,
-            height: 62,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: .18),
-              borderRadius: BorderRadius.circular(24),
+          child: const Icon(Icons.storefront_rounded, color: Colors.white, size: 24),
+        ),
+        const SizedBox(width: 12),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'marketplace.title'.tr(),
+              style: TextStyle(
+                color: ui.text,
+                fontSize: 20,
+                fontWeight: FontWeight.w900,
+              ),
             ),
-            child: Icon(
-              Icons.storefront_rounded,
-              color: Colors.white,
-              size: 34,
+            Text(
+              'marketplace.subtitle'.tr(),
+              style: TextStyle(color: ui.muted, fontSize: 12, fontWeight: FontWeight.w600),
             ),
-          ),
-          SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'auto.sell_sell_screen.vende_en_ofertix'.tr(),
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 23,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                SizedBox(height: 5),
-                Text(
-                  'auto.sell_sell_screen.publica_productos_recibe_mensajes_y_cr'
-                      .tr()
-                      .tr(),
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                    height: 1.25,
-                  ),
-                ),
-              ],
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _ActionTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  const _ActionTile({required this.icon, required this.label, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final ui = _SellUi.of(context);
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+        decoration: BoxDecoration(
+          color: ui.card.withValues(alpha: .9),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: ui.border),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: AppColors.orange, size: 26),
+            const SizedBox(height: 6),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: ui.text,
+                fontSize: 11.5,
+                fontWeight: FontWeight.w800,
+              ),
             ),
-          ),
-          IconButton(
-            onPressed: onAdd,
-            icon: Icon(Icons.add_circle_rounded, color: Colors.white, size: 34),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -787,12 +804,17 @@ class _SellerHero extends StatelessWidget {
 
 class _MarketplaceCard extends StatelessWidget {
   final MarketplaceItem item;
-  _MarketplaceCard({required this.item});
+  const _MarketplaceCard({required this.item});
 
   @override
   Widget build(BuildContext context) {
     final ui = _SellUi.of(context);
-    return Container(
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => MarketplaceItemDetailScreen(item: item)),
+      ),
+      child: Container(
       decoration: BoxDecoration(
         color: ui.card.withValues(alpha: .88),
         borderRadius: BorderRadius.circular(26),
@@ -878,7 +900,8 @@ class _MarketplaceCard extends StatelessWidget {
           ),
         ],
       ),
-    );
+    ),   // Container (child of GestureDetector)
+    );   // GestureDetector
   }
 }
 
