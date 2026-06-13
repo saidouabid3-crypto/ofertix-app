@@ -1,8 +1,10 @@
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../core/config/api_config.dart';
 import '../core/config/api_endpoints.dart';
@@ -113,22 +115,83 @@ class MarketplaceService {
     }
   }
 
-  /// Upload a local image file to the backend (Cloudinary via server-side).
-  /// Returns the public https URL on success, or null on failure.
-  Future<String?> uploadImage(File imageFile, String token) async {
+  /// Upload an image picked from the gallery to the backend (Cloudinary via
+  /// server-side). Returns a record: url is set on success, error code is set
+  /// on failure ('IMAGE_TOO_LARGE', 'INVALID_TYPE', 'UPLOAD_FAILED', …).
+  Future<({String? url, String? error})> uploadImage(
+    XFile xFile,
+    String token,
+  ) async {
+    // Pre-flight: check size before sending to backend (5 MB limit).
+    final bytes = await xFile.length();
+    if (bytes > 5 * 1024 * 1024) {
+      if (kDebugMode) debugPrint('[SellUpload] file too large: $bytes bytes');
+      return (url: null, error: 'IMAGE_TOO_LARGE');
+    }
+
+    // Determine MIME type: prefer xFile.mimeType, fall back to extension.
+    const allowed = {'image/jpeg', 'image/png', 'image/webp'};
+    final rawMime = xFile.mimeType?.toLowerCase() ?? _mimeFromPath(xFile.path);
+    final mime = allowed.contains(rawMime) ? rawMime : _mimeFromPath(xFile.path);
+    if (!allowed.contains(mime)) {
+      if (kDebugMode) debugPrint('[SellUpload] unsupported MIME: $mime');
+      return (url: null, error: 'INVALID_TYPE');
+    }
+
     try {
       final uri = ApiConfig.uri(ApiEndpoints.marketplaceUploadImage);
+      if (kDebugMode) {
+        debugPrint('[SellUpload] POST $uri  file=${xFile.name}  bytes=$bytes  mime=$mime');
+      }
+
       final request = http.MultipartRequest('POST', uri)
         ..headers['Authorization'] = 'Bearer $token'
-        ..files.add(await http.MultipartFile.fromPath('file', imageFile.path));
+        ..files.add(
+          await http.MultipartFile.fromPath(
+            'file',
+            xFile.path,
+            contentType: MediaType.parse(mime),
+          ),
+        );
+
       final streamed = await request.send().timeout(const Duration(seconds: 30));
       final response = await http.Response.fromStream(streamed);
+
+      if (kDebugMode) {
+        debugPrint('[SellUpload] status=${response.statusCode}  body=${response.body}');
+      }
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
-        return data['url'] as String?;
+        final url = data['url'] as String?;
+        return (url: url, error: url == null ? 'UPLOAD_FAILED' : null);
       }
-    } catch (_) {}
-    return null;
+
+      // Try to extract structured error code from backend response.
+      String code = 'UPLOAD_FAILED';
+      try {
+        final err = jsonDecode(response.body);
+        if (err is Map) {
+          final detail = err['detail'];
+          if (detail is Map) code = detail['code'] as String? ?? code;
+        }
+      } catch (_) {}
+      return (url: null, error: code);
+    } catch (e) {
+      if (kDebugMode) debugPrint('[SellUpload] exception=$e');
+      return (url: null, error: 'UPLOAD_FAILED');
+    }
+  }
+
+  static String _mimeFromPath(String path) {
+    final ext = path.split('.').last.toLowerCase();
+    const map = <String, String>{
+      'jpg': 'image/jpeg',
+      'jpeg': 'image/jpeg',
+      'png': 'image/png',
+      'webp': 'image/webp',
+    };
+    return map[ext] ?? 'image/jpeg';
   }
 
   Future<void> reportItem(String itemId, String userId, String reason) async {

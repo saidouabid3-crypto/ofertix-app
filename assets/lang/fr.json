@@ -635,6 +635,7 @@
   "sell.sentForReview": "Annonce envoyée pour révision !",
   "sell.sentForReviewSubtitle": "Elle apparaîtra dans le marketplace après validation par l'équipe Ofertix.",
   "sell.imageUploadFailed": "Échec du téléchargement. Réessayez.",
+  "sell.imageTooLarge": "Image dépasse 5 Mo. Choisissez une image plus petite.",
   "sell.uploadUnavailable": "Téléchargement d'images temporairement indisponible.",
   "sell.pendingApproval": "En attente",
   "sell.statusPending": "En attente",

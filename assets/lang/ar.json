@@ -635,6 +635,7 @@
   "sell.sentForReview": "تم إرسال إعلانك للمراجعة!",
   "sell.sentForReviewSubtitle": "سيظهر في السوق بعد موافقة فريق أوفيرتكس.",
   "sell.imageUploadFailed": "فشل رفع الصورة. حاول مجدداً.",
+  "sell.imageTooLarge": "الصورة تتجاوز 5 ميغابايت. اختر صورة أصغر.",
   "sell.uploadUnavailable": "رفع الصور غير متاح مؤقتاً.",
   "sell.pendingApproval": "في انتظار الموافقة",
   "sell.statusPending": "قيد المراجعة",

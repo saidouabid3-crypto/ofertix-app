@@ -253,19 +253,19 @@ class _AddMarketplaceItemScreenState extends State<AddMarketplaceItemScreen> {
 
     final imageUrls = <String>[];
     for (final xFile in _selectedImages) {
-      final url = await MarketplaceService.instance.uploadImage(
-        File(xFile.path),
-        token,
-      );
-      if (url == null || url.isEmpty) {
+      final result = await MarketplaceService.instance.uploadImage(xFile, token);
+      if (result.url == null) {
         if (!mounted) return;
         setState(() { _saving = false; _uploadingImages = false; });
+        final msgKey = result.error == 'IMAGE_TOO_LARGE'
+            ? 'sell.imageTooLarge'
+            : 'sell.imageUploadFailed';
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('sell.imageUploadFailed'.tr())),
+          SnackBar(content: Text(msgKey.tr())),
         );
         return;
       }
-      imageUrls.add(url);
+      imageUrls.add(result.url!);
     }
     setState(() => _uploadingImages = false);
 

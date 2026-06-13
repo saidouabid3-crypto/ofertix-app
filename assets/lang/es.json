@@ -635,6 +635,7 @@
   "sell.sentForReview": "¡Anuncio enviado a revisión!",
   "sell.sentForReviewSubtitle": "Aparecerá en el marketplace una vez aprobado por el equipo de Ofertix.",
   "sell.imageUploadFailed": "Error al subir la imagen. Inténtalo de nuevo.",
+  "sell.imageTooLarge": "La imagen supera 5 MB. Elige una más pequeña.",
   "sell.uploadUnavailable": "Subida de imágenes no disponible temporalmente.",
   "sell.pendingApproval": "En revisión",
   "sell.statusPending": "Pendiente",
