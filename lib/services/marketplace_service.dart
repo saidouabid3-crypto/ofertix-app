@@ -61,19 +61,35 @@ class MarketplaceService {
         .toList();
   }
 
-  Future<String> createItem(
-    MarketplaceItem item, {
+  Future<MarketplaceItem> createItem(
+    Map<String, dynamic> listing, {
     required String token,
   }) async {
-    // API body uses an ISO timestamp so the backend receives plain JSON.
-    final apiBody = Map<String, dynamic>.from(item.toMap())
-      ..['createdAt'] =
-          item.createdAt?.toIso8601String() ?? DateTime.now().toIso8601String();
+    final apiBody = Map<String, dynamic>.from(listing);
 
     if (kDebugMode) {
       final imgs = apiBody['images'];
       final count = imgs is List ? imgs.length : 0;
       final first = imgs is List && imgs.isNotEmpty ? imgs.first : 'none';
+      final desc = apiBody['description'];
+      final descLen = desc is String ? desc.length : 0;
+      final sanitized = {
+        'title': apiBody['title'],
+        'descriptionLength': descLen,
+        'price': apiBody['price'],
+        'countryCode': apiBody['countryCode'],
+        'currencyCode': apiBody['currencyCode'],
+        'city': apiBody['city'],
+        'postalCode': apiBody['postalCode'],
+        'area': apiBody['area'],
+        'categoryKey': apiBody['categoryKey'],
+        'conditionKey': apiBody['conditionKey'],
+        'deliveryMethodKey': apiBody['deliveryMethodKey'],
+        'imagesCount': count,
+        'coverImage': apiBody['coverImage'],
+        'firstImageUrl': first,
+      };
+      debugPrint('[SellCreate16A] payload=$sanitized');
       debugPrint('[SellCreate] images=$count');
       debugPrint('[SellCreate] firstUrl=$first');
       debugPrint(
@@ -104,7 +120,10 @@ class MarketplaceService {
           cause: 'response.id was empty',
         );
       }
-      return itemId;
+      return MarketplaceItem.fromMap(
+        Map<String, dynamic>.from(response as Map),
+        itemId,
+      );
     } catch (e) {
       if (kDebugMode) {
         final status = _statusCode(e);
@@ -118,6 +137,44 @@ class MarketplaceService {
     }
   }
 
+  Future<MarketplaceItem> updateMyItem(
+    String itemId,
+    Map<String, dynamic> listing,
+  ) async {
+    final token = await _freshToken();
+    final response = await _api.patch(
+      ApiEndpoints.marketplaceMyItem(itemId),
+      body: listing,
+      authorized: true,
+      extraHeaders: {'Authorization': 'Bearer $token'},
+    );
+    final item = MarketplaceItem.fromMap(
+      Map<String, dynamic>.from(response as Map),
+      response['id']?.toString() ?? itemId,
+    );
+    if (kDebugMode) {
+      debugPrint('[Sell16A] item edited id=${item.id} status=${item.status}');
+    }
+    return item;
+  }
+
+  Future<MarketplaceItem> archiveMyItem(String itemId) async {
+    final token = await _freshToken();
+    final response = await _api.delete(
+      ApiEndpoints.marketplaceMyItem(itemId),
+      authorized: true,
+      extraHeaders: {'Authorization': 'Bearer $token'},
+    );
+    final item = MarketplaceItem.fromMap(
+      Map<String, dynamic>.from(response as Map),
+      response['id']?.toString() ?? itemId,
+    );
+    if (kDebugMode) {
+      debugPrint('[Sell16A] item archived id=${item.id}');
+    }
+    return item;
+  }
+
   Future<void> favoriteItem(String itemId, String userId) async {
     await _api.post(
       ApiEndpoints.marketplaceItemFavorite(itemId),
@@ -128,8 +185,9 @@ class MarketplaceService {
 
   /// Fetch authenticated seller's own items (pending + approved + rejected + hidden).
   Future<List<MarketplaceItem>> fetchMyItems({int limit = 50}) async {
-    if (kDebugMode)
+    if (kDebugMode) {
       debugPrint('[MyListings] GET ${ApiEndpoints.marketplaceMyItems}');
+    }
     try {
       final token = await FirebaseAuth.instance.currentUser?.getIdToken();
       if (token == null || token.isEmpty) {
@@ -287,5 +345,13 @@ class MarketplaceService {
     if (error is ForbiddenException) return 403;
     if (error is NotFoundException) return 404;
     return null;
+  }
+
+  Future<String> _freshToken() async {
+    final token = await FirebaseAuth.instance.currentUser?.getIdToken(true);
+    if (token == null || token.isEmpty) {
+      throw const UnauthorizedException('Authentication is required.');
+    }
+    return token;
   }
 }
