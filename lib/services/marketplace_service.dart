@@ -24,41 +24,68 @@ class MarketplaceService {
     String? category,
     String countryCode = 'global',
   }) async {
-    final response = await _api.get(
-      ApiEndpoints.marketplaceItemsList(
-        limit: limit,
-        city: city,
-        category: category,
-        country: countryCode.trim().isNotEmpty && countryCode != 'global'
-            ? countryCode.trim().toLowerCase()
-            : null,
-      ),
+    final endpoint = ApiEndpoints.marketplaceItemsList(
+      limit: limit,
+      city: city,
+      category: category,
+      country: countryCode.trim().isNotEmpty && countryCode != 'global'
+          ? countryCode.trim().toLowerCase()
+          : null,
     );
-    final list = response is List
+
+    if (kDebugMode) {
+      debugPrint(
+        '[Marketplace16A] fetch_start endpoint=$endpoint limit=$limit',
+      );
+    }
+
+    final response = await _api.get(endpoint);
+
+    final rawList = response is List
         ? response
         : response['items'] as List? ?? const [];
-    final items = list
-        .map(
-          (e) => MarketplaceItem.fromMap(
-            Map<String, dynamic>.from(e),
-            e['id']?.toString() ?? '',
-          ),
-        )
-        .toList();
 
-    return _filterByCountry(items, countryCode);
-  }
+    if (kDebugMode) {
+      debugPrint('[Marketplace16A] api_success raw_count=${rawList.length}');
+    }
 
-  List<MarketplaceItem> _filterByCountry(
-    List<MarketplaceItem> items,
-    String countryCode,
-  ) {
-    final normalized = countryCode.trim().toLowerCase();
-    if (normalized.isEmpty || normalized == 'global') return items;
+    // Parse items with per-item error isolation so one bad item never drops
+    // the whole list. Backend already enforces public safety (approved,
+    // isActive, visibleToUsers). Flutter does NOT re-filter by country because
+    // the backend already returns only country-appropriate items; adding a
+    // second client-side country filter can incorrectly drop valid items when
+    // sellerCountryCode uses a different casing or alias than the device locale.
+    final items = <MarketplaceItem>[];
+    for (final e in rawList) {
+      try {
+        final map = Map<String, dynamic>.from(e as Map);
+        final id = e['id']?.toString() ?? '';
+        final item = MarketplaceItem.fromMap(map, id);
+        items.add(item);
+        if (kDebugMode) {
+          debugPrint(
+            '[Marketplace16A] item id=$id title=${item.title.substring(0, item.title.length.clamp(0, 30))} '
+            'status=${item.status} active=${item.isActive} visible=${item.visibleToUsers} '
+            'category=${item.categoryKey}',
+          );
+        }
+      } catch (err) {
+        final id = (e is Map ? e['id'] : null)?.toString() ?? '?';
+        if (kDebugMode) {
+          debugPrint('[Marketplace16A] dropped id=$id reason=$err');
+        }
+      }
+    }
 
-    return items
-        .where((item) => item.isAvailableForCountry(normalized))
-        .toList();
+    if (kDebugMode) {
+      debugPrint('[Marketplace16A] parsed_count=${items.length}');
+      debugPrint('[Marketplace16A] local_filter_before=${items.length}');
+      // No client-side country filter — backend already filtered.
+      debugPrint('[Marketplace16A] local_filter_after=${items.length}');
+      debugPrint('[Marketplace16A] displayed_count=${items.length}');
+    }
+
+    return items;
   }
 
   Future<MarketplaceItem> createItem(
