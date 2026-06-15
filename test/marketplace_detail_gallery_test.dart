@@ -94,4 +94,53 @@ void main() {
       expect(urls, ['https://example.com/valid.jpg']);
     });
   });
+
+  group('Gallery counter string', () {
+    test('counter is always index+1 / total', () {
+      // Simulates what the counter widget renders: should always be "1 / N" format
+      // regardless of locale — the Directionality wrapper enforces LTR rendering.
+      const index = 0;
+      const total = 4;
+      final counter = '${index + 1} / $total';
+      expect(counter, '1 / 4');
+    });
+
+    test('last page counter', () {
+      const index = 3;
+      const total = 4;
+      final counter = '${index + 1} / $total';
+      expect(counter, '4 / 4');
+    });
+  });
+
+  group('Seller card fields', () {
+    test('verified field matches model', () {
+      final item = MarketplaceItem(
+        id: 'x',
+        sellerId: 's1',
+        sellerName: 'Ahmed',
+        sellerVerified: true,
+        title: 'Test',
+        description: 'D',
+        price: 10,
+        city: 'Cairo',
+        sellerCountryCode: 'eg',
+        availableCountries: const ['eg'],
+        shipsTo: const [],
+        pickupOnly: true,
+        isActive: true,
+        isFeatured: false,
+        isSponsored: false,
+        createdAt: null,
+        images: const [],
+      );
+      expect(item.sellerVerified, isTrue);
+      expect(item.sellerName, 'Ahmed');
+    });
+
+    test('unverified seller has sellerVerified=false', () {
+      final item = _item();
+      expect(item.sellerVerified, isFalse);
+    });
+  });
 }

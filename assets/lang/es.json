@@ -1309,5 +1309,14 @@
   "mkt.detail.reportSent": "Reporte enviado. Gracias.",
   "mkt.detail.unknownSeller": "Vendedor desconocido",
   "mkt.detail.showMore": "Ver más",
-  "mkt.detail.showLess": "Ver menos"
+  "mkt.detail.showLess": "Ver menos",
+  "mkt.detail.verifiedSeller": "Vendedor verificado",
+  "mkt.detail.viewProfile": "Ver perfil",
+  "mkt.detail.reportTitle": "Reportar anuncio",
+  "mkt.detail.reportReason.scam": "Estafa o fraude",
+  "mkt.detail.reportReason.wrongCategory": "Categoría incorrecta",
+  "mkt.detail.reportReason.prohibited": "Artículo prohibido",
+  "mkt.detail.reportReason.offensive": "Contenido ofensivo",
+  "mkt.detail.reportReason.other": "Otro",
+  "mkt.detail.reportFailed": "No se pudo enviar el reporte. Inténtalo de nuevo."
 }

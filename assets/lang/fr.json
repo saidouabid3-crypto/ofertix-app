@@ -1309,5 +1309,14 @@
   "mkt.detail.reportSent": "Signalement envoyé. Merci.",
   "mkt.detail.unknownSeller": "Vendeur inconnu",
   "mkt.detail.showMore": "Voir plus",
-  "mkt.detail.showLess": "Voir moins"
+  "mkt.detail.showLess": "Voir moins",
+  "mkt.detail.verifiedSeller": "Vendeur vérifié",
+  "mkt.detail.viewProfile": "Voir le profil",
+  "mkt.detail.reportTitle": "Signaler l'annonce",
+  "mkt.detail.reportReason.scam": "Arnaque ou fraude",
+  "mkt.detail.reportReason.wrongCategory": "Mauvaise catégorie",
+  "mkt.detail.reportReason.prohibited": "Article interdit",
+  "mkt.detail.reportReason.offensive": "Contenu offensant",
+  "mkt.detail.reportReason.other": "Autre",
+  "mkt.detail.reportFailed": "Impossible d'envoyer le signalement. Veuillez réessayer."
 }

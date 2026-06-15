@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' as ui;
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -15,7 +16,7 @@ import '../profile/creator_profile_screen.dart';
 import 'marketplace_listing_form_screen.dart';
 import 'marketplace_messages_screen.dart';
 
-// ─── Batch 16C: Marketplace Listing Detail Pro ───────────────────────────────
+// ─── Batch 16D: Marketplace Trust + Contact + Detail Polish ─────────────────
 
 class MarketplaceItemDetailScreen extends StatefulWidget {
   final MarketplaceItem item;
@@ -135,23 +136,106 @@ class _MarketplaceItemDetailScreenState
     }
   }
 
-  // ─── Report ────────────────────────────────────────────────────────────────
+  // ─── Contact seller ────────────────────────────────────────────────────────
 
-  Future<void> _report() async {
+  void _contact() {
     final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (kDebugMode) {
+      debugPrint(
+        '[Marketplace16D] contact_tap item=${_item.id} seller=${_item.sellerId} auth=${uid != null ? 'yes' : 'no'}',
+      );
+    }
     if (uid == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('profile.loginRequired'.tr())),
       );
       return;
     }
+    if (kDebugMode) {
+      debugPrint('[Marketplace16D] contact_open_messages mode=existing');
+    }
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const MarketplaceMessagesScreen()),
+    );
+  }
+
+  // ─── Report ────────────────────────────────────────────────────────────────
+
+  Future<void> _report() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (kDebugMode) debugPrint('[Marketplace16D] report_tap item=${_item.id}');
+
+    if (uid == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('profile.loginRequired'.tr())),
+      );
+      return;
+    }
+    // Owner cannot report their own listing
+    if (uid == _item.sellerId) return;
+
+    // Reason picker dialog
+    const reasons = [
+      'scam',
+      'wrongCategory',
+      'prohibited',
+      'offensive',
+      'other',
+    ];
+    final reason = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('mkt.detail.reportTitle'.tr()),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: reasons
+              .map(
+                (r) => ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text('mkt.detail.reportReason.$r'.tr()),
+                  onTap: () => Navigator.pop(ctx, r),
+                ),
+              )
+              .toList(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('common.cancel'.tr()),
+          ),
+        ],
+      ),
+    );
+    if (reason == null || !mounted) return;
+
+    if (kDebugMode) {
+      debugPrint(
+        '[Marketplace16D] report_submit item=${_item.id} reason=$reason status=sending',
+      );
+    }
     try {
-      await MarketplaceService.instance.reportItem(_item.id, uid, 'user_report');
+      await MarketplaceService.instance.reportItem(_item.id, uid, reason);
       if (!mounted) return;
+      if (kDebugMode) {
+        debugPrint(
+          '[Marketplace16D] report_submit item=${_item.id} reason=$reason status=success',
+        );
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('mkt.detail.reportSent'.tr())),
       );
-    } catch (_) {}
+    } catch (_) {
+      if (!mounted) return;
+      if (kDebugMode) {
+        debugPrint(
+          '[Marketplace16D] report_submit item=${_item.id} reason=$reason status=failed',
+        );
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('mkt.detail.reportFailed'.tr())),
+      );
+    }
   }
 
   // ─── Open in Maps ──────────────────────────────────────────────────────────
@@ -393,12 +477,7 @@ class _MarketplaceItemDetailScreenState
                     child: ElevatedButton.icon(
                       icon: const Icon(Icons.chat_bubble_outline_rounded),
                       label: Text('mkt.detail.contactSeller'.tr()),
-                      onPressed: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const MarketplaceMessagesScreen(),
-                        ),
-                      ),
+                      onPressed: _contact,
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -473,7 +552,7 @@ class _ImageGallery extends StatelessWidget {
               : const _ImagePlaceholder(),
         ),
 
-        // Counter badge (top right)
+        // Counter badge (top right) — forced LTR so Arabic shows "1 / 4" not "4 / 1"
         if (n > 1)
           Positioned(
             top: MediaQuery.of(context).padding.top + 48,
@@ -484,12 +563,15 @@ class _ImageGallery extends StatelessWidget {
                 color: Colors.black54,
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: Text(
-                '${currentIndex + 1} / $n',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
+              child: Directionality(
+                textDirection: ui.TextDirection.ltr,
+                child: Text(
+                  '${currentIndex + 1} / $n',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             ),
@@ -554,9 +636,12 @@ class _FullscreenGalleryState extends State<_FullscreenGallery> {
       appBar: AppBar(
         backgroundColor: Colors.black,
         iconTheme: const IconThemeData(color: Colors.white),
-        title: Text(
-          '${ _current + 1} / $n',
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+        title: Directionality(
+          textDirection: ui.TextDirection.ltr,
+          child: Text(
+            '${_current + 1} / $n',
+            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+          ),
         ),
       ),
       body: PageView.builder(
@@ -729,11 +814,30 @@ class _SellerCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
+                  if (item.sellerVerified)
+                    Text(
+                      'mkt.detail.verifiedSeller'.tr(),
+                      style: const TextStyle(
+                        color: AppColors.orange,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                 ],
               ),
             ),
-            if (item.sellerId.isNotEmpty)
-              Icon(Icons.chevron_right_rounded, color: muted),
+            if (item.sellerId.isNotEmpty) ...[
+              Text(
+                'mkt.detail.viewProfile'.tr(),
+                style: const TextStyle(
+                  color: AppColors.orange,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(width: 2),
+              Icon(Icons.chevron_right_rounded, color: muted, size: 18),
+            ],
           ],
         ),
       ),

@@ -1309,5 +1309,14 @@
   "mkt.detail.reportSent": "تم إرسال البلاغ. شكراً.",
   "mkt.detail.unknownSeller": "بائع غير معروف",
   "mkt.detail.showMore": "عرض المزيد",
-  "mkt.detail.showLess": "عرض أقل"
+  "mkt.detail.showLess": "عرض أقل",
+  "mkt.detail.verifiedSeller": "بائع موثوق",
+  "mkt.detail.viewProfile": "عرض الملف الشخصي",
+  "mkt.detail.reportTitle": "الإبلاغ عن الإعلان",
+  "mkt.detail.reportReason.scam": "احتيال أو نصب",
+  "mkt.detail.reportReason.wrongCategory": "فئة خاطئة",
+  "mkt.detail.reportReason.prohibited": "منتج محظور",
+  "mkt.detail.reportReason.offensive": "محتوى مسيء",
+  "mkt.detail.reportReason.other": "أخرى",
+  "mkt.detail.reportFailed": "تعذّر إرسال البلاغ. حاول مرة أخرى."
 }
