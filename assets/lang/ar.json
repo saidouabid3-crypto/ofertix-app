@@ -1291,5 +1291,9 @@
   "sell16.status.hidden": "مخفي",
   "sell16.status.archived": "مؤرشف",
   "sell16.status.deleted": "مؤرشف",
-  "sell16.rejectionReason": "سبب الرفض: {reason}"
+  "sell16.rejectionReason": "سبب الرفض: {reason}",
+  "mkt.searchHint": "ابحث في السوق...",
+  "mkt.category.all": "الكل",
+  "mkt.serviceUnavailable": "الخدمة غير متاحة مؤقتاً. حاول مرة أخرى.",
+  "mkt.noResults": "لا توجد نتائج. جرب كلمة أو فئة أخرى."
 }

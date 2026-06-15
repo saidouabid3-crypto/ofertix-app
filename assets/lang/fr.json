@@ -1291,5 +1291,9 @@
   "sell16.status.hidden": "Masquée",
   "sell16.status.archived": "Archivée",
   "sell16.status.deleted": "Archivée",
-  "sell16.rejectionReason": "Motif du refus : {reason}"
+  "sell16.rejectionReason": "Motif du refus : {reason}",
+  "mkt.searchHint": "Rechercher dans le marketplace...",
+  "mkt.category.all": "Tout",
+  "mkt.serviceUnavailable": "Service temporairement indisponible. Veuillez réessayer.",
+  "mkt.noResults": "Aucun résultat. Essayez un autre terme ou catégorie."
 }
