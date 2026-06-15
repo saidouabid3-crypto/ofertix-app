@@ -9,6 +9,7 @@ import 'package:image_picker/image_picker.dart';
 import '../core/config/api_config.dart';
 import '../core/config/api_endpoints.dart';
 import '../core/errors/app_exception.dart';
+import '../models/marketplace_conversation.dart';
 import '../models/marketplace_item.dart';
 import 'api_service.dart';
 
@@ -17,6 +18,199 @@ class MarketplaceService {
   static final MarketplaceService instance = MarketplaceService._();
 
   final ApiService _api = ApiService.instance;
+
+  Future<MarketplaceConversation> startConversationForListing(
+    MarketplaceItem item, {
+    String initialMessage = '',
+  }) async {
+    final auth = FirebaseAuth.instance.currentUser;
+    if (kDebugMode) {
+      debugPrint(
+        '[Marketplace16E] start_conversation item=${item.id} '
+        'seller=${item.sellerId} auth=${auth == null ? 'no' : 'yes'}',
+      );
+    }
+    final token = await _freshToken();
+    final response = await _api.post(
+      ApiEndpoints.marketplaceMessagesStart,
+      authorized: true,
+      extraHeaders: {'Authorization': 'Bearer $token'},
+      body: {
+        'listing_id': item.id,
+        if (initialMessage.trim().isNotEmpty)
+          'initial_message': initialMessage.trim(),
+      },
+    );
+    return MarketplaceConversation.fromMap(
+      Map<String, dynamic>.from(response as Map),
+    );
+  }
+
+  Future<List<MarketplaceConversation>> fetchInbox({int limit = 30}) async {
+    final token = await _freshToken();
+    final response = await _api.get(
+      ApiEndpoints.messagesInbox,
+      authorized: true,
+      queryParameters: {'limit': limit.clamp(1, 50)},
+      extraHeaders: {'Authorization': 'Bearer $token'},
+    );
+    final raw = response is List
+        ? response
+        : response['items'] as List? ?? const [];
+    final items = raw
+        .whereType<Map>()
+        .map(
+          (entry) =>
+              MarketplaceConversation.fromMap(Map<String, dynamic>.from(entry)),
+        )
+        .where((conversation) => conversation.listingId.isNotEmpty)
+        .toList();
+    if (kDebugMode) {
+      debugPrint('[Marketplace16E] inbox_fetch count=${items.length}');
+    }
+    return items;
+  }
+
+  Future<MarketplaceConversationThread> fetchConversation(
+    String conversationId, {
+    int limit = 50,
+  }) async {
+    final token = await _freshToken();
+    final response = await _api.get(
+      ApiEndpoints.messageConversation(conversationId),
+      authorized: true,
+      queryParameters: {'limit': limit.clamp(1, 100)},
+      extraHeaders: {'Authorization': 'Bearer $token'},
+    );
+    final map = Map<String, dynamic>.from(response as Map);
+    final rawConversation = map['conversation'];
+    if (rawConversation is! Map) {
+      throw const NetworkException(
+        'Conversation response did not include its context.',
+        code: 'missing_conversation',
+      );
+    }
+    final rawMessages = map['items'] as List? ?? const [];
+    final thread = MarketplaceConversationThread(
+      conversation: MarketplaceConversation.fromMap(
+        Map<String, dynamic>.from(rawConversation),
+      ),
+      messages: rawMessages
+          .whereType<Map>()
+          .map(
+            (entry) =>
+                MarketplaceMessage.fromMap(Map<String, dynamic>.from(entry)),
+          )
+          .toList(),
+    );
+    if (kDebugMode) {
+      debugPrint(
+        '[Marketplace16E] conversation_fetch id=$conversationId '
+        'messages=${thread.messages.length}',
+      );
+    }
+    return thread;
+  }
+
+  Future<MarketplaceMessage> sendMessage(
+    String conversationId,
+    String text,
+  ) async {
+    final clean = text.trim();
+    if (clean.isEmpty || clean.length > 1000) {
+      throw const NetworkException(
+        'Message must contain between 1 and 1000 characters.',
+        code: 'invalid_message',
+      );
+    }
+    final token = await _freshToken();
+    try {
+      final response = await _api.post(
+        ApiEndpoints.messageConversationSend(conversationId),
+        authorized: true,
+        extraHeaders: {'Authorization': 'Bearer $token'},
+        body: {'text': clean},
+      );
+      final message = MarketplaceMessage.fromMap(
+        Map<String, dynamic>.from(response as Map),
+      );
+      if (kDebugMode) {
+        debugPrint(
+          '[Marketplace16E] send_message id=$conversationId status=success',
+        );
+      }
+      return message;
+    } catch (_) {
+      if (kDebugMode) {
+        debugPrint(
+          '[Marketplace16E] send_message id=$conversationId status=failed',
+        );
+      }
+      rethrow;
+    }
+  }
+
+  Future<void> markConversationRead(String conversationId) async {
+    final token = await _freshToken();
+    await _api.post(
+      ApiEndpoints.messageConversationRead(conversationId),
+      authorized: true,
+      extraHeaders: {'Authorization': 'Bearer $token'},
+    );
+  }
+
+  Future<MarketplaceMessage> sendOffer(
+    String conversationId, {
+    required double amount,
+    required String currency,
+    String message = '',
+  }) async {
+    if (amount <= 0) {
+      throw const NetworkException(
+        'Offer amount must be greater than zero.',
+        code: 'invalid_offer',
+      );
+    }
+    final token = await _freshToken();
+    try {
+      final response = await _api.post(
+        ApiEndpoints.messageConversationOffer(conversationId),
+        authorized: true,
+        extraHeaders: {'Authorization': 'Bearer $token'},
+        body: {
+          'amount': amount,
+          'currency': currency,
+          if (message.trim().isNotEmpty) 'message': message.trim(),
+        },
+      );
+      final offer = MarketplaceMessage.fromMap(
+        Map<String, dynamic>.from(response as Map),
+      );
+      if (kDebugMode) {
+        debugPrint(
+          '[Marketplace16E] send_offer id=$conversationId '
+          'amount=$amount status=success',
+        );
+      }
+      return offer;
+    } catch (_) {
+      if (kDebugMode) {
+        debugPrint(
+          '[Marketplace16E] send_offer id=$conversationId '
+          'amount=$amount status=failed',
+        );
+      }
+      rethrow;
+    }
+  }
+
+  Future<MarketplaceItem> fetchItemById(String itemId) async {
+    final response = await _api.get(ApiEndpoints.marketplaceItem(itemId));
+    return MarketplaceItem.fromMap(
+      Map<String, dynamic>.from(response as Map),
+      response['id']?.toString() ?? itemId,
+    );
+  }
 
   Future<List<MarketplaceItem>> fetchItems({
     int limit = 30,

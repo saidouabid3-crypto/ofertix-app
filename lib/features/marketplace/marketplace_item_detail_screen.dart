@@ -13,8 +13,8 @@ import '../../core/theme/app_theme.dart';
 import '../../models/marketplace_item.dart';
 import '../../services/marketplace_service.dart';
 import '../profile/creator_profile_screen.dart';
+import 'marketplace_conversation_screen.dart';
 import 'marketplace_listing_form_screen.dart';
-import 'marketplace_messages_screen.dart';
 
 // ─── Batch 16D: Marketplace Trust + Contact + Detail Polish ─────────────────
 
@@ -60,6 +60,7 @@ class _MarketplaceItemDetailScreenState
   int _galleryIndex = 0;
   late final PageController _pageCtrl;
   late final List<String> _galleryUrls;
+  bool _contacting = false;
 
   @override
   void initState() {
@@ -125,20 +126,22 @@ class _MarketplaceItemDetailScreenState
     );
     if (confirmed != true || !mounted) return;
     try {
-      final archived = await MarketplaceService.instance.archiveMyItem(_item.id);
+      final archived = await MarketplaceService.instance.archiveMyItem(
+        _item.id,
+      );
       if (!mounted) return;
       setState(() => _item = archived);
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('sell16.archiveFailed'.tr())),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('sell16.archiveFailed'.tr())));
     }
   }
 
   // ─── Contact seller ────────────────────────────────────────────────────────
 
-  void _contact() {
+  Future<void> _contact() async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (kDebugMode) {
       debugPrint(
@@ -147,17 +150,38 @@ class _MarketplaceItemDetailScreenState
     }
     if (uid == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('profile.loginRequired'.tr())),
+        SnackBar(content: Text('mkt.messages.loginRequired'.tr())),
       );
       return;
     }
-    if (kDebugMode) {
-      debugPrint('[Marketplace16D] contact_open_messages mode=existing');
+    if (uid == _item.sellerId || _contacting) return;
+    setState(() => _contacting = true);
+    try {
+      final conversation = await MarketplaceService.instance
+          .startConversationForListing(_item);
+      if (!mounted) return;
+      if (kDebugMode) {
+        debugPrint(
+          '[Marketplace16E] contact_open_conversation id=${conversation.id}',
+        );
+      }
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => MarketplaceConversationScreen(
+            conversation: conversation,
+            initialItem: _item,
+          ),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('mkt.messages.serviceUnavailable'.tr())),
+      );
+    } finally {
+      if (mounted) setState(() => _contacting = false);
     }
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const MarketplaceMessagesScreen()),
-    );
   }
 
   // ─── Report ────────────────────────────────────────────────────────────────
@@ -167,9 +191,9 @@ class _MarketplaceItemDetailScreenState
     if (kDebugMode) debugPrint('[Marketplace16D] report_tap item=${_item.id}');
 
     if (uid == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('profile.loginRequired'.tr())),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('profile.loginRequired'.tr())));
       return;
     }
     // Owner cannot report their own listing
@@ -222,9 +246,9 @@ class _MarketplaceItemDetailScreenState
           '[Marketplace16D] report_submit item=${_item.id} reason=$reason status=success',
         );
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('mkt.detail.reportSent'.tr())),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('mkt.detail.reportSent'.tr())));
     } catch (_) {
       if (!mounted) return;
       if (kDebugMode) {
@@ -232,9 +256,9 @@ class _MarketplaceItemDetailScreenState
           '[Marketplace16D] report_submit item=${_item.id} reason=$reason status=failed',
         );
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('mkt.detail.reportFailed'.tr())),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('mkt.detail.reportFailed'.tr())));
     }
   }
 
@@ -243,7 +267,9 @@ class _MarketplaceItemDetailScreenState
   Future<void> _openMaps() async {
     final city = _item.city.trim().isNotEmpty ? _item.city.trim() : null;
     if (city == null) return;
-    final uri = Uri.parse('https://maps.google.com/?q=${Uri.encodeComponent(city)}');
+    final uri = Uri.parse(
+      'https://maps.google.com/?q=${Uri.encodeComponent(city)}',
+    );
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
@@ -256,10 +282,8 @@ class _MarketplaceItemDetailScreenState
       context,
       MaterialPageRoute(
         fullscreenDialog: true,
-        builder: (_) => _FullscreenGallery(
-          urls: _galleryUrls,
-          initialIndex: startIndex,
-        ),
+        builder: (_) =>
+            _FullscreenGallery(urls: _galleryUrls, initialIndex: startIndex),
       ),
     );
   }
@@ -309,9 +333,8 @@ class _MarketplaceItemDetailScreenState
               }
               setState(() => _galleryIndex = i);
             },
-            onTap: () => _galleryUrls.isNotEmpty
-                ? _openFullscreen(_galleryIndex)
-                : null,
+            onTap: () =>
+                _galleryUrls.isNotEmpty ? _openFullscreen(_galleryIndex) : null,
           ),
 
           Padding(
@@ -396,7 +419,10 @@ class _MarketplaceItemDetailScreenState
 
                 // ── Description ───────────────────────────────────────────
                 if (_item.description.trim().isNotEmpty) ...[
-                  _SectionLabel(label: 'mkt.detail.description'.tr(), isDark: isDark),
+                  _SectionLabel(
+                    label: 'mkt.detail.description'.tr(),
+                    isDark: isDark,
+                  ),
                   const SizedBox(height: 6),
                   _Card(
                     color: card,
@@ -412,7 +438,10 @@ class _MarketplaceItemDetailScreenState
 
                 // ── Seller card (public view only) ────────────────────────
                 if (!widget.showOwnerStatus) ...[
-                  _SectionLabel(label: 'mkt.detail.seller'.tr(), isDark: isDark),
+                  _SectionLabel(
+                    label: 'mkt.detail.seller'.tr(),
+                    isDark: isDark,
+                  ),
                   const SizedBox(height: 6),
                   _SellerCard(
                     item: _item,
@@ -427,7 +456,10 @@ class _MarketplaceItemDetailScreenState
                 // ── Location ──────────────────────────────────────────────
                 if (_item.city.isNotEmpty ||
                     _item.approximateLocationLabel.isNotEmpty) ...[
-                  _SectionLabel(label: 'mkt.detail.location'.tr(), isDark: isDark),
+                  _SectionLabel(
+                    label: 'mkt.detail.location'.tr(),
+                    isDark: isDark,
+                  ),
                   const SizedBox(height: 6),
                   _LocationCard(
                     item: _item,
@@ -471,13 +503,28 @@ class _MarketplaceItemDetailScreenState
                 ],
 
                 // ── Contact seller (non-owner) ────────────────────────────
-                if (!widget.showOwnerStatus) ...[
+                if (!widget.showOwnerStatus &&
+                    FirebaseAuth.instance.currentUser?.uid !=
+                        _item.sellerId) ...[
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
-                      icon: const Icon(Icons.chat_bubble_outline_rounded),
-                      label: Text('mkt.detail.contactSeller'.tr()),
-                      onPressed: _contact,
+                      icon: _contacting
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Icon(Icons.chat_bubble_outline_rounded),
+                      label: Text(
+                        _contacting
+                            ? 'mkt.messages.starting'.tr()
+                            : 'mkt.detail.contactSeller'.tr(),
+                      ),
+                      onPressed: _contacting ? null : _contact,
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -640,7 +687,10 @@ class _FullscreenGalleryState extends State<_FullscreenGallery> {
           textDirection: ui.TextDirection.ltr,
           child: Text(
             '${_current + 1} / $n',
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ),
       ),
@@ -875,7 +925,11 @@ class _LocationCard extends StatelessWidget {
       border: border,
       child: Row(
         children: [
-          const Icon(Icons.location_on_rounded, color: AppColors.green, size: 20),
+          const Icon(
+            Icons.location_on_rounded,
+            color: AppColors.green,
+            size: 20,
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
@@ -927,7 +981,11 @@ class _SafetyCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.shield_outlined, color: AppColors.green, size: 18),
+              const Icon(
+                Icons.shield_outlined,
+                color: AppColors.green,
+                size: 18,
+              ),
               const SizedBox(width: 8),
               Text(
                 'mkt.detail.safetyTitle'.tr(),

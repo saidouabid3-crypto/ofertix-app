@@ -64,6 +64,7 @@ class ApiEndpoints {
   static const String marketplace = '/marketplace';
 
   static const String marketplaceItems = '/marketplace/items';
+  static String marketplaceItem(String itemId) => '/marketplace/items/$itemId';
   static String marketplaceItemsList({
     int? limit,
     String? city,
@@ -167,10 +168,14 @@ class ApiEndpoints {
   // --- Messages -------------------------------------------------------------
   static const String messagesInbox = '/messages/inbox';
   static const String messagesStart = '/messages/start';
+  static const String marketplaceMessagesStart =
+      '/messages/conversations/start';
   static String messageConversation(String conversationId) =>
       '/messages/conversations/$conversationId';
   static String messageConversationSend(String conversationId) =>
       '/messages/conversations/$conversationId/send';
+  static String messageConversationOffer(String conversationId) =>
+      '/messages/conversations/$conversationId/offer';
   static String messageConversationRead(String conversationId) =>
       '/messages/conversations/$conversationId/read';
 
