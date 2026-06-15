@@ -6,6 +6,7 @@ import '../../core/theme/app_theme.dart';
 import '../../models/marketplace_item.dart';
 import '../../services/marketplace_service.dart';
 import 'marketplace_item_detail_screen.dart';
+import 'marketplace_listing_form_screen.dart';
 
 class MarketplaceMyListingsScreen extends StatefulWidget {
   const MarketplaceMyListingsScreen({super.key});
@@ -18,6 +19,16 @@ class MarketplaceMyListingsScreen extends StatefulWidget {
 class _MarketplaceMyListingsScreenState
     extends State<MarketplaceMyListingsScreen> {
   late Future<List<MarketplaceItem>> _future;
+  String _filter = 'all';
+
+  static const _filters = [
+    'all',
+    'pending',
+    'approved',
+    'rejected',
+    'hidden',
+    'archived',
+  ];
 
   @override
   void initState() {
@@ -28,23 +39,64 @@ class _MarketplaceMyListingsScreenState
   Future<List<MarketplaceItem>> _load() =>
       MarketplaceService.instance.fetchMyItems();
 
+  Future<void> _reload() async {
+    final next = _load();
+    if (mounted) setState(() { _future = next; });
+    try {
+      await next;
+    } catch (_) {}
+  }
+
+  Future<void> _edit(MarketplaceItem item) async {
+    final updated = await Navigator.push<MarketplaceItem>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => MarketplaceListingFormScreen(existingItem: item),
+      ),
+    );
+    if (updated != null && mounted) await _reload();
+  }
+
+  Future<void> _archive(MarketplaceItem item) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('sell16.archiveTitle'.tr()),
+        content: Text('sell16.archiveMessage'.tr()),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('common.cancel'.tr()),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text('sell16.archive'.tr()),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      await MarketplaceService.instance.archiveMyItem(item.id);
+      if (mounted) await _reload();
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('sell16.archiveFailed'.tr())));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bg = isDark ? AppColors.background : AppColors.lightBackground;
     final text = isDark ? AppColors.text : AppColors.lightText;
-
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
+    if (FirebaseAuth.instance.currentUser == null) {
       return Scaffold(
         backgroundColor: bg,
         appBar: _appBar(text, bg),
-        body: Center(
-          child: Text(
-            'profile.loginRequired'.tr(),
-            style: TextStyle(color: text),
-          ),
-        ),
+        body: Center(child: Text('profile.loginRequired'.tr())),
       );
     }
 
@@ -53,36 +105,99 @@ class _MarketplaceMyListingsScreenState
       appBar: _appBar(text, bg),
       body: FutureBuilder<List<MarketplaceItem>>(
         future: _future,
-        builder: (context, snap) {
-          if (snap.connectionState == ConnectionState.waiting) {
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
               child: CircularProgressIndicator(color: AppColors.orange),
             );
           }
-          if (snap.hasError) {
-            return _MyListingsError(
-              isDark: isDark,
-              onRetry: () => setState(() => _future = _load()),
+          if (snapshot.hasError) {
+            return _StateMessage(
+              icon: Icons.cloud_off_rounded,
+              title: 'marketplace.listingUnavailable'.tr(),
+              actionLabel: 'common.retry'.tr(),
+              onAction: _reload,
             );
           }
-          final items = snap.data ?? [];
-          if (items.isEmpty) {
-            return _EmptyMyListings(isDark: isDark);
-          }
+          final allItems = snapshot.data ?? const <MarketplaceItem>[];
+          final items = allItems.where(_matchesFilter).toList();
           return RefreshIndicator(
             color: AppColors.orange,
-            onRefresh: () async => setState(() => _future = _load()),
-            child: ListView.separated(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 40),
-              itemCount: items.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 10),
-              itemBuilder: (_, i) =>
-                  _MyListingCard(item: items[i], isDark: isDark),
+            onRefresh: _reload,
+            child: CustomScrollView(
+              slivers: [
+                SliverToBoxAdapter(
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
+                    child: Row(
+                      children: _filters.map((filter) {
+                        final selected = _filter == filter;
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: FilterChip(
+                            selected: selected,
+                            label: Text('sell16.filter.$filter'.tr()),
+                            onSelected: (_) => setState(() => _filter = filter),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ),
+                if (items.isEmpty)
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: _StateMessage(
+                      icon: Icons.storefront_outlined,
+                      title: allItems.isEmpty
+                          ? 'marketplace.myListingsEmpty'.tr()
+                          : 'sell16.filterEmpty'.tr(),
+                    ),
+                  )
+                else
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
+                    sliver: SliverList.separated(
+                      itemCount: items.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 12),
+                      itemBuilder: (_, index) => _MyListingCard(
+                        item: items[index],
+                        onOpen: () async {
+                          await Navigator.push<void>(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => MarketplaceItemDetailScreen(
+                                item: items[index],
+                                showOwnerStatus: true,
+                              ),
+                            ),
+                          );
+                          if (mounted) await _reload();
+                        },
+                        onEdit: items[index].canEdit
+                            ? () => _edit(items[index])
+                            : null,
+                        onArchive: items[index].isArchived
+                            ? null
+                            : () => _archive(items[index]),
+                      ),
+                    ),
+                  ),
+              ],
             ),
           );
         },
       ),
     );
+  }
+
+  bool _matchesFilter(MarketplaceItem item) {
+    if (_filter == 'all') return true;
+    if (_filter == 'approved') {
+      return {'approved', 'active', 'published'}.contains(item.status);
+    }
+    return item.status == _filter;
   }
 
   AppBar _appBar(Color text, Color bg) => AppBar(
@@ -98,116 +213,107 @@ class _MarketplaceMyListingsScreenState
 
 class _MyListingCard extends StatelessWidget {
   final MarketplaceItem item;
-  final bool isDark;
+  final VoidCallback onOpen;
+  final VoidCallback? onEdit;
+  final VoidCallback? onArchive;
 
-  const _MyListingCard({required this.item, required this.isDark});
+  const _MyListingCard({
+    required this.item,
+    required this.onOpen,
+    required this.onEdit,
+    required this.onArchive,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final card = isDark ? AppColors.card : AppColors.lightCard;
-    final text = isDark ? AppColors.text : AppColors.lightText;
-    final muted = isDark ? AppColors.gray : AppColors.lightGray;
     final border = isDark ? Colors.white12 : AppColors.lightBorder;
-
-    return GestureDetector(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) =>
-              MarketplaceItemDetailScreen(item: item, showOwnerStatus: true),
-        ),
+    return Card(
+      color: card,
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(color: border),
       ),
-      child: Container(
-        decoration: BoxDecoration(
-          color: card,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: border),
-        ),
-        child: Row(
-          children: [
-            // Thumbnail
-            ClipRRect(
-              borderRadius: const BorderRadius.horizontal(
-                left: Radius.circular(20),
-              ),
-              child: SizedBox(
-                width: 90,
-                height: 90,
-                child: item.hasImage
-                    ? Image.network(
-                        item.mainImage,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => _placeholder(),
-                      )
-                    : _placeholder(),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  vertical: 12,
-                  horizontal: 4,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      item.title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: text,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 14,
-                      ),
+      child: InkWell(
+        onTap: onOpen,
+        borderRadius: BorderRadius.circular(20),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(14),
+                    child: SizedBox(
+                      width: 86,
+                      height: 86,
+                      child: item.hasImage
+                          ? Image.network(
+                              item.mainImage,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) =>
+                                  const _Placeholder(),
+                            )
+                          : const _Placeholder(),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      item.formattedPrice,
-                      style: TextStyle(
-                        color: AppColors.orange,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 15,
-                      ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          item.title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w900,
+                            fontSize: 15,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          item.formattedPrice,
+                          style: const TextStyle(
+                            color: AppColors.orange,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        _StatusChip(status: item.status),
+                      ],
                     ),
-                    const SizedBox(height: 6),
-                    _StatusChip(status: item.status),
-                    if (item.createdAt != null) ...[
-                      const SizedBox(height: 5),
-                      Text(
-                        _formatDate(item.createdAt!),
-                        style: TextStyle(color: muted, fontSize: 11),
-                      ),
-                    ],
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ),
-            const SizedBox(width: 8),
-            Icon(Icons.chevron_right_rounded, color: muted),
-            const SizedBox(width: 8),
-          ],
+              const Divider(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: onEdit,
+                      icon: const Icon(Icons.edit_outlined),
+                      label: Text('sell16.edit'.tr()),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: onArchive,
+                      icon: const Icon(Icons.archive_outlined),
+                      label: Text('sell16.archive'.tr()),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
-  }
-
-  Widget _placeholder() => Container(
-    color: AppColors.orange.withValues(alpha: .10),
-    child: Center(
-      child: Icon(
-        Icons.shopping_bag_rounded,
-        color: AppColors.orange,
-        size: 32,
-      ),
-    ),
-  );
-
-  String _formatDate(DateTime date) {
-    final local = date.toLocal();
-    return '${local.day.toString().padLeft(2, '0')}/'
-        '${local.month.toString().padLeft(2, '0')}/${local.year}';
   }
 }
 
@@ -218,109 +324,75 @@ class _StatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (color, key) = _colorAndKey(status);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: .15),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withValues(alpha: .4)),
-      ),
-      child: Text(
-        key.tr(),
-        style: TextStyle(
-          color: color,
-          fontSize: 11,
-          fontWeight: FontWeight.w800,
-        ),
-      ),
-    );
-  }
-
-  (Color, String) _colorAndKey(String s) {
-    switch (s.toLowerCase()) {
-      case 'approved':
-      case 'active':
-      case 'published':
-        return (AppColors.green, 'marketplace.statusApproved');
-      case 'rejected':
-        return (AppColors.red, 'marketplace.statusRejected');
-      case 'hidden':
-        return (AppColors.gray, 'marketplace.statusHidden');
-      default:
-        return (AppColors.orange, 'marketplace.statusPending');
-    }
-  }
-}
-
-class _EmptyMyListings extends StatelessWidget {
-  final bool isDark;
-
-  const _EmptyMyListings({required this.isDark});
-
-  @override
-  Widget build(BuildContext context) {
-    final text = isDark ? AppColors.text : AppColors.lightText;
-    final muted = isDark ? AppColors.gray : AppColors.lightGray;
-
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.storefront_outlined, color: AppColors.orange, size: 56),
-            const SizedBox(height: 16),
-            Text(
-              'marketplace.myListingsEmpty'.tr(),
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: text,
-                fontSize: 17,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'marketplace.sellFirst'.tr(),
-              textAlign: TextAlign.center,
-              style: TextStyle(color: muted, fontSize: 13),
-            ),
-          ],
+    final normalized = status.toLowerCase();
+    final color = switch (normalized) {
+      'approved' || 'active' || 'published' => AppColors.green,
+      'rejected' => AppColors.red,
+      'hidden' || 'archived' => AppColors.gray,
+      _ => AppColors.orange,
+    };
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Chip(
+        visualDensity: VisualDensity.compact,
+        backgroundColor: color.withValues(alpha: .14),
+        side: BorderSide(color: color.withValues(alpha: .4)),
+        label: Text(
+          'sell16.status.$normalized'.tr(),
+          style: TextStyle(
+            color: color,
+            fontSize: 11,
+            fontWeight: FontWeight.w800,
+          ),
         ),
       ),
     );
   }
 }
 
-class _MyListingsError extends StatelessWidget {
-  final bool isDark;
-  final VoidCallback onRetry;
-
-  const _MyListingsError({required this.isDark, required this.onRetry});
+class _Placeholder extends StatelessWidget {
+  const _Placeholder();
 
   @override
-  Widget build(BuildContext context) {
-    final text = isDark ? AppColors.text : AppColors.lightText;
-    final muted = isDark ? AppColors.gray : AppColors.lightGray;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.cloud_off_rounded, color: muted, size: 48),
-            const SizedBox(height: 12),
-            Text(
-              'marketplace.listingUnavailable'.tr(),
-              textAlign: TextAlign.center,
-              style: TextStyle(color: text, fontWeight: FontWeight.w800),
-            ),
+  Widget build(BuildContext context) => Container(
+    color: AppColors.orange.withValues(alpha: .1),
+    child: const Icon(Icons.shopping_bag_rounded, color: AppColors.orange),
+  );
+}
+
+class _StateMessage extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+
+  const _StateMessage({
+    required this.icon,
+    required this.title,
+    this.actionLabel,
+    this.onAction,
+  });
+
+  @override
+  Widget build(BuildContext context) => Center(
+    child: Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 54, color: AppColors.orange),
+          const SizedBox(height: 12),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontWeight: FontWeight.w800),
+          ),
+          if (actionLabel != null) ...[
             const SizedBox(height: 8),
-            TextButton(onPressed: onRetry, child: Text('common.retry'.tr())),
+            TextButton(onPressed: onAction, child: Text(actionLabel!)),
           ],
-        ),
+        ],
       ),
-    );
-  }
+    ),
+  );
 }

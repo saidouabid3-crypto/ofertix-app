@@ -81,6 +81,8 @@ class ApiEndpoints {
       '/marketplace/items/$itemId/report';
   static const String marketplaceUploadImage = '/marketplace/upload-image';
   static const String marketplaceMyItems = '/marketplace/my-items';
+  static String marketplaceMyItem(String itemId) =>
+      '/marketplace/my-items/$itemId';
 
   // --- Ofertix Local Engine -------------------------------------------------
   static const String localStores = '/api/local/stores';
