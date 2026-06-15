@@ -23,7 +23,7 @@ import '../../features/rewards/rewards_screen.dart';
 import '../../features/cashback/cashback_screen.dart';
 import '../../features/trending/trending_screen.dart';
 import '../../features/scan/scan_screen.dart';
-import '../../features/sell/sell_screen.dart';
+import '../../features/marketplace/marketplace_home_screen.dart';
 import '../../features/visual_search/visual_search_screen.dart';
 import '../../features/voice_search/voice_search_screen.dart';
 
@@ -73,7 +73,7 @@ class AppRouter {
           SmartReelsScreen(baseUrl: ApiConfig.baseUrl),
         );
       case AppRoutes.sell:
-        return _page(SellScreen());
+        return _page(const MarketplaceHomeScreen());
 
       case AppRoutes.aiAssistant:
         return _page(AIAssistantScreen());

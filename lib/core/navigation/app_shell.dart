@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/config/api_config.dart';
@@ -9,7 +10,7 @@ import '../../features/ai_assistant/ai_assistant_screen.dart';
 
 import '../../features/scan/scan_screen.dart';
 
-import '../../features/sell/sell_screen.dart';
+import '../../features/marketplace/marketplace_home_screen.dart';
 
 import '../../features/smart_reels/smart_reels_screen.dart';
 
@@ -32,7 +33,7 @@ class _AppShellState extends State<AppShell> {
         baseUrl: ApiConfig.baseUrl,
         isVisible: currentIndex == 2,
       ),
-      SellScreen(),
+      const MarketplaceHomeScreen(),
       AIAssistantScreen(),
     ];
 
@@ -44,6 +45,11 @@ class _AppShellState extends State<AppShell> {
         currentIndex: currentIndex,
 
         onTap: (index) {
+          if (kDebugMode && index == 3) {
+            debugPrint(
+              '[Marketplace16B-A] bottom_nav_sell_opened target=MarketplaceHomeScreen',
+            );
+          }
           setState(() {
             currentIndex = index;
           });

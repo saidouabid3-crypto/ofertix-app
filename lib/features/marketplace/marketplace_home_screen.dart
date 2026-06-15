@@ -55,6 +55,9 @@ class _MarketplaceHomeScreenState extends State<MarketplaceHomeScreen> {
   @override
   void initState() {
     super.initState();
+    if (kDebugMode) {
+      debugPrint('[Marketplace16B-A] MarketplaceHomeScreen mounted');
+    }
     _fetch(reason: 'initial');
   }
 
@@ -167,6 +170,7 @@ class _MarketplaceHomeScreenState extends State<MarketplaceHomeScreen> {
   // ─── Navigation ───────────────────────────────────────────────────────────
 
   Future<void> _openSell() async {
+    if (kDebugMode) debugPrint('[Marketplace16B-A] quick_action_sell_open_form');
     if (FirebaseAuth.instance.currentUser == null) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -188,15 +192,21 @@ class _MarketplaceHomeScreenState extends State<MarketplaceHomeScreen> {
     _fetch(reason: 'refresh');
   }
 
-  void _openMyListings() => Navigator.push(
-    context,
-    MaterialPageRoute(builder: (_) => const MarketplaceMyListingsScreen()),
-  );
+  void _openMyListings() {
+    if (kDebugMode) debugPrint('[Marketplace16B-A] quick_action_my_listings');
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const MarketplaceMyListingsScreen()),
+    );
+  }
 
-  void _openMessages() => Navigator.push(
-    context,
-    MaterialPageRoute(builder: (_) => const MarketplaceMessagesScreen()),
-  );
+  void _openMessages() {
+    if (kDebugMode) debugPrint('[Marketplace16B-A] quick_action_messages');
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const MarketplaceMessagesScreen()),
+    );
+  }
 
   void _openDetail(MarketplaceItem item) {
     Navigator.push(
