@@ -1295,5 +1295,19 @@
   "mkt.searchHint": "Rechercher dans le marketplace...",
   "mkt.category.all": "Tout",
   "mkt.serviceUnavailable": "Service temporairement indisponible. Veuillez réessayer.",
-  "mkt.noResults": "Aucun résultat. Essayez un autre terme ou catégorie."
+  "mkt.noResults": "Aucun résultat. Essayez un autre terme ou catégorie.",
+  "mkt.detail.description": "Description",
+  "mkt.detail.seller": "Vendeur",
+  "mkt.detail.location": "Emplacement",
+  "mkt.detail.openMaps": "Ouvrir sur la carte",
+  "mkt.detail.safetyTitle": "Conseils de sécurité",
+  "mkt.detail.safetyTip1": "Rencontrez-vous en personne dans un endroit public et sûr.",
+  "mkt.detail.safetyTip2": "Vérifiez l'article avant de payer.",
+  "mkt.detail.safetyTip3": "Méfiez-vous des paiements anticipés ou des virements suspects.",
+  "mkt.detail.contactSeller": "Contacter le vendeur",
+  "mkt.detail.report": "Signaler",
+  "mkt.detail.reportSent": "Signalement envoyé. Merci.",
+  "mkt.detail.unknownSeller": "Vendeur inconnu",
+  "mkt.detail.showMore": "Voir plus",
+  "mkt.detail.showLess": "Voir moins"
 }

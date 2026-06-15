@@ -1295,5 +1295,19 @@
   "mkt.searchHint": "ابحث في السوق...",
   "mkt.category.all": "الكل",
   "mkt.serviceUnavailable": "الخدمة غير متاحة مؤقتاً. حاول مرة أخرى.",
-  "mkt.noResults": "لا توجد نتائج. جرب كلمة أو فئة أخرى."
+  "mkt.noResults": "لا توجد نتائج. جرب كلمة أو فئة أخرى.",
+  "mkt.detail.description": "الوصف",
+  "mkt.detail.seller": "البائع",
+  "mkt.detail.location": "الموقع",
+  "mkt.detail.openMaps": "فتح في الخريطة",
+  "mkt.detail.safetyTitle": "نصائح الأمان",
+  "mkt.detail.safetyTip1": "التقِ شخصياً في مكان عام وآمن.",
+  "mkt.detail.safetyTip2": "تحقق من المنتج قبل الدفع.",
+  "mkt.detail.safetyTip3": "احذر من الدفع المسبق أو التحويلات المشبوهة.",
+  "mkt.detail.contactSeller": "التواصل مع البائع",
+  "mkt.detail.report": "إبلاغ",
+  "mkt.detail.reportSent": "تم إرسال البلاغ. شكراً.",
+  "mkt.detail.unknownSeller": "بائع غير معروف",
+  "mkt.detail.showMore": "عرض المزيد",
+  "mkt.detail.showLess": "عرض أقل"
 }

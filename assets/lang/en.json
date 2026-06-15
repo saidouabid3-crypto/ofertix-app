@@ -1295,5 +1295,19 @@
   "mkt.searchHint": "Search the marketplace...",
   "mkt.category.all": "All",
   "mkt.serviceUnavailable": "Service temporarily unavailable. Please try again.",
-  "mkt.noResults": "No results. Try a different term or category."
+  "mkt.noResults": "No results. Try a different term or category.",
+  "mkt.detail.description": "Description",
+  "mkt.detail.seller": "Seller",
+  "mkt.detail.location": "Location",
+  "mkt.detail.openMaps": "Open in maps",
+  "mkt.detail.safetyTitle": "Safety tips",
+  "mkt.detail.safetyTip1": "Meet in person in a safe public place.",
+  "mkt.detail.safetyTip2": "Inspect the item before paying.",
+  "mkt.detail.safetyTip3": "Be cautious of advance payments or suspicious transfers.",
+  "mkt.detail.contactSeller": "Contact seller",
+  "mkt.detail.report": "Report",
+  "mkt.detail.reportSent": "Report sent. Thank you.",
+  "mkt.detail.unknownSeller": "Unknown seller",
+  "mkt.detail.showMore": "Show more",
+  "mkt.detail.showLess": "Show less"
 }
