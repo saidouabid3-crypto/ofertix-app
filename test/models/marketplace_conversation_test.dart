@@ -36,4 +36,28 @@ void main() {
     expect(message.offerAmount, 200);
     expect(message.createdAt, isNotNull);
   });
+
+  test('derives other participant id safely', () {
+    final conversation = MarketplaceConversation.fromMap({
+      'id': 'conv-1',
+      'participants': ['buyer', 'seller'],
+      'seller_id': 'seller',
+      'buyer_id': 'buyer',
+    });
+
+    expect(conversation.otherUserId('buyer'), 'seller');
+    expect(conversation.otherUserId('seller'), 'buyer');
+    expect(conversation.otherUserId(''), 'buyer');
+  });
+
+  test('missing participant id returns empty profile target', () {
+    final conversation = MarketplaceConversation.fromMap({
+      'id': 'conv-1',
+      'participants': <String>[],
+    });
+
+    expect(conversation.otherUserId('buyer'), '');
+    expect(conversation.otherUserName('buyer'), '');
+    expect(conversation.otherUserPhoto('buyer'), '');
+  });
 }

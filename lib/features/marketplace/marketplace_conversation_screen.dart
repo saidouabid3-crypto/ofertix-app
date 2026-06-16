@@ -8,6 +8,7 @@ import '../../models/marketplace_conversation.dart';
 import '../../models/marketplace_item.dart';
 import '../../services/marketplace_service.dart';
 import 'marketplace_item_detail_screen.dart';
+import 'marketplace_profile_navigation.dart';
 
 class MarketplaceConversationScreen extends StatefulWidget {
   final MarketplaceConversation conversation;
@@ -194,6 +195,21 @@ class _MarketplaceConversationScreenState
     }
   }
 
+  Future<void> _openParticipantProfile() async {
+    final otherUserId = _conversation.otherUserId(_uid);
+    final available = otherUserId.trim().isNotEmpty;
+    debugPrint(
+      '[Marketplace16E-A] conversation_profile_tap '
+      'conversation=${_conversation.id} otherUser=$otherUserId '
+      'available=$available',
+    );
+    await openMarketplacePublicProfile(
+      context: context,
+      source: 'conversation',
+      userId: otherUserId,
+    );
+  }
+
   void _scrollToEnd() {
     if (!_scrollController.hasClients) return;
     _scrollController.animateTo(
@@ -208,7 +224,6 @@ class _MarketplaceConversationScreenState
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bg = isDark ? AppColors.background : AppColors.lightBackground;
     final text = isDark ? AppColors.text : AppColors.lightText;
-    final otherName = _conversation.otherUserName(_uid).trim();
     final canOffer = _uid.isNotEmpty && _uid == _conversation.buyerId;
 
     return Scaffold(
@@ -218,31 +233,18 @@ class _MarketplaceConversationScreenState
         foregroundColor: text,
         elevation: 0,
         titleSpacing: 0,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              otherName.isNotEmpty
-                  ? otherName
-                  : (_uid == _conversation.sellerId
-                        ? 'mkt.messages.buyer'.tr()
-                        : 'mkt.messages.seller'.tr()),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
-            ),
-            Text(
-              _conversation.listingTitle,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: isDark ? AppColors.gray : AppColors.lightGray,
-                fontSize: 11,
-              ),
-            ),
-          ],
+        title: _ParticipantHeader(
+          conversation: _conversation,
+          currentUserId: _uid,
+          isDark: isDark,
+          onTap: _openParticipantProfile,
         ),
         actions: [
+          IconButton(
+            tooltip: 'mkt.profile.open'.tr(),
+            onPressed: _openParticipantProfile,
+            icon: const Icon(Icons.person_outline_rounded),
+          ),
           if (canOffer)
             IconButton(
               tooltip: 'mkt.messages.makeOffer'.tr(),
@@ -301,6 +303,94 @@ class _MarketplaceConversationScreenState
           message: _messages[index],
           isMine: _messages[index].senderId == _uid,
           isDark: isDark,
+        ),
+      ),
+    );
+  }
+}
+
+class _ParticipantHeader extends StatelessWidget {
+  final MarketplaceConversation conversation;
+  final String currentUserId;
+  final bool isDark;
+  final VoidCallback onTap;
+
+  const _ParticipantHeader({
+    required this.conversation,
+    required this.currentUserId,
+    required this.isDark,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final otherName = conversation.otherUserName(currentUserId).trim();
+    final avatar = conversation.otherUserPhoto(currentUserId).trim();
+    final displayName = otherName.isNotEmpty
+        ? otherName
+        : (currentUserId == conversation.sellerId
+              ? 'mkt.messages.buyer'.tr()
+              : 'mkt.messages.seller'.tr());
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 17,
+              backgroundColor: AppColors.orange.withValues(alpha: .16),
+              backgroundImage: avatar.startsWith('http')
+                  ? CachedNetworkImageProvider(avatar)
+                  : null,
+              child: avatar.startsWith('http')
+                  ? null
+                  : const Icon(
+                      Icons.person_outline_rounded,
+                      color: AppColors.orange,
+                      size: 19,
+                    ),
+            ),
+            const SizedBox(width: 9),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          displayName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                      Icon(
+                        Icons.chevron_right_rounded,
+                        size: 17,
+                        color: isDark ? AppColors.gray : AppColors.lightGray,
+                      ),
+                    ],
+                  ),
+                  Text(
+                    conversation.listingTitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: isDark ? AppColors.gray : AppColors.lightGray,
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );

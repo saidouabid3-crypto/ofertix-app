@@ -8,13 +8,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../core/config/api_config.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/marketplace_item.dart';
 import '../../services/marketplace_service.dart';
-import '../profile/creator_profile_screen.dart';
 import 'marketplace_conversation_screen.dart';
 import 'marketplace_listing_form_screen.dart';
+import 'marketplace_profile_navigation.dart';
 
 // ─── Batch 16D: Marketplace Trust + Contact + Detail Polish ─────────────────
 
@@ -795,18 +794,24 @@ class _SellerCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    void openProfile() {
+      final available = item.sellerId.trim().isNotEmpty;
+      if (kDebugMode) {
+        debugPrint(
+          '[Marketplace16E-A] detail_profile_tap '
+          'seller=${item.sellerId} available=$available',
+        );
+      }
+      openMarketplacePublicProfile(
+        context: context,
+        source: 'detail',
+        userId: item.sellerId,
+      );
+    }
+
     return GestureDetector(
-      onTap: item.sellerId.isEmpty
-          ? null
-          : () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => CreatorProfileScreen(
-                  creatorId: item.sellerId,
-                  baseUrl: ApiConfig.baseUrl,
-                ),
-              ),
-            ),
+      behavior: HitTestBehavior.opaque,
+      onTap: openProfile,
       child: _Card(
         color: card,
         border: border,
@@ -877,12 +882,22 @@ class _SellerCard extends StatelessWidget {
               ),
             ),
             if (item.sellerId.isNotEmpty) ...[
-              Text(
-                'mkt.detail.viewProfile'.tr(),
-                style: const TextStyle(
-                  color: AppColors.orange,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
+              InkWell(
+                onTap: openProfile,
+                borderRadius: BorderRadius.circular(10),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 6,
+                  ),
+                  child: Text(
+                    'mkt.detail.viewProfile'.tr(),
+                    style: const TextStyle(
+                      color: AppColors.orange,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(width: 2),
