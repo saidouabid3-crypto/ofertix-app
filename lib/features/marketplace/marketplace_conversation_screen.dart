@@ -33,6 +33,7 @@ class _MarketplaceConversationScreenState
   List<MarketplaceMessage> _messages = const [];
   bool _loading = true;
   bool _sending = false;
+  bool _offerDialogOpen = false;
   String? _error;
 
   String get _uid => FirebaseAuth.instance.currentUser?.uid ?? '';
@@ -89,6 +90,7 @@ class _MarketplaceConversationScreenState
   Future<void> _send() async {
     final text = _controller.text.trim();
     if (_sending || text.isEmpty || text.length > 1000) return;
+    FocusManager.instance.primaryFocus?.unfocus();
     setState(() => _sending = true);
     try {
       final message = await MarketplaceService.instance.sendMessage(
@@ -112,47 +114,88 @@ class _MarketplaceConversationScreenState
   }
 
   Future<void> _showOffer() async {
-    final amountController = TextEditingController();
-    final amount = await showDialog<double>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text('mkt.messages.makeOffer'.tr()),
-        content: TextField(
-          controller: amountController,
-          autofocus: true,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: InputDecoration(
-            labelText: 'mkt.messages.offerAmount'.tr(),
-            suffixText: _conversation.listingCurrency,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: Text('common.cancel'.tr()),
-          ),
-          FilledButton(
-            onPressed: () {
-              final parsed = double.tryParse(
-                amountController.text.trim().replaceAll(',', '.'),
-              );
-              Navigator.pop(
-                dialogContext,
-                parsed != null && parsed > 0 ? parsed : null,
-              );
-            },
-            child: Text('mkt.messages.sendOffer'.tr()),
-          ),
-        ],
-      ),
+    // Guard against a second tap opening a stacked dialog before the first
+    // one resolves — two overlapping dialog routes popping out of order is
+    // a known trigger for the `_dependents.isEmpty` framework assertion.
+    if (_offerDialogOpen || _sending) return;
+    setState(() => _offerDialogOpen = true);
+    debugPrint(
+      '[Marketplace16E-C] offer_dialog_open conversation=${_conversation.id}',
     );
-    amountController.dispose();
-    if (amount == null || !mounted) return;
+
+    final amountController = TextEditingController();
+    double? amount;
+    try {
+      String? errorText;
+      amount = await showDialog<double>(
+        context: context,
+        builder: (dialogContext) => StatefulBuilder(
+          builder: (dialogContext, setDialogState) {
+            return AlertDialog(
+              title: Text('mkt.messages.makeOffer'.tr()),
+              content: TextField(
+                controller: amountController,
+                autofocus: false,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                decoration: InputDecoration(
+                  labelText: 'mkt.messages.offerAmount'.tr(),
+                  suffixText: _conversation.listingCurrency,
+                  errorText: errorText,
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: Text('common.cancel'.tr()),
+                ),
+                FilledButton(
+                  onPressed: () {
+                    final parsed = double.tryParse(
+                      amountController.text.trim().replaceAll(',', '.'),
+                    );
+                    if (parsed == null || parsed <= 0) {
+                      setDialogState(
+                        () => errorText = 'mkt.messages.invalidOfferAmount'
+                            .tr(),
+                      );
+                      return;
+                    }
+                    Navigator.of(dialogContext).pop(parsed);
+                  },
+                  child: Text('mkt.messages.sendOffer'.tr()),
+                ),
+              ],
+            );
+          },
+        ),
+      );
+    } finally {
+      amountController.dispose();
+    }
+
+    if (mounted) setState(() => _offerDialogOpen = false);
+
+    if (amount == null) {
+      debugPrint(
+        '[Marketplace16E-C] offer_dialog_closed result=cancelled '
+        'conversation=${_conversation.id}',
+      );
+      return;
+    }
+    if (!mounted) return;
+
+    final resolvedAmount = amount;
+    debugPrint(
+      '[Marketplace16E-C] offer_submit_start '
+      'conversation=${_conversation.id} amount=$resolvedAmount',
+    );
     setState(() => _sending = true);
     try {
       final offer = await MarketplaceService.instance.sendOffer(
         _conversation.id,
-        amount: amount,
+        amount: resolvedAmount,
         currency: _conversation.listingCurrency,
       );
       if (!mounted) return;
@@ -160,16 +203,30 @@ class _MarketplaceConversationScreenState
         _messages = [..._messages, offer];
         _sending = false;
       });
+      debugPrint(
+        '[Marketplace16E-C] offer_submit_success message=${offer.id}',
+      );
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('mkt.messages.offerSent'.tr())));
+      debugPrint(
+        '[Marketplace16E-C] offer_dialog_closed result=sent '
+        'conversation=${_conversation.id}',
+      );
       WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToEnd());
-    } catch (_) {
+    } catch (error) {
+      debugPrint(
+        '[Marketplace16E-C] offer_submit_failed reason=${error.runtimeType}',
+      );
       if (!mounted) return;
       setState(() => _sending = false);
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('mkt.messages.offerFailed'.tr())));
+      debugPrint(
+        '[Marketplace16E-C] offer_dialog_closed result=failed '
+        'conversation=${_conversation.id}',
+      );
     }
   }
 
@@ -199,7 +256,7 @@ class _MarketplaceConversationScreenState
     final otherUserId = _conversation.otherUserId(_uid);
     final available = otherUserId.trim().isNotEmpty;
     debugPrint(
-      '[Marketplace16E-A] conversation_profile_tap '
+      '[Marketplace16E-B] conversation_profile_tap '
       'conversation=${_conversation.id} otherUser=$otherUserId '
       'available=$available',
     );
@@ -248,7 +305,7 @@ class _MarketplaceConversationScreenState
           if (canOffer)
             IconButton(
               tooltip: 'mkt.messages.makeOffer'.tr(),
-              onPressed: _sending ? null : _showOffer,
+              onPressed: (_sending || _offerDialogOpen) ? null : _showOffer,
               icon: const Icon(Icons.local_offer_outlined),
             ),
         ],
