@@ -11,6 +11,7 @@ import '../core/config/api_endpoints.dart';
 import '../core/errors/app_exception.dart';
 import '../models/marketplace_conversation.dart';
 import '../models/marketplace_item.dart';
+import '../models/marketplace_review.dart';
 import 'api_service.dart';
 
 class MarketplaceService {
@@ -402,6 +403,55 @@ class MarketplaceService {
       body: {'userId': userId},
       authorized: true,
     );
+  }
+
+  Future<bool> saveListing(String itemId) async {
+    final token = await _freshToken();
+    await _api.post(
+      ApiEndpoints.marketplaceItemFavorite(itemId),
+      extraHeaders: {'Authorization': 'Bearer $token'},
+    );
+    return true;
+  }
+
+  Future<bool> unsaveListing(String itemId) async {
+    final token = await _freshToken();
+    await _api.delete(
+      ApiEndpoints.marketplaceItemFavorite(itemId),
+      extraHeaders: {'Authorization': 'Bearer $token'},
+    );
+    return false;
+  }
+
+  Future<bool> isListingSaved(String itemId) async {
+    final token = await _freshToken();
+    final response = await _api.get(
+      ApiEndpoints.marketplaceItemFavorite(itemId),
+      extraHeaders: {'Authorization': 'Bearer $token'},
+    );
+    return response is Map && response['is_saved'] == true;
+  }
+
+  Future<MarketplaceReview> submitReview({
+    required String listingId,
+    required String conversationId,
+    required String revieweeId,
+    required int rating,
+    String comment = '',
+  }) async {
+    final token = await _freshToken();
+    final response = await _api.post(
+      ApiEndpoints.marketplaceReviews,
+      extraHeaders: {'Authorization': 'Bearer $token'},
+      body: {
+        'listing_id': listingId,
+        'conversation_id': conversationId,
+        'reviewee_id': revieweeId,
+        'rating': rating,
+        'comment': comment,
+      },
+    );
+    return MarketplaceReview.fromMap(Map<String, dynamic>.from(response as Map));
   }
 
   /// Fetch authenticated seller's own items (pending + approved + rejected + hidden).

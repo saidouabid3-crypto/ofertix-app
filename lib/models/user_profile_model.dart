@@ -22,6 +22,7 @@ class UserProfileModel {
   final int totalLikes;
   final double ratingAverage;
   final int ratingCount;
+  final String trustLevel;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -47,6 +48,7 @@ class UserProfileModel {
     required this.totalLikes,
     required this.ratingAverage,
     required this.ratingCount,
+    required this.trustLevel,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -84,6 +86,7 @@ class UserProfileModel {
       totalLikes: 0,
       ratingAverage: 0,
       ratingCount: 0,
+      trustLevel: 'new_seller',
       createdAt: null,
       updatedAt: null,
     );
@@ -93,11 +96,14 @@ class UserProfileModel {
     return UserProfileModel(
       uid: (map['uid'] ?? '').toString(),
       email: (map['email'] ?? '').toString(),
-      displayName: (map['display_name'] ?? map['displayName'] ?? '').toString(),
+      displayName:
+          (map['display_name'] ?? map['displayName'] ?? map['name'] ?? '')
+              .toString(),
       username: (map['username'] ?? '').toString(),
       usernameLower: (map['username_lower'] ?? map['usernameLower'] ?? '')
           .toString(),
-      photoUrl: (map['photo_url'] ?? map['photoUrl'] ?? '').toString(),
+      photoUrl: (map['photo_url'] ?? map['photoUrl'] ?? map['avatar_url'] ?? '')
+          .toString(),
       bio: (map['bio'] ?? '').toString(),
       country: (map['country'] ?? 'global').toString(),
       city: (map['city'] ?? '').toString(),
@@ -117,9 +123,28 @@ class UserProfileModel {
       totalLikes: _toInt(map['total_likes'] ?? map['totalLikes']),
       ratingAverage: _toDouble(map['rating_average'] ?? map['ratingAverage']),
       ratingCount: _toInt(map['rating_count'] ?? map['ratingCount']),
+      trustLevel: (map['trust_level'] ?? map['trustLevel'] ?? 'new_seller')
+          .toString(),
       createdAt: _toDate(map['created_at'] ?? map['createdAt']),
       updatedAt: _toDate(map['updated_at'] ?? map['updatedAt']),
     );
+  }
+
+  factory UserProfileModel.fromPublicMap(Map<String, dynamic> map) {
+    final clean = Map<String, dynamic>.from(map)
+      ..remove('email')
+      ..remove('phone')
+      ..remove('role')
+      ..remove('userRole')
+      ..remove('isAdmin')
+      ..remove('admin')
+      ..remove('permissions')
+      ..remove('moderation')
+      ..remove('tokens')
+      ..remove('authProvider')
+      ..remove('address');
+
+    return UserProfileModel.fromMap({...clean, 'email': '', 'role': 'user'});
   }
 
   Map<String, dynamic> toMap() {
@@ -145,6 +170,7 @@ class UserProfileModel {
       'total_likes': totalLikes,
       'rating_average': ratingAverage,
       'rating_count': ratingCount,
+      'trust_level': trustLevel,
       'created_at': createdAt == null
           ? FieldValue.serverTimestamp()
           : Timestamp.fromDate(createdAt!),
@@ -189,6 +215,7 @@ class UserProfileModel {
     int? totalLikes,
     double? ratingAverage,
     int? ratingCount,
+    String? trustLevel,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -216,6 +243,7 @@ class UserProfileModel {
       totalLikes: totalLikes ?? this.totalLikes,
       ratingAverage: ratingAverage ?? this.ratingAverage,
       ratingCount: ratingCount ?? this.ratingCount,
+      trustLevel: trustLevel ?? this.trustLevel,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

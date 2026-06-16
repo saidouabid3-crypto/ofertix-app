@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_profile_model.dart';
 import '../models/user_identity.dart';
 import '../models/marketplace_item.dart';
+import '../models/marketplace_review.dart';
 import '../models/smart_reel_model.dart';
 import '../core/config/api_endpoints.dart';
 import 'api_service.dart';
@@ -222,6 +223,17 @@ class ProfileService {
     });
   }
 
+  Future<UserProfileModel?> getPublicProfileById(String uid) async {
+    final cleanUid = uid.trim();
+    if (cleanUid.isEmpty) return null;
+
+    final decoded = await _api.get('${ApiEndpoints.profiles}/$cleanUid/public');
+    if (decoded is Map) {
+      return UserProfileModel.fromPublicMap(Map<String, dynamic>.from(decoded));
+    }
+    return null;
+  }
+
   Future<UserIdentity?> getPublicIdentity(String uid) async {
     final cleanUid = uid.trim();
     if (cleanUid.isEmpty) return null;
@@ -235,8 +247,7 @@ class ProfileService {
       }
     } catch (_) {}
 
-    final profile = await getProfileById(cleanUid);
-    return profile == null ? null : UserIdentity.fromProfile(profile);
+    return null;
   }
 
   Future<List<MarketplaceItem>> getSellItems({
@@ -277,6 +288,20 @@ class ProfileService {
         .map((doc) => MarketplaceItem.fromMap(doc.data(), doc.id))
         .where((item) => item.isActive)
         .toList();
+  }
+
+  Future<MarketplaceReviewSummary> getProfileReviews(String uid) async {
+    final cleanUid = uid.trim();
+    if (cleanUid.isEmpty) return MarketplaceReviewSummary.empty;
+    try {
+      final decoded = await _api.get(ApiEndpoints.profileReviews(cleanUid));
+      if (decoded is Map) {
+        return MarketplaceReviewSummary.fromMap(
+          Map<String, dynamic>.from(decoded),
+        );
+      }
+    } catch (_) {}
+    return MarketplaceReviewSummary.empty;
   }
 
   Future<bool> followProfile(String uid) async {

@@ -60,6 +60,8 @@ class _MarketplaceItemDetailScreenState
   late final PageController _pageCtrl;
   late final List<String> _galleryUrls;
   bool _contacting = false;
+  bool _saved = false;
+  bool _savePending = false;
 
   @override
   void initState() {
@@ -76,12 +78,59 @@ class _MarketplaceItemDetailScreenState
         'final_count=${_galleryUrls.length}',
       );
     }
+    _loadSavedState();
   }
 
   @override
   void dispose() {
     _pageCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadSavedState() async {
+    if (FirebaseAuth.instance.currentUser == null) return;
+    try {
+      final saved = await MarketplaceService.instance.isListingSaved(_item.id);
+      if (!mounted) return;
+      setState(() => _saved = saved);
+    } catch (_) {
+      // Best-effort — leave save state unknown rather than guessing.
+    }
+  }
+
+  Future<void> _toggleSaved() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('profile.loginRequired'.tr())));
+      return;
+    }
+    if (uid == _item.sellerId || _savePending) return;
+    setState(() => _savePending = true);
+    try {
+      final nowSaved = _saved
+          ? await MarketplaceService.instance.unsaveListing(_item.id)
+          : await MarketplaceService.instance.saveListing(_item.id);
+      if (!mounted) return;
+      setState(() {
+        _saved = nowSaved;
+        _savePending = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            (_saved ? 'mkt.profile.saved' : 'mkt.profile.removeSaved').tr(),
+          ),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _savePending = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('mkt.profile.saveFailed'.tr())),
+      );
+    }
   }
 
   // ─── Edit / Archive ────────────────────────────────────────────────────────
@@ -306,6 +355,15 @@ class _MarketplaceItemDetailScreenState
         elevation: 0,
         iconTheme: IconThemeData(color: text),
         actions: [
+          if (!widget.showOwnerStatus)
+            IconButton(
+              icon: Icon(
+                _saved ? Icons.bookmark_rounded : Icons.bookmark_outline_rounded,
+                color: _saved ? AppColors.orange : muted,
+              ),
+              tooltip: 'mkt.profile.saveListing'.tr(),
+              onPressed: _savePending ? null : _toggleSaved,
+            ),
           if (!widget.showOwnerStatus)
             IconButton(
               icon: Icon(Icons.flag_outlined, color: muted),

@@ -80,6 +80,7 @@ class ApiEndpoints {
       '/marketplace/items/$itemId/favorite';
   static String marketplaceItemReport(String itemId) =>
       '/marketplace/items/$itemId/report';
+  static const String marketplaceReviews = '/marketplace/reviews';
   static const String marketplaceUploadImage = '/marketplace/upload-image';
   static const String marketplaceMyItems = '/marketplace/my-items';
   static String marketplaceMyItem(String itemId) =>
@@ -181,6 +182,7 @@ class ApiEndpoints {
 
   // --- Profiles / admin / setup --------------------------------------------
   static const String profiles = '/profiles';
+  static String profileReviews(String uid) => '/profiles/$uid/reviews';
   static const String adminDashboard = '/admin/dashboard';
   static const String setupPublic = '/setup/public';
   static const String setupAdmin = '/setup/admin';

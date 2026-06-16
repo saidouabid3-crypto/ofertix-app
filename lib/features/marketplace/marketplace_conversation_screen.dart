@@ -34,6 +34,7 @@ class _MarketplaceConversationScreenState
   bool _loading = true;
   bool _sending = false;
   bool _offerDialogOpen = false;
+  bool _reviewDialogOpen = false;
   String? _error;
 
   String get _uid => FirebaseAuth.instance.currentUser?.uid ?? '';
@@ -230,6 +231,95 @@ class _MarketplaceConversationScreenState
     }
   }
 
+  Future<void> _showReview() async {
+    if (_reviewDialogOpen) return;
+    final revieweeId = _conversation.otherUserId(_uid);
+    if (revieweeId.isEmpty || _conversation.listingId.isEmpty) return;
+
+    setState(() => _reviewDialogOpen = true);
+    int rating = 5;
+    final commentController = TextEditingController();
+    int? submittedRating;
+    try {
+      submittedRating = await showDialog<int>(
+        context: context,
+        builder: (dialogContext) => StatefulBuilder(
+          builder: (dialogContext, setDialogState) => AlertDialog(
+            title: Text('mkt.profile.writeReview'.tr()),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(5, (index) {
+                    final starValue = index + 1;
+                    return IconButton(
+                      icon: Icon(
+                        starValue <= rating
+                            ? Icons.star_rounded
+                            : Icons.star_border_rounded,
+                        color: AppColors.orange,
+                      ),
+                      onPressed: () =>
+                          setDialogState(() => rating = starValue),
+                    );
+                  }),
+                ),
+                TextField(
+                  controller: commentController,
+                  maxLength: 500,
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    hintText: 'mkt.messages.startConversation'.tr(),
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: Text('common.cancel'.tr()),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(dialogContext).pop(rating),
+                child: Text('mkt.profile.writeReview'.tr()),
+              ),
+            ],
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _reviewDialogOpen = false);
+    }
+
+    if (submittedRating == null || !mounted) {
+      commentController.dispose();
+      return;
+    }
+
+    try {
+      await MarketplaceService.instance.submitReview(
+        listingId: _conversation.listingId,
+        conversationId: _conversation.id,
+        revieweeId: revieweeId,
+        rating: submittedRating,
+        comment: commentController.text.trim(),
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('mkt.profile.reviewSubmitted'.tr())),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('mkt.profile.reviewFailed'.tr())),
+      );
+    } finally {
+      commentController.dispose();
+    }
+  }
+
   Future<void> _openListing() async {
     try {
       final item =
@@ -282,6 +372,10 @@ class _MarketplaceConversationScreenState
     final bg = isDark ? AppColors.background : AppColors.lightBackground;
     final text = isDark ? AppColors.text : AppColors.lightText;
     final canOffer = _uid.isNotEmpty && _uid == _conversation.buyerId;
+    final canReview =
+        _uid.isNotEmpty &&
+        _conversation.listingId.isNotEmpty &&
+        _messages.isNotEmpty;
 
     return Scaffold(
       backgroundColor: bg,
@@ -307,6 +401,12 @@ class _MarketplaceConversationScreenState
               tooltip: 'mkt.messages.makeOffer'.tr(),
               onPressed: (_sending || _offerDialogOpen) ? null : _showOffer,
               icon: const Icon(Icons.local_offer_outlined),
+            ),
+          if (canReview)
+            IconButton(
+              tooltip: 'mkt.profile.writeReview'.tr(),
+              onPressed: _reviewDialogOpen ? null : _showReview,
+              icon: const Icon(Icons.star_outline_rounded),
             ),
         ],
       ),

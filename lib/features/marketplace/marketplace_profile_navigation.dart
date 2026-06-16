@@ -14,7 +14,7 @@ Future<void> openMarketplacePublicProfile({
   final available = cleanUserId.isNotEmpty;
   if (kDebugMode) {
     debugPrint(
-      '[Marketplace16E-A] open_public_profile source=$source '
+      '[Marketplace16E-B] open_public_profile source=$source '
       'user=$cleanUserId available=$available',
     );
   }

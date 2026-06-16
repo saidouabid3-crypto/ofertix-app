@@ -1,7 +1,11 @@
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 
+import '../../core/errors/app_exception.dart';
+import '../../core/theme/app_theme.dart';
+import '../../models/marketplace_review.dart';
 import '../../models/smart_reel_model.dart';
 import '../../models/marketplace_item.dart';
 import '../../models/user_profile_model.dart';
@@ -10,7 +14,7 @@ import '../../services/profile_service.dart';
 import '../messages/chat_screen.dart';
 
 class CreatorProfileScreen extends StatefulWidget {
-  CreatorProfileScreen({
+  const CreatorProfileScreen({
     super.key,
     required this.creatorId,
     required this.baseUrl,
@@ -29,9 +33,13 @@ class _CreatorProfileScreenState extends State<CreatorProfileScreen> {
   UserProfileModel? profile;
   List<SmartReelModel> reels = [];
   List<MarketplaceItem> sellItems = [];
+  MarketplaceReviewSummary reviews = MarketplaceReviewSummary.empty;
   bool loading = true;
   bool following = false;
   String? error;
+
+  bool get _isOwnProfile =>
+      AuthService.instance.currentUserId == widget.creatorId.trim();
 
   @override
   void initState() {
@@ -40,35 +48,100 @@ class _CreatorProfileScreenState extends State<CreatorProfileScreen> {
   }
 
   Future<void> _load() async {
+    final userId = widget.creatorId.trim();
     setState(() {
       loading = true;
       error = null;
     });
 
+    if (kDebugMode) {
+      debugPrint(
+        '[Marketplace16E-B] profile_load_start user=$userId '
+        'screen=CreatorProfileScreen',
+      );
+    }
+
     try {
-      final user = await _profileService.getProfileById(widget.creatorId);
-      final items = await _profileService.getCreatorReels(
-        creatorId: widget.creatorId,
-      );
-      final marketplaceItems = await _profileService.getSellItems(
-        sellerId: widget.creatorId,
-      );
+      final user = await _profileService.getPublicProfileById(userId);
+      if (user == null) {
+        throw const NotFoundException('Profile not found');
+      }
+
+      var items = <SmartReelModel>[];
+      var marketplaceItems = <MarketplaceItem>[];
+
+      try {
+        items = await _profileService.getCreatorReels(creatorId: userId);
+      } catch (e) {
+        _logOptionalLoadFailure(userId, 'reels', e);
+      }
+
+      try {
+        marketplaceItems = await _profileService.getSellItems(sellerId: userId);
+      } catch (e) {
+        _logOptionalLoadFailure(userId, 'sell_items', e);
+      }
+
+      var reviewSummary = MarketplaceReviewSummary.empty;
+      try {
+        reviewSummary = await _profileService.getProfileReviews(userId);
+      } catch (e) {
+        _logOptionalLoadFailure(userId, 'reviews', e);
+      }
 
       if (!mounted) return;
+
+      if (kDebugMode) {
+        debugPrint(
+          '[Marketplace16E-B] profile_load_result user=$userId '
+          'status=success reason=public_profile_loaded',
+        );
+      }
 
       setState(() {
         profile = user;
         reels = items;
         sellItems = marketplaceItems;
+        reviews = reviewSummary;
         loading = false;
       });
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
+      if (kDebugMode) {
+        debugPrint(
+          '[Marketplace16E-B] profile_load_result user=$userId '
+          'status=${_profileStatus(e)} reason=${_profileReason(e)}',
+        );
+      }
       setState(() {
         loading = false;
-        error = 'No se pudo cargar el perfil';
+        error = 'mkt.profile.loadFailed';
       });
     }
+  }
+
+  void _logOptionalLoadFailure(String userId, String section, Object error) {
+    if (!kDebugMode) return;
+    debugPrint(
+      '[Marketplace16E-B] profile_load_result user=$userId '
+      'status=success reason=${section}_optional_${_profileReason(error)}',
+    );
+  }
+
+  String _profileStatus(Object error) {
+    if (error is NotFoundException) return '404';
+    if (error is ForbiddenException) return '403';
+    if (error is NetworkException && error.statusCode != null) {
+      return error.statusCode.toString();
+    }
+    return 'error';
+  }
+
+  String _profileReason(Object error) {
+    if (error is AppException) {
+      return error.code ?? error.runtimeType.toString();
+    }
+    return error.runtimeType.toString();
   }
 
   Future<void> _toggleFollow() async {
@@ -126,11 +199,41 @@ class _CreatorProfileScreenState extends State<CreatorProfileScreen> {
     if (error != null) {
       return Scaffold(
         backgroundColor: Colors.black,
-        appBar: AppBar(backgroundColor: Colors.black),
+        appBar: AppBar(
+          backgroundColor: Colors.black,
+          title: Text('mkt.profile.publicProfile'.tr()),
+        ),
         body: Center(
-          child: Text(
-            error!,
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.person_off_outlined,
+                  color: Colors.white54,
+                  size: 42,
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  error!.tr(),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 18),
+                OutlinedButton(
+                  onPressed: _load,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    side: const BorderSide(color: Colors.white24),
+                  ),
+                  child: Text('mkt.profile.retry'.tr()),
+                ),
+              ],
+            ),
           ),
         ),
       );
@@ -150,8 +253,10 @@ class _CreatorProfileScreenState extends State<CreatorProfileScreen> {
               pinned: true,
               expandedHeight: 250,
               title: Text(
-                p?.username.isNotEmpty == true ? '@${p!.username}' : 'Creator',
-                style: TextStyle(fontWeight: FontWeight.w900),
+                p?.username.isNotEmpty == true
+                    ? '@${p!.username}'
+                    : 'mkt.profile.publicProfile'.tr(),
+                style: const TextStyle(fontWeight: FontWeight.w900),
               ),
               flexibleSpace: FlexibleSpaceBar(
                 background: _ProfileHeader(
@@ -159,11 +264,15 @@ class _CreatorProfileScreenState extends State<CreatorProfileScreen> {
                   reelsCount: reels.length,
                   sellItemsCount: sellItems.length,
                   following: following,
+                  isOwnProfile: _isOwnProfile,
                   onFollow: _toggleFollow,
                   onMessage: _openChat,
                 ),
               ),
             ),
+            SliverToBoxAdapter(child: _TrustCard(profile: p, sellItemsCount: sellItems.length)),
+            SliverToBoxAdapter(child: _ReviewsCard(summary: reviews)),
+            SliverToBoxAdapter(child: _SafetyCard()),
             SliverToBoxAdapter(child: _SellItemsStrip(items: sellItems)),
             SliverToBoxAdapter(
               child: Padding(
@@ -229,11 +338,12 @@ class _CreatorProfileScreenState extends State<CreatorProfileScreen> {
 }
 
 class _ProfileHeader extends StatelessWidget {
-  _ProfileHeader({
+  const _ProfileHeader({
     required this.profile,
     required this.reelsCount,
     required this.sellItemsCount,
     required this.following,
+    required this.isOwnProfile,
     required this.onFollow,
     required this.onMessage,
   });
@@ -242,6 +352,7 @@ class _ProfileHeader extends StatelessWidget {
   final int reelsCount;
   final int sellItemsCount;
   final bool following;
+  final bool isOwnProfile;
   final VoidCallback onFollow;
   final VoidCallback onMessage;
 
@@ -293,7 +404,9 @@ class _ProfileHeader extends StatelessWidget {
                   ),
                   SizedBox(height: 5),
                   Text(
-                    p?.bio.trim().isNotEmpty == true ? p!.bio : '',
+                    p?.bio.trim().isNotEmpty == true
+                        ? p!.bio
+                        : 'mkt.profile.noPublicInfo'.tr(),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
@@ -314,32 +427,38 @@ class _ProfileHeader extends StatelessWidget {
                         value: sellItemsCount.toString(),
                       ),
                       _Stat(
-                        label: 'Followers',
+                        label: 'profile.followers'.tr(),
                         value: '${p?.followersCount ?? 0}',
                       ),
-                      _Stat(label: 'Likes', value: '${p?.totalLikes ?? 0}'),
+                      _Stat(
+                        label: 'profile.likes'.tr(),
+                        value: '${p?.totalLikes ?? 0}',
+                      ),
                     ],
                   ),
                   SizedBox(height: 13),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _ProfileButton(
-                          label: following ? 'Following' : 'Follow',
-                          filled: !following,
-                          onTap: onFollow,
+                  if (!isOwnProfile)
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _ProfileButton(
+                            label: following
+                                ? 'profile.following'.tr()
+                                : 'profile.follow'.tr(),
+                            filled: !following,
+                            onTap: onFollow,
+                          ),
                         ),
-                      ),
-                      SizedBox(width: 8),
-                      Expanded(
-                        child: _ProfileButton(
-                          label: 'Message',
-                          filled: false,
-                          onTap: onMessage,
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: _ProfileButton(
+                            label: 'profile.message'.tr(),
+                            filled: false,
+                            onTap: onMessage,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
+                      ],
+                    ),
                 ],
               ),
             ),
@@ -351,7 +470,7 @@ class _ProfileHeader extends StatelessWidget {
 }
 
 class _Stat extends StatelessWidget {
-  _Stat({required this.label, required this.value});
+  const _Stat({required this.label, required this.value});
 
   final String label;
   final String value;
@@ -382,7 +501,7 @@ class _Stat extends StatelessWidget {
 }
 
 class _ProfileButton extends StatelessWidget {
-  _ProfileButton({
+  const _ProfileButton({
     required this.label,
     required this.filled,
     required this.onTap,
@@ -408,6 +527,285 @@ class _ProfileButton extends StatelessWidget {
           ),
         ),
         child: Text(label, style: TextStyle(fontWeight: FontWeight.w900)),
+      ),
+    );
+  }
+}
+
+String _trustLabelKey(String trustLevel) {
+  switch (trustLevel) {
+    case 'highly_rated_seller':
+      return 'mkt.profile.trust.highlyRatedSeller';
+    case 'verified_seller':
+      return 'mkt.profile.trust.verifiedSeller';
+    case 'active_seller':
+      return 'mkt.profile.trust.activeSeller';
+    case 'new_seller':
+      return 'mkt.profile.trust.newSeller';
+    default:
+      return 'mkt.profile.trust.basicProfile';
+  }
+}
+
+IconData _trustIcon(String trustLevel) {
+  switch (trustLevel) {
+    case 'highly_rated_seller':
+      return Icons.workspace_premium_rounded;
+    case 'verified_seller':
+      return Icons.verified_rounded;
+    case 'active_seller':
+      return Icons.trending_up_rounded;
+    default:
+      return Icons.shield_outlined;
+  }
+}
+
+class _TrustCard extends StatelessWidget {
+  const _TrustCard({required this.profile, required this.sellItemsCount});
+
+  final UserProfileModel? profile;
+  final int sellItemsCount;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = profile;
+    if (p == null) return const SizedBox.shrink();
+    final memberSince = p.createdAt;
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: .05),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                _trustIcon(p.trustLevel),
+                color: AppColors.orange,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  _trustLabelKey(p.trustLevel).tr(),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 16,
+            runSpacing: 8,
+            children: [
+              _TrustStat(
+                label: 'mkt.profile.publicListings'.tr(),
+                value: '$sellItemsCount',
+              ),
+              if (memberSince != null)
+                _TrustStat(
+                  label: 'mkt.profile.memberSince'.tr(),
+                  value: '${memberSince.year}',
+                ),
+              if (p.ratingCount > 0)
+                _TrustStat(
+                  label: 'mkt.profile.rating'.tr(),
+                  value:
+                      '${p.ratingAverage.toStringAsFixed(1)} (${p.ratingCount})',
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TrustStat extends StatelessWidget {
+  const _TrustStat({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          value,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w900,
+            fontSize: 13,
+          ),
+        ),
+        Text(
+          label,
+          style: const TextStyle(
+            color: Colors.white54,
+            fontSize: 10.5,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ReviewsCard extends StatelessWidget {
+  const _ReviewsCard({required this.summary});
+
+  final MarketplaceReviewSummary summary;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: .05),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                'mkt.profile.reviews'.tr(),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 14,
+                ),
+              ),
+              const Spacer(),
+              if (summary.count > 0)
+                Text(
+                  '${summary.average.toStringAsFixed(1)} ★ (${summary.count})',
+                  style: const TextStyle(
+                    color: AppColors.orange,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 12.5,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (summary.items.isEmpty)
+            Text(
+              'mkt.profile.noReviewsYet'.tr(),
+              style: const TextStyle(color: Colors.white54, fontSize: 12.5),
+            )
+          else
+            ...summary.items.take(3).map(
+              (review) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          review.reviewerName,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 12.5,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          '${review.rating} ★',
+                          style: const TextStyle(
+                            color: AppColors.orange,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (review.comment.trim().isNotEmpty)
+                      Text(
+                        review.comment,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 12,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SafetyCard extends StatelessWidget {
+  const _SafetyCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: .03),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white10),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.shield_outlined,
+                color: Colors.white54,
+                size: 16,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                'mkt.profile.safetyTips'.tr(),
+                style: const TextStyle(
+                  color: Colors.white70,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 12.5,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'mkt.messages.safetyMeetPublic'.tr(),
+            style: const TextStyle(color: Colors.white54, fontSize: 11.5),
+          ),
+          Text(
+            'mkt.messages.safetyInspectBeforePaying'.tr(),
+            style: const TextStyle(color: Colors.white54, fontSize: 11.5),
+          ),
+          Text(
+            'mkt.messages.safetyNoAdvancePayment'.tr(),
+            style: const TextStyle(color: Colors.white54, fontSize: 11.5),
+          ),
+        ],
       ),
     );
   }
@@ -517,7 +915,7 @@ class _SellItemTile extends StatelessWidget {
 }
 
 class _ReelTile extends StatelessWidget {
-  _ReelTile({required this.reel});
+  const _ReelTile({required this.reel});
 
   final SmartReelModel reel;
 
