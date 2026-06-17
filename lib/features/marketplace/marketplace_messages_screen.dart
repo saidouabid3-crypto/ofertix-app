@@ -46,8 +46,8 @@ class _MarketplaceMessagesScreenState extends State<MarketplaceMessagesScreen> {
       final conversations = await MarketplaceService.instance.fetchInbox();
       final deduped = dedupeInboxConversations(conversations, _uid);
       debugPrint(
-        '[Marketplace16F-A] inbox_dedup before=${deduped.before} '
-        'after=${deduped.after} hidden_self=${deduped.hiddenSelf} grouped=0',
+        '[Marketplace16F-B] inbox_dedup before=${deduped.before} '
+        'after=${deduped.after} hidden_self=${deduped.hiddenSelf}',
       );
       if (!mounted) return;
       setState(() {
@@ -72,6 +72,78 @@ class _MarketplaceMessagesScreenState extends State<MarketplaceMessagesScreen> {
       ),
     );
     if (mounted) _loadInbox();
+  }
+
+  Future<void> _archiveConversation(MarketplaceConversation conv) async {
+    // Optimistically remove from list
+    setState(() {
+      _conversations = _conversations
+          .where((c) => c.id != conv.id)
+          .toList();
+    });
+    try {
+      await MarketplaceService.instance.archiveConversation(conv.id);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('mkt.inbox.archived'.tr())),
+        );
+      }
+    } catch (_) {
+      // Restore on failure
+      if (mounted) {
+        setState(() {
+          _conversations = [conv, ..._conversations];
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('mkt.inbox.actionFailed'.tr())),
+        );
+      }
+    }
+  }
+
+  Future<void> _deleteConversationForMe(MarketplaceConversation conv) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('mkt.inbox.deleteConfirmTitle'.tr()),
+        content: Text('mkt.inbox.deleteConfirmBody'.tr()),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(MaterialLocalizations.of(ctx).cancelButtonLabel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(
+              'mkt.inbox.deleteForMe'.tr(),
+              style: const TextStyle(color: Colors.red),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() {
+      _conversations = _conversations.where((c) => c.id != conv.id).toList();
+    });
+    try {
+      await MarketplaceService.instance.deleteConversationForMe(conv.id);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('mkt.inbox.deleted'.tr())),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _conversations = [conv, ..._conversations];
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('mkt.inbox.actionFailed'.tr())),
+        );
+      }
+    }
   }
 
   @override
@@ -125,11 +197,29 @@ class _MarketplaceMessagesScreenState extends State<MarketplaceMessagesScreen> {
         separatorBuilder: (_, __) => const SizedBox(height: 8),
         itemBuilder: (_, index) {
           final conversation = _conversations[index];
-          return _ConversationTile(
-            conversation: conversation,
-            currentUserId: _uid,
-            isDark: isDark,
-            onTap: () => _open(conversation),
+          return Dismissible(
+            key: ValueKey(conversation.id),
+            direction: DismissDirection.endToStart,
+            confirmDismiss: (_) async {
+              await _deleteConversationForMe(conversation);
+              return false; // We handle removal manually
+            },
+            background: Container(
+              alignment: Alignment.centerRight,
+              padding: const EdgeInsets.only(right: 20),
+              decoration: BoxDecoration(
+                color: Colors.red.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: const Icon(Icons.delete_outline_rounded, color: Colors.red),
+            ),
+            child: _ConversationTile(
+              conversation: conversation,
+              currentUserId: _uid,
+              isDark: isDark,
+              onTap: () => _open(conversation),
+              onArchive: () => _archiveConversation(conversation),
+            ),
           );
         },
       ),
@@ -137,23 +227,34 @@ class _MarketplaceMessagesScreenState extends State<MarketplaceMessagesScreen> {
   }
 }
 
+enum _ConvType { listing, reel, direct }
+
+_ConvType _convType(MarketplaceConversation c) {
+  if (c.listingId.isNotEmpty) return _ConvType.listing;
+  if (c.reelId.isNotEmpty) return _ConvType.reel;
+  return _ConvType.direct;
+}
+
 class _ConversationTile extends StatelessWidget {
   final MarketplaceConversation conversation;
   final String currentUserId;
   final bool isDark;
   final VoidCallback onTap;
+  final VoidCallback onArchive;
 
   const _ConversationTile({
     required this.conversation,
     required this.currentUserId,
     required this.isDark,
     required this.onTap,
+    required this.onArchive,
   });
 
   @override
   Widget build(BuildContext context) {
     final text = isDark ? AppColors.text : AppColors.lightText;
     final muted = isDark ? AppColors.gray : AppColors.lightGray;
+    final type = _convType(conversation);
     final otherName = conversation.otherUserName(currentUserId).trim();
     final unread = conversation.unreadFor(currentUserId);
     final timestamp = conversation.lastMessageAt == null
@@ -162,11 +263,43 @@ class _ConversationTile extends StatelessWidget {
             context.locale.languageCode,
           ).add_Hm().format(conversation.lastMessageAt!.toLocal());
 
+    final String tileTitle;
+    final String leadingImage;
+    final IconData fallbackIcon;
+    final String contextLabel;
+    final Color contextColor;
+
+    switch (type) {
+      case _ConvType.listing:
+        tileTitle = conversation.listingTitle.isNotEmpty
+            ? conversation.listingTitle
+            : otherName;
+        leadingImage = conversation.listingImage;
+        fallbackIcon = Icons.shopping_bag_outlined;
+        contextLabel = 'mkt.inbox.contextListing'.tr();
+        contextColor = AppColors.orange;
+      case _ConvType.reel:
+        tileTitle = conversation.reelTitle.isNotEmpty
+            ? conversation.reelTitle
+            : otherName;
+        leadingImage = conversation.reelThumbnailUrl;
+        fallbackIcon = Icons.play_circle_outline_rounded;
+        contextLabel = 'mkt.inbox.contextReel'.tr();
+        contextColor = Colors.purple;
+      case _ConvType.direct:
+        tileTitle = otherName.isNotEmpty ? otherName : '—';
+        leadingImage = conversation.otherUserPhoto(currentUserId);
+        fallbackIcon = Icons.person_outline_rounded;
+        contextLabel = 'mkt.inbox.contextDirect'.tr();
+        contextColor = Colors.teal;
+    }
+
     return Material(
       color: isDark ? AppColors.card : AppColors.lightCard,
       borderRadius: BorderRadius.circular(18),
       child: InkWell(
         onTap: onTap,
+        onLongPress: onArchive,
         borderRadius: BorderRadius.circular(18),
         child: Container(
           padding: const EdgeInsets.all(12),
@@ -179,17 +312,20 @@ class _ConversationTile extends StatelessWidget {
           child: Row(
             children: [
               ClipRRect(
-                borderRadius: BorderRadius.circular(13),
+                borderRadius: type == _ConvType.direct
+                    ? BorderRadius.circular(29)
+                    : BorderRadius.circular(13),
                 child: SizedBox(
                   width: 58,
                   height: 58,
-                  child: conversation.listingImage.startsWith('http')
+                  child: leadingImage.startsWith('http')
                       ? CachedNetworkImage(
-                          imageUrl: conversation.listingImage,
+                          imageUrl: leadingImage,
                           fit: BoxFit.cover,
-                          errorWidget: (_, __, ___) => const _TileIcon(),
+                          errorWidget: (_, __, ___) =>
+                              _TileIcon(icon: fallbackIcon),
                         )
-                      : const _TileIcon(),
+                      : _TileIcon(icon: fallbackIcon),
                 ),
               ),
               const SizedBox(width: 11),
@@ -201,7 +337,7 @@ class _ConversationTile extends StatelessWidget {
                       children: [
                         Expanded(
                           child: Text(
-                            conversation.listingTitle,
+                            tileTitle,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
@@ -217,20 +353,43 @@ class _ConversationTile extends StatelessWidget {
                           ),
                       ],
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      otherName.isNotEmpty
-                          ? otherName
-                          : (currentUserId == conversation.sellerId
-                                ? 'mkt.messages.buyer'.tr()
-                                : 'mkt.messages.seller'.tr()),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: muted,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                      ),
+                    const SizedBox(height: 3),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 7,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: contextColor.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            contextLabel,
+                            style: TextStyle(
+                              color: contextColor,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                        if (otherName.isNotEmpty && type != _ConvType.direct) ...[
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              otherName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: muted,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                     const SizedBox(height: 3),
                     Row(
@@ -280,12 +439,14 @@ class _ConversationTile extends StatelessWidget {
 }
 
 class _TileIcon extends StatelessWidget {
-  const _TileIcon();
+  final IconData icon;
+
+  const _TileIcon({this.icon = Icons.shopping_bag_outlined});
 
   @override
   Widget build(BuildContext context) => Container(
     color: AppColors.orange.withValues(alpha: .1),
-    child: const Icon(Icons.shopping_bag_outlined, color: AppColors.orange),
+    child: Icon(icon, color: AppColors.orange),
   );
 }
 

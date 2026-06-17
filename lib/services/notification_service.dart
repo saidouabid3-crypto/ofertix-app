@@ -1,6 +1,8 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
+import '../core/navigation/app_router.dart';
+import '../core/navigation/app_routes.dart';
 import 'fcm_token_service.dart';
 import 'firebase_service.dart';
 
@@ -45,6 +47,12 @@ class NotificationService {
       );
     });
 
+    // Route user to the messages screen when tapping a message notification
+    // from the background or terminated state.
+    FirebaseMessaging.onMessageOpenedApp.listen(_handleMessageTap);
+    final initial = await _messaging.getInitialMessage();
+    if (initial != null) _handleMessageTap(initial);
+
     // Start token-refresh listener once and register token for any user
     // who is already logged in when the app starts.
     FcmTokenService.instance.startRefreshListener();
@@ -52,6 +60,15 @@ class NotificationService {
     if (uid != null && uid.isNotEmpty) {
       // Fire-and-forget — do not block notification setup.
       FcmTokenService.instance.registerForUser(uid);
+    }
+  }
+
+  void _handleMessageTap(RemoteMessage message) {
+    final type = message.data['type']?.toString() ?? '';
+    if (type == 'message' || type == 'marketplace_message' ||
+        type == 'reel_message' || type == 'direct_message') {
+      AppRouter.navigatorKey.currentState
+          ?.pushNamed(AppRoutes.marketplaceMessages);
     }
   }
 

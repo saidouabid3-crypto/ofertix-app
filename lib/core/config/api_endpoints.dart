@@ -181,8 +181,13 @@ class ApiEndpoints {
       '/messages/conversations/$conversationId/offer';
   static String messageConversationRead(String conversationId) =>
       '/messages/conversations/$conversationId/read';
+  static String messageConversationArchive(String conversationId) =>
+      '/messages/conversations/$conversationId/archive';
+  static String messageConversationDeleteForMe(String conversationId) =>
+      '/messages/conversations/$conversationId/delete-for-me';
 
   // --- Profiles / admin / setup --------------------------------------------
+  static const String profileAvatar = '/profiles/me/avatar';
   static const String profiles = '/profiles';
   static String profileReviews(String uid) => '/profiles/$uid/reviews';
   static const String adminDashboard = '/admin/dashboard';

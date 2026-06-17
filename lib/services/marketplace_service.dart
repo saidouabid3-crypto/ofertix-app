@@ -64,7 +64,6 @@ class MarketplaceService {
           (entry) =>
               MarketplaceConversation.fromMap(Map<String, dynamic>.from(entry)),
         )
-        .where((conversation) => conversation.listingId.isNotEmpty)
         .toList();
     if (kDebugMode) {
       debugPrint('[Marketplace16E] inbox_fetch count=${items.length}');
@@ -155,6 +154,24 @@ class MarketplaceService {
     final token = await _freshToken();
     await _api.post(
       ApiEndpoints.messageConversationRead(conversationId),
+      authorized: true,
+      extraHeaders: {'Authorization': 'Bearer $token'},
+    );
+  }
+
+  Future<void> archiveConversation(String conversationId) async {
+    final token = await _freshToken();
+    await _api.post(
+      ApiEndpoints.messageConversationArchive(conversationId),
+      authorized: true,
+      extraHeaders: {'Authorization': 'Bearer $token'},
+    );
+  }
+
+  Future<void> deleteConversationForMe(String conversationId) async {
+    final token = await _freshToken();
+    await _api.post(
+      ApiEndpoints.messageConversationDeleteForMe(conversationId),
       authorized: true,
       extraHeaders: {'Authorization': 'Bearer $token'},
     );

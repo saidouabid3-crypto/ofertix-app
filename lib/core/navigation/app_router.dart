@@ -39,6 +39,7 @@ import '../../features/local/create_store_screen.dart';
 import '../../features/local/create_offer_screen.dart';
 import '../../features/local/admin_offer_review_screen.dart';
 import '../../features/admin/admin_command_center_screen.dart';
+import '../../features/marketplace/marketplace_messages_screen.dart';
 import '../../features/notifications/notification_center_screen.dart';
 import '../../features/product_details/product_details_loader_screen.dart';
 
@@ -46,6 +47,9 @@ import 'app_routes.dart';
 import 'app_shell.dart';
 
 class AppRouter {
+  static final GlobalKey<NavigatorState> navigatorKey =
+      GlobalKey<NavigatorState>();
+
   static Route<dynamic> onGenerateRoute(RouteSettings settings) {
     switch (settings.name) {
       case AppRoutes.splash:
@@ -131,6 +135,8 @@ class AppRouter {
 
       case AppRoutes.notifications:
         return _page(const NotificationCenterScreen());
+      case AppRoutes.marketplaceMessages:
+        return _page(const MarketplaceMessagesScreen());
 
       default:
         if (settings.name != null && settings.name!.startsWith('${AppRoutes.product}/')) {

@@ -41,6 +41,7 @@ class AppRoutes {
   static const String adminCommandCenter = '/admin/command-center';
 
   static const String notifications = '/notifications';
+  static const String marketplaceMessages = '/marketplace/messages';
 
   /// Deep link: `/product/{id}`
   static const String product = '/product';

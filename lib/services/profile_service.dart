@@ -1,4 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart';
 
 import '../models/user_profile_model.dart';
 import '../models/user_identity.dart';
@@ -368,6 +370,30 @@ class ProfileService {
         data['admin'] == true ||
         role == 'admin' ||
         role == 'owner';
+  }
+
+  Future<String> uploadAvatar(XFile file) async {
+    final token = await _auth.getIdToken();
+    if (token == null || token.trim().isEmpty) {
+      throw Exception('Not authenticated');
+    }
+    final bytes = await file.readAsBytes();
+    final ext = file.name.split('.').last.toLowerCase();
+    final mime = ext == 'png' ? 'image/png' : 'image/jpeg';
+    final result = await _api.postMultipart(
+      ApiEndpoints.profileAvatar,
+      files: [
+        http.MultipartFile.fromBytes('file', bytes, filename: file.name,
+            contentType: http.MediaType.parse(mime))
+      ],
+      extraHeaders: {'Authorization': 'Bearer ${token.trim()}'},
+      timeout: const Duration(seconds: 60),
+    );
+    if (result is Map) {
+      final url = result['photo_url']?.toString() ?? result['secure_url']?.toString() ?? '';
+      if (url.isNotEmpty) return url;
+    }
+    throw Exception('Avatar upload failed');
   }
 
   String sanitizeUsername(String value) {

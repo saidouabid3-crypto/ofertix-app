@@ -85,6 +85,8 @@ class OfertixApp extends StatelessWidget {
 
             debugShowCheckedModeBanner: false,
 
+            navigatorKey: AppRouter.navigatorKey,
+
             locale: context.locale,
 
             supportedLocales: context.supportedLocales,

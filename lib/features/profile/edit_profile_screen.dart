@@ -1,10 +1,12 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../models/user_profile_model.dart';
+import '../../services/profile_service.dart';
 import 'profile_provider.dart';
 
 class EditProfileScreen extends StatefulWidget {
@@ -27,6 +29,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   late final TextEditingController _currencyController;
 
   bool _isCreator = false;
+  bool _avatarUploading = false;
+  String? _uploadedAvatarUrl;
 
   @override
   void initState() {
@@ -52,12 +56,54 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     super.dispose();
   }
 
-  void _showAvatarUploadSoon() {
-    // TODO: avatar upload should use Cloudinary or a backend upload endpoint,
-    // not Firebase Storage.
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('profile.avatarUploadSoon'.tr())));
+  Future<void> _pickAndUploadAvatar() async {
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt_rounded),
+              title: Text('profile.uploadAvatar'.tr()),
+              onTap: () => Navigator.pop(context, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_rounded),
+              title: Text('profile.changeAvatar'.tr()),
+              onTap: () => Navigator.pop(context, ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (source == null || !mounted) return;
+
+    final file = await ImagePicker().pickImage(
+      source: source,
+      imageQuality: 90,
+      maxWidth: 1000,
+    );
+    if (file == null || !mounted) return;
+
+    setState(() => _avatarUploading = true);
+    try {
+      final url = await ProfileService.instance.uploadAvatar(file);
+      if (!mounted) return;
+      setState(() {
+        _uploadedAvatarUrl = url;
+        _avatarUploading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('profile.avatarUpdated'.tr())),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _avatarUploading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('profile.avatarFailed'.tr())),
+      );
+    }
   }
 
   Future<void> _save() async {
@@ -75,6 +121,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       city: _cityController.text,
       currency: _currencyController.text,
       isCreator: _isCreator,
+      photoUrl: _uploadedAvatarUrl,
     );
 
     if (!mounted) return;
@@ -121,7 +168,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       child: _AvatarEditor(
                         ui: ui,
                         profile: widget.profile,
-                        onTap: _showAvatarUploadSoon,
+                        overridePhotoUrl: _uploadedAvatarUrl,
+                        uploading: _avatarUploading,
+                        onTap: _pickAndUploadAvatar,
                       ),
                     ),
 
@@ -129,12 +178,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
                     _Input(
                       controller: _nameController,
-                      label: 'Nombre visible',
-                      hint: 'Ej: Ofertix Deals',
+                      label: 'profile.editName'.tr(),
+                      hint: 'profile.editNameHint'.tr(),
                       icon: Icons.badge_rounded,
                       validator: (value) {
                         if ((value ?? '').trim().length < 2) {
-                          return 'El nombre debe tener al menos 2 caracteres';
+                          return 'profile.editNameMin'.tr();
                         }
                         return null;
                       },
@@ -144,22 +193,22 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
                     _Input(
                       controller: _usernameController,
-                      label: 'Username',
+                      label: 'profile.editUsername'.tr(),
                       hint: 'ofertix_deals',
                       icon: Icons.alternate_email_rounded,
                       validator: (value) {
                         final text = (value ?? '').trim();
 
                         if (text.length < 3) {
-                          return 'Mínimo 3 caracteres';
+                          return 'profile.editUsernameMin'.tr();
                         }
 
                         if (text.length > 24) {
-                          return 'Máximo 24 caracteres';
+                          return 'profile.editUsernameMax'.tr();
                         }
 
                         if (!RegExp(r'^[a-zA-Z0-9_@. -]+$').hasMatch(text)) {
-                          return 'Usa letras, números o guion bajo';
+                          return 'profile.editUsernameChars'.tr();
                         }
 
                         return null;
@@ -170,13 +219,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
                     _Input(
                       controller: _bioController,
-                      label: 'Bio',
-                      hint: 'Comparo ofertas reales y descuentos útiles',
+                      label: 'profile.editBio'.tr(),
+                      hint: 'profile.editBioHint'.tr(),
                       icon: Icons.notes_rounded,
                       maxLines: 3,
                       validator: (value) {
                         if ((value ?? '').trim().length > 140) {
-                          return 'Máximo 140 caracteres';
+                          return 'profile.editBioMax'.tr();
                         }
                         return null;
                       },
@@ -189,7 +238,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         Expanded(
                           child: _Input(
                             controller: _countryController,
-                            label: 'País',
+                            label: 'profile.editCountry'.tr(),
                             hint: 'ES',
                             icon: Icons.public_rounded,
                           ),
@@ -198,7 +247,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         Expanded(
                           child: _Input(
                             controller: _currencyController,
-                            label: 'Moneda',
+                            label: 'profile.editCurrency'.tr(),
                             hint: 'EUR',
                             icon: Icons.payments_rounded,
                           ),
@@ -253,7 +302,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                               )
                             : Icon(Icons.save_rounded),
                         label: Text(
-                          provider.isSaving ? 'Guardando...' : 'Guardar perfil',
+                          provider.isSaving ? 'profile.saving'.tr() : 'profile.saveProfile'.tr(),
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w900,
@@ -325,13 +374,21 @@ class _TopBar extends StatelessWidget {
 class _AvatarEditor extends StatelessWidget {
   final _EditProfileUi ui;
   final UserProfileModel profile;
+  final String? overridePhotoUrl;
+  final bool uploading;
   final VoidCallback onTap;
 
-  _AvatarEditor({required this.ui, required this.profile, required this.onTap});
+  _AvatarEditor({
+    required this.ui,
+    required this.profile,
+    required this.onTap,
+    this.overridePhotoUrl,
+    this.uploading = false,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final photoUrl = profile.photoUrl.trim();
+    final photoUrl = (overridePhotoUrl ?? profile.photoUrl).trim();
     final hasNetworkImage =
         photoUrl.startsWith('http://') || photoUrl.startsWith('https://');
 
@@ -365,24 +422,40 @@ class _AvatarEditor extends StatelessWidget {
                   : Icon(Icons.person_rounded, size: 58, color: Colors.white),
             ),
           ),
-          Positioned(
-            right: 2,
-            bottom: 4,
-            child: Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: AppColors.primary,
-                shape: BoxShape.circle,
-                border: Border.all(color: ui.background, width: 3),
-              ),
-              child: Icon(
-                Icons.camera_alt_rounded,
-                color: Colors.white,
-                size: 18,
+          if (uploading)
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.black54,
+                  shape: BoxShape.circle,
+                ),
+                child: const Center(
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2.5,
+                  ),
+                ),
               ),
             ),
-          ),
+          if (!uploading)
+            Positioned(
+              right: 2,
+              bottom: 4,
+              child: Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: ui.background, width: 3),
+                ),
+                child: const Icon(
+                  Icons.camera_alt_rounded,
+                  color: Colors.white,
+                  size: 18,
+                ),
+              ),
+            ),
         ],
       ),
     );

@@ -43,6 +43,7 @@ class ProfileProvider extends ChangeNotifier {
     required String city,
     required String currency,
     required bool isCreator,
+    String? photoUrl,
   }) async {
     isSaving = true;
     errorMessage = null;
@@ -64,6 +65,7 @@ class ProfileProvider extends ChangeNotifier {
         city: city,
         currency: currency,
         isCreator: isCreator,
+        photoUrl: photoUrl,
       );
 
       this.country = profile?.country ?? country;

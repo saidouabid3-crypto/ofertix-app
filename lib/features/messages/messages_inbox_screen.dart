@@ -48,7 +48,7 @@ class _MessagesInboxScreenState extends State<MessagesInboxScreen> {
       if (!mounted) return;
       setState(() {
         loading = false;
-        error = 'No se pudo cargar la bandeja';
+        error = 'mkt.inbox.loadFailed'.tr();
       });
     }
   }
@@ -166,7 +166,7 @@ class _MessagesInboxScreenState extends State<MessagesInboxScreen> {
                       ],
                     ),
                     subtitle: Text(
-                      c.lastMessage.isEmpty ? 'Nuevo mensaje' : c.lastMessage,
+                      c.lastMessage.isEmpty ? 'mkt.inbox.newMessage'.tr() : c.lastMessage,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(

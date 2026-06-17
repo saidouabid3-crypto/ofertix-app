@@ -16,6 +16,9 @@ class MarketplaceConversation {
   final String sellerId;
   final String buyerId;
   final String status;
+  final String reelId;
+  final String reelTitle;
+  final String reelThumbnailUrl;
 
   const MarketplaceConversation({
     required this.id,
@@ -35,6 +38,9 @@ class MarketplaceConversation {
     required this.sellerId,
     required this.buyerId,
     required this.status,
+    this.reelId = '',
+    this.reelTitle = '',
+    this.reelThumbnailUrl = '',
   });
 
   factory MarketplaceConversation.fromMap(Map<String, dynamic> map) {
@@ -64,6 +70,11 @@ class MarketplaceConversation {
       sellerId: (map['seller_id'] ?? map['sellerId'] ?? '').toString(),
       buyerId: (map['buyer_id'] ?? map['buyerId'] ?? '').toString(),
       status: (map['status'] ?? 'active').toString(),
+      reelId: (map['reel_id'] ?? map['reelId'] ?? '').toString(),
+      reelTitle: (map['reel_title'] ?? map['reelTitle'] ?? '').toString(),
+      reelThumbnailUrl:
+          (map['reel_thumbnail_url'] ?? map['reelThumbnailUrl'] ?? '')
+              .toString(),
     );
   }
 
