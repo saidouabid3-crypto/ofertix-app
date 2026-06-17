@@ -152,9 +152,8 @@ class InboxDedupeResult {
 }
 
 /// Removes self-conversations and exact duplicate conversation ids from an
-/// inbox list. Same buyer+seller+listing always produces one deterministic
-/// backend id, so this is a defensive client-side safety net, not the
-/// primary dedup mechanism.
+/// inbox list. Kept as a low-level safety net; prefer [groupInboxByParticipant]
+/// for the UI layer which also groups by person.
 InboxDedupeResult dedupeInboxConversations(
   List<MarketplaceConversation> conversations,
   String currentUserId,
@@ -180,6 +179,134 @@ InboxDedupeResult dedupeInboxConversations(
     before: conversations.length,
     after: result.length,
     hiddenSelf: hiddenSelf,
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Participant-grouped inbox (one row per person, not per conversation)
+// ---------------------------------------------------------------------------
+
+/// One row in the grouped inbox: represents all conversations with a single
+/// other user, collapsed to show the most recent message and context chips.
+class InboxParticipantGroup {
+  final String otherUserId;
+  final String otherUserName;
+  final String otherUserPhoto;
+  final String latestMessage;
+  final DateTime? latestMessageAt;
+  final int totalUnread;
+  final int listingCount;
+  final int reelCount;
+  final int directCount;
+
+  /// Conversations sorted newest-first. latestConversation == first element.
+  final List<MarketplaceConversation> conversations;
+
+  const InboxParticipantGroup({
+    required this.otherUserId,
+    required this.otherUserName,
+    required this.otherUserPhoto,
+    required this.latestMessage,
+    required this.latestMessageAt,
+    required this.totalUnread,
+    required this.listingCount,
+    required this.reelCount,
+    required this.directCount,
+    required this.conversations,
+  });
+
+  MarketplaceConversation get latestConversation => conversations.first;
+
+  /// Best image to display: prefer the user's own avatar, then fall back to
+  /// the latest listing/reel thumbnail so the tile never looks empty.
+  String get leadingImage {
+    if (otherUserPhoto.startsWith('http')) return otherUserPhoto;
+    for (final c in conversations) {
+      if (c.listingImage.startsWith('http')) return c.listingImage;
+      if (c.reelThumbnailUrl.startsWith('http')) return c.reelThumbnailUrl;
+    }
+    return '';
+  }
+}
+
+class InboxGroupResult {
+  final List<InboxParticipantGroup> groups;
+  final int before;
+  final int after;
+  final int hiddenSelf;
+  final int contexts;
+
+  const InboxGroupResult({
+    required this.groups,
+    required this.before,
+    required this.after,
+    required this.hiddenSelf,
+    required this.contexts,
+  });
+}
+
+/// Groups conversations by the other participant, hiding self-rows and
+/// deduplicating exact conversation IDs.  Produces one [InboxParticipantGroup]
+/// per unique other-user, sorted by most-recent message descending.
+InboxGroupResult groupInboxByParticipant(
+  List<MarketplaceConversation> conversations,
+  String currentUserId,
+) {
+  final seenIds = <String>{};
+  final grouped = <String, List<MarketplaceConversation>>{};
+  var hiddenSelf = 0;
+
+  for (final conv in conversations) {
+    // Skip exact duplicate conversation IDs (safety net).
+    if (!seenIds.add(conv.id)) continue;
+
+    final otherId = conv.otherUserId(currentUserId);
+    if (otherId.isEmpty || otherId == currentUserId) {
+      hiddenSelf++;
+      continue;
+    }
+    grouped.putIfAbsent(otherId, () => []).add(conv);
+  }
+
+  final epoch = DateTime.fromMillisecondsSinceEpoch(0);
+
+  final groups = <InboxParticipantGroup>[];
+  for (final entry in grouped.entries) {
+    final convs = List<MarketplaceConversation>.from(entry.value)
+      ..sort((a, b) =>
+          (b.lastMessageAt ?? epoch).compareTo(a.lastMessageAt ?? epoch));
+
+    final latest = convs.first;
+    final otherId = entry.key;
+
+    groups.add(InboxParticipantGroup(
+      otherUserId: otherId,
+      otherUserName: latest.otherUserName(currentUserId),
+      otherUserPhoto: latest.otherUserPhoto(currentUserId),
+      latestMessage: latest.lastMessage,
+      latestMessageAt: latest.lastMessageAt,
+      totalUnread:
+          convs.fold(0, (sum, c) => sum + c.unreadFor(currentUserId)),
+      listingCount: convs.where((c) => c.listingId.isNotEmpty).length,
+      reelCount: convs
+          .where((c) => c.reelId.isNotEmpty && c.listingId.isEmpty)
+          .length,
+      directCount: convs
+          .where((c) => c.listingId.isEmpty && c.reelId.isEmpty)
+          .length,
+      conversations: convs,
+    ));
+  }
+
+  groups.sort((a, b) =>
+      (b.latestMessageAt ?? epoch).compareTo(a.latestMessageAt ?? epoch));
+
+  return InboxGroupResult(
+    groups: groups,
+    before: conversations.length,
+    after: groups.length,
+    hiddenSelf: hiddenSelf,
+    contexts: conversations.length - hiddenSelf,
   );
 }
 

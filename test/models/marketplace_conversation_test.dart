@@ -123,6 +123,115 @@ void main() {
     expect(result.after, 2);
   });
 
+  // -------------------------------------------------------------------------
+  // groupInboxByParticipant tests
+  // -------------------------------------------------------------------------
+
+  test('groupInboxByParticipant produces one group per person', () {
+    final convA = MarketplaceConversation.fromMap({
+      'id': 'conv-a',
+      'participants': ['buyer', 'seller'],
+      'listing_id': 'listing-1',
+    });
+    final convB = MarketplaceConversation.fromMap({
+      'id': 'conv-b',
+      'participants': ['buyer', 'seller'],
+      'listing_id': 'listing-2',
+    });
+
+    final result = groupInboxByParticipant([convA, convB], 'buyer');
+
+    expect(result.before, 2);
+    expect(result.after, 1);
+    expect(result.groups.single.otherUserId, 'seller');
+    expect(result.groups.single.conversations.length, 2);
+    expect(result.groups.single.listingCount, 2);
+  });
+
+  test('groupInboxByParticipant aggregates unread counts', () {
+    final convA = MarketplaceConversation.fromMap({
+      'id': 'conv-a',
+      'participants': ['buyer', 'seller'],
+      'unread_counts': {'buyer': 3},
+      'listing_id': 'listing-1',
+    });
+    final convB = MarketplaceConversation.fromMap({
+      'id': 'conv-b',
+      'participants': ['buyer', 'seller'],
+      'unread_counts': {'buyer': 2},
+      'listing_id': 'listing-2',
+    });
+
+    final result = groupInboxByParticipant([convA, convB], 'buyer');
+
+    expect(result.groups.single.totalUnread, 5);
+  });
+
+  test('groupInboxByParticipant correctly classifies context counts', () {
+    final listing = MarketplaceConversation.fromMap({
+      'id': 'conv-listing',
+      'participants': ['buyer', 'seller'],
+      'listing_id': 'listing-1',
+      'reel_id': '',
+    });
+    final reel = MarketplaceConversation.fromMap({
+      'id': 'conv-reel',
+      'participants': ['buyer', 'seller'],
+      'listing_id': '',
+      'reel_id': 'reel-1',
+    });
+    final direct = MarketplaceConversation.fromMap({
+      'id': 'conv-direct',
+      'participants': ['buyer', 'seller'],
+      'listing_id': '',
+      'reel_id': '',
+    });
+
+    final result = groupInboxByParticipant([listing, reel, direct], 'buyer');
+
+    final group = result.groups.single;
+    expect(group.listingCount, 1);
+    expect(group.reelCount, 1);
+    expect(group.directCount, 1);
+  });
+
+  test('groupInboxByParticipant hides self-conversations', () {
+    final selfConvo = MarketplaceConversation.fromMap({
+      'id': 'conv-self',
+      'participants': ['buyer', 'buyer'],
+    });
+    final real = MarketplaceConversation.fromMap({
+      'id': 'conv-real',
+      'participants': ['buyer', 'seller'],
+      'listing_id': 'listing-1',
+    });
+
+    final result = groupInboxByParticipant([selfConvo, real], 'buyer');
+
+    expect(result.hiddenSelf, 1);
+    expect(result.after, 1);
+    expect(result.groups.single.otherUserId, 'seller');
+  });
+
+  test('groupInboxByParticipant two senders produce two groups', () {
+    final fromSeller1 = MarketplaceConversation.fromMap({
+      'id': 'conv-s1',
+      'participants': ['buyer', 'seller1'],
+      'listing_id': 'listing-1',
+    });
+    final fromSeller2 = MarketplaceConversation.fromMap({
+      'id': 'conv-s2',
+      'participants': ['buyer', 'seller2'],
+      'listing_id': 'listing-2',
+    });
+
+    final result = groupInboxByParticipant([fromSeller1, fromSeller2], 'buyer');
+
+    expect(result.after, 2);
+    final ids = result.groups.map((g) => g.otherUserId).toSet();
+    expect(ids, {'seller1', 'seller2'});
+  });
+
   test(
     'public marketplace visibility requires approved active visible item',
     () {

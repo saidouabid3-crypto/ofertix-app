@@ -183,7 +183,8 @@ class UserProfileModel {
       'display_name': displayName,
       'username': username,
       'username_lower': usernameLower,
-      'photo_url': photoUrl,
+      // photo_url is intentionally omitted — Firestore rules only allow the
+      // backend admin SDK to write this field. Use POST /profiles/me/avatar.
       'bio': bio,
       'country': country,
       'city': city,
