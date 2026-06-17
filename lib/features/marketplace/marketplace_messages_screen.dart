@@ -44,9 +44,14 @@ class _MarketplaceMessagesScreenState extends State<MarketplaceMessagesScreen> {
     });
     try {
       final conversations = await MarketplaceService.instance.fetchInbox();
+      final deduped = dedupeInboxConversations(conversations, _uid);
+      debugPrint(
+        '[Marketplace16F-A] inbox_dedup before=${deduped.before} '
+        'after=${deduped.after} hidden_self=${deduped.hiddenSelf} grouped=0',
+      );
       if (!mounted) return;
       setState(() {
-        _conversations = conversations;
+        _conversations = deduped.conversations;
         _loading = false;
       });
     } catch (_) {

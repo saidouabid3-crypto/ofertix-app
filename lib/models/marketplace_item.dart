@@ -244,6 +244,23 @@ class MarketplaceItem {
   bool get hasImage => mainImage.isNotEmpty;
   bool get isArchived => status == 'archived';
   bool get canEdit => !{'archived', 'deleted', 'hidden'}.contains(status);
+  bool get isPublicMarketplaceVisible {
+    const publicStatuses = {'active', 'approved', 'published'};
+    const blockedStatuses = {
+      'archived',
+      'blocked',
+      'deleted',
+      'hidden',
+      'pending',
+      'rejected',
+      'review',
+      'under_review',
+    };
+    return isActive &&
+        visibleToUsers &&
+        publicStatuses.contains(status) &&
+        !blockedStatuses.contains(status);
+  }
 
   String get formattedPrice =>
       '${price.toStringAsFixed(price % 1 == 0 ? 0 : 2)} $currencyCode';

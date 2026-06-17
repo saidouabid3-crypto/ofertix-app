@@ -62,6 +62,7 @@ class _MarketplaceItemDetailScreenState
   bool _contacting = false;
   bool _saved = false;
   bool _savePending = false;
+  List<MarketplaceItem> _similarItems = const [];
 
   @override
   void initState() {
@@ -79,12 +80,27 @@ class _MarketplaceItemDetailScreenState
       );
     }
     _loadSavedState();
+    _loadSimilarItems();
   }
 
   @override
   void dispose() {
     _pageCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadSimilarItems() async {
+    try {
+      final items = await MarketplaceService.instance.fetchSimilarItems(
+        _item.id,
+      );
+      final safe =
+          items.where((i) => i.isPublicMarketplaceVisible).toList(growable: false);
+      if (!mounted) return;
+      setState(() => _similarItems = safe);
+    } catch (_) {
+      // Best-effort — hide the section rather than show an error.
+    }
   }
 
   Future<void> _loadSavedState() async {
@@ -127,9 +143,9 @@ class _MarketplaceItemDetailScreenState
     } catch (_) {
       if (!mounted) return;
       setState(() => _savePending = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('mkt.profile.saveFailed'.tr())),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('mkt.profile.saveFailed'.tr())));
     }
   }
 
@@ -358,7 +374,9 @@ class _MarketplaceItemDetailScreenState
           if (!widget.showOwnerStatus)
             IconButton(
               icon: Icon(
-                _saved ? Icons.bookmark_rounded : Icons.bookmark_outline_rounded,
+                _saved
+                    ? Icons.bookmark_rounded
+                    : Icons.bookmark_outline_rounded,
                 color: _saved ? AppColors.orange : muted,
               ),
               tooltip: 'mkt.profile.saveListing'.tr(),
@@ -535,61 +553,123 @@ class _MarketplaceItemDetailScreenState
                   const SizedBox(height: 16),
                 ],
 
-                // ── Owner controls ────────────────────────────────────────
-                if (widget.showOwnerStatus) ...[
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: _item.canEdit ? _edit : null,
-                          icon: const Icon(Icons.edit_outlined),
-                          label: Text('sell16.edit'.tr()),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: _item.isArchived ? null : _archive,
-                          icon: const Icon(Icons.archive_outlined),
-                          label: Text('sell16.archive'.tr()),
-                        ),
-                      ),
-                    ],
+                // ── Similar listings ──────────────────────────────────────
+                if (_similarItems.isNotEmpty) ...[
+                  _SectionLabel(
+                    label: 'mkt.detail.similarListings'.tr(),
+                    isDark: isDark,
+                  ),
+                  const SizedBox(height: 6),
+                  _SimilarListingsStrip(
+                    items: _similarItems,
+                    onOpen: _openSimilarItem,
                   ),
                   const SizedBox(height: 16),
                 ],
 
-                // ── Contact seller (non-owner) ────────────────────────────
-                if (!widget.showOwnerStatus &&
-                    FirebaseAuth.instance.currentUser?.uid !=
-                        _item.sellerId) ...[
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      icon: _contacting
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Icon(Icons.chat_bubble_outline_rounded),
-                      label: Text(
-                        _contacting
-                            ? 'mkt.messages.starting'.tr()
-                            : 'mkt.detail.contactSeller'.tr(),
-                      ),
-                      onPressed: _contacting ? null : _contact,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                ],
+                SizedBox(height: MediaQuery.of(context).padding.bottom + 72),
               ],
             ),
           ),
         ],
+      ),
+      bottomNavigationBar: _buildBottomBar(isDark, text, muted),
+    );
+  }
+
+  Widget? _buildBottomBar(bool isDark, Color text, Color muted) {
+    final isOwner =
+        widget.showOwnerStatus ||
+        FirebaseAuth.instance.currentUser?.uid == _item.sellerId;
+    final bg = isDark ? AppColors.card : AppColors.lightCard;
+    final border = isDark ? Colors.white12 : AppColors.lightBorder;
+
+    return Container(
+      padding: EdgeInsets.fromLTRB(
+        14,
+        10,
+        14,
+        MediaQuery.of(context).padding.bottom + 10,
+      ),
+      decoration: BoxDecoration(
+        color: bg,
+        border: Border(top: BorderSide(color: border)),
+      ),
+      child: isOwner
+          ? Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _item.canEdit ? _edit : null,
+                    icon: const Icon(Icons.edit_outlined),
+                    label: Text('sell16.edit'.tr()),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _item.isArchived ? null : _archive,
+                    icon: const Icon(Icons.archive_outlined),
+                    label: Text('sell16.archive'.tr()),
+                  ),
+                ),
+              ],
+            )
+          : Row(
+              children: [
+                InkWell(
+                  onTap: _openSellerProfile,
+                  borderRadius: BorderRadius.circular(24),
+                  child: CircleAvatar(
+                    radius: 22,
+                    backgroundColor: AppColors.orange.withValues(alpha: .15),
+                    backgroundImage: _item.sellerAvatarUrl.startsWith('http')
+                        ? NetworkImage(_item.sellerAvatarUrl)
+                        : null,
+                    child: _item.sellerAvatarUrl.startsWith('http')
+                        ? null
+                        : Icon(Icons.person_rounded, color: muted, size: 22),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    icon: _contacting
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Icon(Icons.chat_bubble_outline_rounded),
+                    label: Text(
+                      _contacting
+                          ? 'mkt.messages.starting'.tr()
+                          : 'mkt.detail.contactSeller'.tr(),
+                    ),
+                    onPressed: _contacting ? null : _contact,
+                  ),
+                ),
+              ],
+            ),
+    );
+  }
+
+  void _openSellerProfile() {
+    openMarketplacePublicProfile(
+      context: context,
+      source: 'detail_bottom_bar',
+      userId: _item.sellerId,
+    );
+  }
+
+  Future<void> _openSimilarItem(MarketplaceItem item) async {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => MarketplaceItemDetailScreen(item: item),
       ),
     );
   }
@@ -1190,4 +1270,85 @@ class _ImagePlaceholder extends StatelessWidget {
       ),
     ),
   );
+}
+
+class _SimilarListingsStrip extends StatelessWidget {
+  const _SimilarListingsStrip({required this.items, required this.onOpen});
+
+  final List<MarketplaceItem> items;
+  final ValueChanged<MarketplaceItem> onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final card = isDark ? AppColors.card : AppColors.lightCard;
+    final border = isDark ? Colors.white12 : AppColors.lightBorder;
+    final text = isDark ? AppColors.text : AppColors.lightText;
+
+    return SizedBox(
+      height: 150,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: items.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 10),
+        itemBuilder: (context, index) {
+          final item = items[index];
+          return GestureDetector(
+            onTap: () => onOpen(item),
+            child: Container(
+              width: 130,
+              decoration: BoxDecoration(
+                color: card,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: border),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: item.hasImage
+                        ? CachedNetworkImage(
+                            imageUrl: item.mainImage,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                            errorWidget: (_, __, ___) =>
+                                const _ImagePlaceholder(),
+                          )
+                        : const _ImagePlaceholder(),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          item.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: text,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 12,
+                          ),
+                        ),
+                        Text(
+                          item.formattedPrice,
+                          style: const TextStyle(
+                            color: AppColors.orange,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
 }

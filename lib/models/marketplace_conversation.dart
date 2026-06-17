@@ -126,6 +126,52 @@ class MarketplaceMessage {
   bool get isOffer => type == 'offer' && offerAmount != null;
 }
 
+class InboxDedupeResult {
+  final List<MarketplaceConversation> conversations;
+  final int before;
+  final int after;
+  final int hiddenSelf;
+
+  const InboxDedupeResult({
+    required this.conversations,
+    required this.before,
+    required this.after,
+    required this.hiddenSelf,
+  });
+}
+
+/// Removes self-conversations and exact duplicate conversation ids from an
+/// inbox list. Same buyer+seller+listing always produces one deterministic
+/// backend id, so this is a defensive client-side safety net, not the
+/// primary dedup mechanism.
+InboxDedupeResult dedupeInboxConversations(
+  List<MarketplaceConversation> conversations,
+  String currentUserId,
+) {
+  final seenIds = <String>{};
+  var hiddenSelf = 0;
+  final result = <MarketplaceConversation>[];
+
+  for (final conversation in conversations) {
+    final isSelf =
+        conversation.otherUserId(currentUserId).isEmpty ||
+        conversation.otherUserId(currentUserId) == currentUserId;
+    if (isSelf) {
+      hiddenSelf++;
+      continue;
+    }
+    if (!seenIds.add(conversation.id)) continue;
+    result.add(conversation);
+  }
+
+  return InboxDedupeResult(
+    conversations: result,
+    before: conversations.length,
+    after: result.length,
+    hiddenSelf: hiddenSelf,
+  );
+}
+
 class MarketplaceConversationThread {
   final MarketplaceConversation conversation;
   final List<MarketplaceMessage> messages;

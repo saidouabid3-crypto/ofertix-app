@@ -11,6 +11,7 @@ import '../../models/marketplace_item.dart';
 import '../../models/user_profile_model.dart';
 import '../../services/auth_service.dart';
 import '../../services/profile_service.dart';
+import '../marketplace/marketplace_item_detail_screen.dart';
 import '../messages/chat_screen.dart';
 
 class CreatorProfileScreen extends StatefulWidget {
@@ -27,8 +28,10 @@ class CreatorProfileScreen extends StatefulWidget {
   State<CreatorProfileScreen> createState() => _CreatorProfileScreenState();
 }
 
-class _CreatorProfileScreenState extends State<CreatorProfileScreen> {
+class _CreatorProfileScreenState extends State<CreatorProfileScreen>
+    with SingleTickerProviderStateMixin {
   final ProfileService _profileService = ProfileService.instance;
+  late final TabController _tabController;
 
   UserProfileModel? profile;
   List<SmartReelModel> reels = [];
@@ -44,7 +47,23 @@ class _CreatorProfileScreenState extends State<CreatorProfileScreen> {
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 3, vsync: this);
     _load();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  void _openListing(MarketplaceItem item) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => MarketplaceItemDetailScreen(item: item),
+      ),
+    );
   }
 
   Future<void> _load() async {
@@ -101,7 +120,9 @@ class _CreatorProfileScreenState extends State<CreatorProfileScreen> {
       setState(() {
         profile = user;
         reels = items;
-        sellItems = marketplaceItems;
+        sellItems = marketplaceItems
+            .where((item) => item.isPublicMarketplaceVisible)
+            .toList(growable: false);
         reviews = reviewSummary;
         loading = false;
       });
@@ -158,15 +179,9 @@ class _CreatorProfileScreenState extends State<CreatorProfileScreen> {
       setState(() => following = isFollowing);
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'auto.profile_creator_profile_screen.follow_pendiente_de_activar'
-                .tr()
-                .tr(),
-          ),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('mkt.profile.followFailed'.tr())));
     }
   }
 
@@ -240,21 +255,22 @@ class _CreatorProfileScreenState extends State<CreatorProfileScreen> {
     }
 
     final p = profile;
+    final bottomSafe = MediaQuery.of(context).padding.bottom;
 
     return Scaffold(
       backgroundColor: Colors.black,
       body: RefreshIndicator(
         onRefresh: _load,
         color: Colors.white,
-        child: CustomScrollView(
-          slivers: [
+        child: NestedScrollView(
+          headerSliverBuilder: (context, innerBoxIsScrolled) => [
             SliverAppBar(
               backgroundColor: Colors.black,
               pinned: true,
               expandedHeight: 250,
               title: Text(
-                p?.username.isNotEmpty == true
-                    ? '@${p!.username}'
+                p?.displayName.trim().isNotEmpty == true
+                    ? p!.displayName
                     : 'mkt.profile.publicProfile'.tr(),
                 style: const TextStyle(fontWeight: FontWeight.w900),
               ),
@@ -263,6 +279,7 @@ class _CreatorProfileScreenState extends State<CreatorProfileScreen> {
                   profile: p,
                   reelsCount: reels.length,
                   sellItemsCount: sellItems.length,
+                  reviewCount: reviews.count,
                   following: following,
                   isOwnProfile: _isOwnProfile,
                   onFollow: _toggleFollow,
@@ -270,67 +287,40 @@ class _CreatorProfileScreenState extends State<CreatorProfileScreen> {
                 ),
               ),
             ),
-            SliverToBoxAdapter(child: _TrustCard(profile: p, sellItemsCount: sellItems.length)),
-            SliverToBoxAdapter(child: _ReviewsCard(summary: reviews)),
-            SliverToBoxAdapter(child: _SafetyCard()),
-            SliverToBoxAdapter(child: _SellItemsStrip(items: sellItems)),
             SliverToBoxAdapter(
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(16, 14, 16, 12),
-                child: Row(
-                  children: [
-                    Text(
-                      'auto.profile_creator_profile_screen.reels'.tr(),
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 19,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    Spacer(),
-                    Text(
-                      '${reels.length}',
-                      style: TextStyle(
-                        color: Colors.white54,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
+              child: _TrustCard(profile: p, sellItemsCount: sellItems.length),
+            ),
+            SliverToBoxAdapter(child: _SafetyCard()),
+            SliverPersistentHeader(
+              pinned: true,
+              delegate: _ProfileTabBarDelegate(
+                TabBar(
+                  controller: _tabController,
+                  indicatorColor: AppColors.orange,
+                  labelColor: AppColors.orange,
+                  unselectedLabelColor: Colors.white54,
+                  labelStyle: const TextStyle(fontWeight: FontWeight.w800),
+                  tabs: [
+                    Tab(text: 'mkt.profile.tabListings'.tr()),
+                    Tab(text: 'mkt.profile.tabReviews'.tr()),
+                    Tab(text: 'mkt.profile.tabReels'.tr()),
                   ],
                 ),
               ),
             ),
-            if (reels.isEmpty)
-              SliverFillRemaining(
-                hasScrollBody: false,
-                child: Center(
-                  child: Text(
-                    'auto.profile_creator_profile_screen.este_creator_todavia_no_tiene_reels'
-                        .tr()
-                        .tr(),
-                    style: TextStyle(
-                      color: Colors.white54,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              )
-            else
-              SliverPadding(
-                padding: EdgeInsets.fromLTRB(12, 0, 12, 110),
-                sliver: SliverGrid(
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) => _ReelTile(reel: reels[index]),
-                    childCount: reels.length,
-                  ),
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 3,
-                    mainAxisSpacing: 6,
-                    crossAxisSpacing: 6,
-                    childAspectRatio: 0.72,
-                  ),
-                ),
-              ),
           ],
+          body: TabBarView(
+            controller: _tabController,
+            children: [
+              _ListingsTab(
+                items: sellItems,
+                bottomPadding: bottomSafe + 24,
+                onOpen: _openListing,
+              ),
+              _ReviewsTab(summary: reviews, bottomPadding: bottomSafe + 24),
+              _ReelsTab(reels: reels, bottomPadding: bottomSafe + 24),
+            ],
+          ),
         ),
       ),
     );
@@ -342,6 +332,7 @@ class _ProfileHeader extends StatelessWidget {
     required this.profile,
     required this.reelsCount,
     required this.sellItemsCount,
+    required this.reviewCount,
     required this.following,
     required this.isOwnProfile,
     required this.onFollow,
@@ -351,6 +342,7 @@ class _ProfileHeader extends StatelessWidget {
   final UserProfileModel? profile;
   final int reelsCount;
   final int sellItemsCount;
+  final int reviewCount;
   final bool following;
   final bool isOwnProfile;
   final VoidCallback onFollow;
@@ -419,21 +411,22 @@ class _ProfileHeader extends StatelessWidget {
                   Row(
                     children: [
                       _Stat(
-                        label: 'auto.profile_creator_profile_screen.reels'.tr(),
-                        value: reelsCount.toString(),
-                      ),
-                      _Stat(
                         label: 'profile.sellItems'.tr(),
                         value: sellItemsCount.toString(),
+                      ),
+                      _Stat(
+                        label: 'mkt.profile.reviews'.tr(),
+                        value: reviewCount.toString(),
                       ),
                       _Stat(
                         label: 'profile.followers'.tr(),
                         value: '${p?.followersCount ?? 0}',
                       ),
-                      _Stat(
-                        label: 'profile.likes'.tr(),
-                        value: '${p?.totalLikes ?? 0}',
-                      ),
+                      if (reelsCount > 0)
+                        _Stat(
+                          label: 'mkt.profile.tabReels'.tr(),
+                          value: reelsCount.toString(),
+                        ),
                     ],
                   ),
                   SizedBox(height: 13),
@@ -585,11 +578,7 @@ class _TrustCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(
-                _trustIcon(p.trustLevel),
-                color: AppColors.orange,
-                size: 20,
-              ),
+              Icon(_trustIcon(p.trustLevel), color: AppColors.orange, size: 20),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -664,100 +653,6 @@ class _TrustStat extends StatelessWidget {
   }
 }
 
-class _ReviewsCard extends StatelessWidget {
-  const _ReviewsCard({required this.summary});
-
-  final MarketplaceReviewSummary summary;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: .05),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text(
-                'mkt.profile.reviews'.tr(),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 14,
-                ),
-              ),
-              const Spacer(),
-              if (summary.count > 0)
-                Text(
-                  '${summary.average.toStringAsFixed(1)} ★ (${summary.count})',
-                  style: const TextStyle(
-                    color: AppColors.orange,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 12.5,
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          if (summary.items.isEmpty)
-            Text(
-              'mkt.profile.noReviewsYet'.tr(),
-              style: const TextStyle(color: Colors.white54, fontSize: 12.5),
-            )
-          else
-            ...summary.items.take(3).map(
-              (review) => Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Text(
-                          review.reviewerName,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w800,
-                            fontSize: 12.5,
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          '${review.rating} ★',
-                          style: const TextStyle(
-                            color: AppColors.orange,
-                            fontWeight: FontWeight.w800,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (review.comment.trim().isNotEmpty)
-                      Text(
-                        review.comment,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white70,
-                          fontSize: 12,
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
 class _SafetyCard extends StatelessWidget {
   const _SafetyCard();
 
@@ -811,105 +706,252 @@ class _SafetyCard extends StatelessWidget {
   }
 }
 
-class _SellItemsStrip extends StatelessWidget {
-  const _SellItemsStrip({required this.items});
+class _ProfileTabBarDelegate extends SliverPersistentHeaderDelegate {
+  _ProfileTabBarDelegate(this.tabBar);
+
+  final TabBar tabBar;
+
+  @override
+  double get minExtent => tabBar.preferredSize.height;
+
+  @override
+  double get maxExtent => tabBar.preferredSize.height;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    return Container(color: Colors.black, child: tabBar);
+  }
+
+  @override
+  bool shouldRebuild(_ProfileTabBarDelegate oldDelegate) =>
+      oldDelegate.tabBar != tabBar;
+}
+
+class _ListingsTab extends StatelessWidget {
+  const _ListingsTab({
+    required this.items,
+    required this.bottomPadding,
+    required this.onOpen,
+  });
 
   final List<MarketplaceItem> items;
+  final double bottomPadding;
+  final ValueChanged<MarketplaceItem> onOpen;
 
   @override
   Widget build(BuildContext context) {
-    if (items.isEmpty) return const SizedBox.shrink();
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'profile.sellerListings'.tr(),
+    if (items.isEmpty) {
+      return Padding(
+        padding: EdgeInsets.fromLTRB(20, 20, 20, bottomPadding),
+        child: Center(
+          child: Text(
+            'mkt.profile.noPublicListings'.tr(),
+            textAlign: TextAlign.center,
             style: const TextStyle(
-              color: Colors.white,
-              fontSize: 19,
-              fontWeight: FontWeight.w900,
+              color: Colors.white54,
+              fontWeight: FontWeight.w700,
             ),
           ),
-          const SizedBox(height: 10),
-          SizedBox(
-            height: 138,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemBuilder: (context, index) =>
-                  _SellItemTile(item: items[index]),
-              separatorBuilder: (_, __) => const SizedBox(width: 10),
-              itemCount: items.length.clamp(0, 10),
+        ),
+      );
+    }
+    return GridView.builder(
+      padding: EdgeInsets.fromLTRB(14, 14, 14, bottomPadding),
+      itemCount: items.length,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 12,
+        childAspectRatio: 0.78,
+      ),
+      itemBuilder: (context, index) {
+        final item = items[index];
+        return _ListingGridTile(item: item, onTap: () => onOpen(item));
+      },
+    );
+  }
+}
+
+class _ListingGridTile extends StatelessWidget {
+  const _ListingGridTile({required this.item, required this.onTap});
+
+  final MarketplaceItem item;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white10,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.white12),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: item.hasImage
+                  ? CachedNetworkImage(
+                      imageUrl: item.mainImage,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorWidget: (_, __, ___) =>
+                          const Icon(Icons.shopping_bag, color: Colors.white54),
+                    )
+                  : const Center(
+                      child: Icon(Icons.shopping_bag, color: Colors.white54),
+                    ),
             ),
-          ),
-        ],
+            Padding(
+              padding: const EdgeInsets.all(9),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 12,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    item.formattedPrice,
+                    style: const TextStyle(
+                      color: AppColors.orange,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-class _SellItemTile extends StatelessWidget {
-  const _SellItemTile({required this.item});
+class _ReviewsTab extends StatelessWidget {
+  const _ReviewsTab({required this.summary, required this.bottomPadding});
 
-  final MarketplaceItem item;
+  final MarketplaceReviewSummary summary;
+  final double bottomPadding;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 150,
-      decoration: BoxDecoration(
-        color: Colors.white10,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white12),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: item.hasImage
-                ? CachedNetworkImage(
-                    imageUrl: item.mainImage,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    errorWidget: (_, __, ___) =>
-                        const Icon(Icons.shopping_bag, color: Colors.white54),
-                  )
-                : const Center(
-                    child: Icon(Icons.shopping_bag, color: Colors.white54),
-                  ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(9),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 12,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  item.formattedPrice,
-                  style: const TextStyle(
-                    color: Colors.white70,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
+    if (summary.items.isEmpty) {
+      return Padding(
+        padding: EdgeInsets.fromLTRB(20, 20, 20, bottomPadding),
+        child: Center(
+          child: Text(
+            'mkt.profile.noReviewsYet'.tr(),
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Colors.white54,
+              fontWeight: FontWeight.w700,
             ),
           ),
-        ],
+        ),
+      );
+    }
+    return ListView.separated(
+      padding: EdgeInsets.fromLTRB(16, 14, 16, bottomPadding),
+      itemCount: summary.items.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 10),
+      itemBuilder: (context, index) {
+        final review = summary.items[index];
+        return Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: .05),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: Colors.white12),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Text(
+                    review.reviewerName,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 13,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    '${review.rating} ★',
+                    style: const TextStyle(
+                      color: AppColors.orange,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+              if (review.comment.trim().isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(
+                  review.comment,
+                  style: const TextStyle(color: Colors.white70, fontSize: 12.5),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _ReelsTab extends StatelessWidget {
+  const _ReelsTab({required this.reels, required this.bottomPadding});
+
+  final List<SmartReelModel> reels;
+  final double bottomPadding;
+
+  @override
+  Widget build(BuildContext context) {
+    if (reels.isEmpty) {
+      return Padding(
+        padding: EdgeInsets.fromLTRB(20, 20, 20, bottomPadding),
+        child: Center(
+          child: Text(
+            'mkt.profile.noReelsYet'.tr(),
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Colors.white54,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      );
+    }
+    return GridView.builder(
+      padding: EdgeInsets.fromLTRB(12, 12, 12, bottomPadding),
+      itemCount: reels.length,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        mainAxisSpacing: 6,
+        crossAxisSpacing: 6,
+        childAspectRatio: 0.72,
       ),
+      itemBuilder: (context, index) => _ReelTile(reel: reels[index]),
     );
   }
 }

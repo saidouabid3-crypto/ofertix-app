@@ -213,6 +213,29 @@ class MarketplaceService {
     );
   }
 
+  Future<List<MarketplaceItem>> fetchSimilarItems(
+    String itemId, {
+    int limit = 8,
+  }) async {
+    final response = await _api.get(
+      ApiEndpoints.marketplaceItemSimilar(itemId),
+      queryParameters: {'limit': limit.clamp(1, 12)},
+    );
+    final rawList = response is Map
+        ? (response['items'] as List? ?? const [])
+        : (response is List ? response : const []);
+    final items = <MarketplaceItem>[];
+    for (final e in rawList) {
+      try {
+        final map = Map<String, dynamic>.from(e as Map);
+        items.add(MarketplaceItem.fromMap(map, map['id']?.toString() ?? ''));
+      } catch (_) {
+        continue;
+      }
+    }
+    return items;
+  }
+
   Future<List<MarketplaceItem>> fetchItems({
     int limit = 30,
     String? city,
@@ -451,7 +474,9 @@ class MarketplaceService {
         'comment': comment,
       },
     );
-    return MarketplaceReview.fromMap(Map<String, dynamic>.from(response as Map));
+    return MarketplaceReview.fromMap(
+      Map<String, dynamic>.from(response as Map),
+    );
   }
 
   /// Fetch authenticated seller's own items (pending + approved + rejected + hidden).

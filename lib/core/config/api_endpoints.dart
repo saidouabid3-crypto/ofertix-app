@@ -81,6 +81,8 @@ class ApiEndpoints {
   static String marketplaceItemReport(String itemId) =>
       '/marketplace/items/$itemId/report';
   static const String marketplaceReviews = '/marketplace/reviews';
+  static String marketplaceItemSimilar(String itemId) =>
+      '/marketplace/items/$itemId/similar';
   static const String marketplaceUploadImage = '/marketplace/upload-image';
   static const String marketplaceMyItems = '/marketplace/my-items';
   static String marketplaceMyItem(String itemId) =>
