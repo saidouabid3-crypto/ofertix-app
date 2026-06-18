@@ -67,8 +67,13 @@ class NotificationService {
     final type = message.data['type']?.toString() ?? '';
     if (type == 'message' || type == 'marketplace_message' ||
         type == 'reel_message' || type == 'direct_message') {
-      AppRouter.navigatorKey.currentState
-          ?.pushNamed(AppRoutes.marketplaceMessages);
+      // Backend sends the canonical conversation_id in FCM data.
+      // Pass it as route arguments so the inbox can auto-open that thread.
+      final conversationId = message.data['conversationId']?.toString() ?? '';
+      AppRouter.navigatorKey.currentState?.pushNamed(
+        AppRoutes.marketplaceMessages,
+        arguments: conversationId.isNotEmpty ? conversationId : null,
+      );
     }
   }
 

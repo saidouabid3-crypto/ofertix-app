@@ -136,7 +136,10 @@ class AppRouter {
       case AppRoutes.notifications:
         return _page(const NotificationCenterScreen());
       case AppRoutes.marketplaceMessages:
-        return _page(const MarketplaceMessagesScreen());
+        final initialConvId = settings.arguments is String
+            ? settings.arguments as String
+            : null;
+        return _page(MarketplaceMessagesScreen(initialConversationId: initialConvId));
 
       default:
         if (settings.name != null && settings.name!.startsWith('${AppRoutes.product}/')) {

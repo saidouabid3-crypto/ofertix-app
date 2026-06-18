@@ -19,7 +19,11 @@ import 'marketplace_conversation_screen.dart';
 ///   - _ConversationPickerSheet (select conversation bottom sheet)
 ///   - Context chips ("2 Listings · 1 Reel") on inbox rows
 class MarketplaceMessagesScreen extends StatefulWidget {
-  const MarketplaceMessagesScreen({super.key});
+  const MarketplaceMessagesScreen({super.key, this.initialConversationId});
+
+  /// When set (e.g. from a notification tap), the inbox auto-opens this
+  /// conversation after the first load completes.
+  final String? initialConversationId;
 
   @override
   State<MarketplaceMessagesScreen> createState() =>
@@ -65,6 +69,17 @@ class _MarketplaceMessagesScreenState extends State<MarketplaceMessagesScreen> {
         _conversations = result.conversations;
         _loading = false;
       });
+
+      // Auto-open conversation from notification deep-link (first load only)
+      final pendingId = widget.initialConversationId;
+      if (pendingId != null && pendingId.isNotEmpty && mounted) {
+        final match = result.conversations.where((c) => c.id == pendingId).firstOrNull;
+        if (match != null) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) _openConversation(match);
+          });
+        }
+      }
     } catch (_) {
       if (!mounted) return;
       setState(() {
