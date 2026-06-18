@@ -8,6 +8,16 @@ import '../../models/marketplace_conversation.dart';
 import '../../services/marketplace_service.dart';
 import 'marketplace_conversation_screen.dart';
 
+/// Unified WhatsApp-style inbox: exactly one row per other user.
+///
+/// The backend now returns one canonical conversation per participant pair.
+/// Flutter applies a client-side safety dedup as a belt-and-suspenders guard
+/// during the migration rollout period.
+///
+/// Removed in Batch 16F-D:
+///   - InboxParticipantGroup / InboxGroupResult / groupInboxByParticipant
+///   - _ConversationPickerSheet (select conversation bottom sheet)
+///   - Context chips ("2 Listings · 1 Reel") on inbox rows
 class MarketplaceMessagesScreen extends StatefulWidget {
   const MarketplaceMessagesScreen({super.key});
 
@@ -17,7 +27,7 @@ class MarketplaceMessagesScreen extends StatefulWidget {
 }
 
 class _MarketplaceMessagesScreenState extends State<MarketplaceMessagesScreen> {
-  List<InboxParticipantGroup> _groups = const [];
+  List<MarketplaceConversation> _conversations = const [];
   bool _loading = true;
   String? _error;
 
@@ -33,7 +43,7 @@ class _MarketplaceMessagesScreenState extends State<MarketplaceMessagesScreen> {
     if (_uid.isEmpty) {
       setState(() {
         _loading = false;
-        _groups = const [];
+        _conversations = const [];
         _error = 'mkt.messages.loginRequired'.tr();
       });
       return;
@@ -44,15 +54,15 @@ class _MarketplaceMessagesScreenState extends State<MarketplaceMessagesScreen> {
     });
     try {
       final raw = await MarketplaceService.instance.fetchInbox();
-      final result = groupInboxByParticipant(raw, _uid);
+      // Safety-net client dedup (canonical dedup already done on backend)
+      final result = dedupeInboxConversations(raw, _uid);
       debugPrint(
-        '[Marketplace16F-C] inbox_group before=${result.before} '
-        'after=${result.after} hidden_self=${result.hiddenSelf} '
-        'contexts=${result.contexts}',
+        '[16F-D] inbox_load before=${result.before} '
+        'after=${result.after} hidden_self=${result.hiddenSelf}',
       );
       if (!mounted) return;
       setState(() {
-        _groups = result.groups;
+        _conversations = result.conversations;
         _loading = false;
       });
     } catch (_) {
@@ -62,24 +72,6 @@ class _MarketplaceMessagesScreenState extends State<MarketplaceMessagesScreen> {
         _error = 'mkt.messages.serviceUnavailable'.tr();
       });
     }
-  }
-
-  Future<void> _openGroup(InboxParticipantGroup group) async {
-    if (group.conversations.length == 1) {
-      await _openConversation(group.conversations.first);
-      return;
-    }
-    // Multiple conversations with the same person — show a picker.
-    if (!mounted) return;
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _ConversationPickerSheet(
-        group: group,
-        onPick: _openConversation,
-      ),
-    );
   }
 
   Future<void> _openConversation(MarketplaceConversation conversation) async {
@@ -93,14 +85,15 @@ class _MarketplaceMessagesScreenState extends State<MarketplaceMessagesScreen> {
     if (mounted) _loadInbox();
   }
 
-  Future<void> _archiveGroup(InboxParticipantGroup group) async {
+  Future<void> _archiveConversation(MarketplaceConversation conv) async {
+    final idx = _conversations.indexOf(conv);
     setState(() {
-      _groups = _groups.where((g) => g.otherUserId != group.otherUserId).toList();
+      _conversations = [
+        ..._conversations.where((c) => c.id != conv.id),
+      ];
     });
     try {
-      for (final conv in group.conversations) {
-        await MarketplaceService.instance.archiveConversation(conv.id);
-      }
+      await MarketplaceService.instance.archiveConversation(conv.id);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('mkt.inbox.archived'.tr())),
@@ -108,7 +101,13 @@ class _MarketplaceMessagesScreenState extends State<MarketplaceMessagesScreen> {
       }
     } catch (_) {
       if (mounted) {
-        setState(() => _groups = [group, ..._groups]);
+        final updated = List<MarketplaceConversation>.from(_conversations);
+        if (idx >= 0 && idx <= updated.length) {
+          updated.insert(idx, conv);
+        } else {
+          updated.add(conv);
+        }
+        setState(() => _conversations = updated);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('mkt.inbox.actionFailed'.tr())),
         );
@@ -116,7 +115,7 @@ class _MarketplaceMessagesScreenState extends State<MarketplaceMessagesScreen> {
     }
   }
 
-  Future<void> _deleteGroup(InboxParticipantGroup group) async {
+  Future<void> _deleteConversation(MarketplaceConversation conv) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -139,13 +138,14 @@ class _MarketplaceMessagesScreenState extends State<MarketplaceMessagesScreen> {
     );
     if (confirmed != true || !mounted) return;
 
+    final idx = _conversations.indexOf(conv);
     setState(() {
-      _groups = _groups.where((g) => g.otherUserId != group.otherUserId).toList();
+      _conversations = [
+        ..._conversations.where((c) => c.id != conv.id),
+      ];
     });
     try {
-      for (final conv in group.conversations) {
-        await MarketplaceService.instance.deleteConversationForMe(conv.id);
-      }
+      await MarketplaceService.instance.deleteConversationForMe(conv.id);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('mkt.inbox.deleted'.tr())),
@@ -153,7 +153,13 @@ class _MarketplaceMessagesScreenState extends State<MarketplaceMessagesScreen> {
       }
     } catch (_) {
       if (mounted) {
-        setState(() => _groups = [group, ..._groups]);
+        final updated = List<MarketplaceConversation>.from(_conversations);
+        if (idx >= 0 && idx <= updated.length) {
+          updated.insert(idx, conv);
+        } else {
+          updated.add(conv);
+        }
+        setState(() => _conversations = updated);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('mkt.inbox.actionFailed'.tr())),
         );
@@ -196,7 +202,7 @@ class _MarketplaceMessagesScreenState extends State<MarketplaceMessagesScreen> {
         action: _uid.isEmpty ? null : _loadInbox,
       );
     }
-    if (_groups.isEmpty) {
+    if (_conversations.isEmpty) {
       return _InboxState(
         icon: Icons.chat_bubble_outline_rounded,
         title: 'mkt.messages.noConversations'.tr(),
@@ -208,15 +214,15 @@ class _MarketplaceMessagesScreenState extends State<MarketplaceMessagesScreen> {
       onRefresh: _loadInbox,
       child: ListView.separated(
         padding: const EdgeInsets.fromLTRB(14, 10, 14, 32),
-        itemCount: _groups.length,
+        itemCount: _conversations.length,
         separatorBuilder: (_, __) => const SizedBox(height: 8),
         itemBuilder: (_, index) {
-          final group = _groups[index];
+          final conv = _conversations[index];
           return Dismissible(
-            key: ValueKey(group.otherUserId),
+            key: ValueKey(conv.id),
             direction: DismissDirection.endToStart,
             confirmDismiss: (_) async {
-              await _deleteGroup(group);
+              await _deleteConversation(conv);
               return false;
             },
             background: Container(
@@ -228,11 +234,12 @@ class _MarketplaceMessagesScreenState extends State<MarketplaceMessagesScreen> {
               ),
               child: const Icon(Icons.delete_outline_rounded, color: Colors.red),
             ),
-            child: _ParticipantTile(
-              group: group,
+            child: _ConversationTile(
+              conversation: conv,
+              currentUserId: _uid,
               isDark: isDark,
-              onTap: () => _openGroup(group),
-              onArchive: () => _archiveGroup(group),
+              onTap: () => _openConversation(conv),
+              onArchive: () => _archiveConversation(conv),
             ),
           );
         },
@@ -242,17 +249,19 @@ class _MarketplaceMessagesScreenState extends State<MarketplaceMessagesScreen> {
 }
 
 // ---------------------------------------------------------------------------
-// Tile
+// Single-conversation inbox tile (WhatsApp-style)
 // ---------------------------------------------------------------------------
 
-class _ParticipantTile extends StatelessWidget {
-  final InboxParticipantGroup group;
+class _ConversationTile extends StatelessWidget {
+  final MarketplaceConversation conversation;
+  final String currentUserId;
   final bool isDark;
   final VoidCallback onTap;
   final VoidCallback onArchive;
 
-  const _ParticipantTile({
-    required this.group,
+  const _ConversationTile({
+    required this.conversation,
+    required this.currentUserId,
     required this.isDark,
     required this.onTap,
     required this.onArchive,
@@ -262,12 +271,14 @@ class _ParticipantTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final text = isDark ? AppColors.text : AppColors.lightText;
     final muted = isDark ? AppColors.gray : AppColors.lightGray;
-    final image = group.leadingImage;
-    final timestamp = group.latestMessageAt == null
+    final avatar = conversation.otherUserPhoto(currentUserId);
+    final name = conversation.otherUserName(currentUserId);
+    final unread = conversation.unreadFor(currentUserId);
+    final timestamp = conversation.lastMessageAt == null
         ? ''
-        : DateFormat.MMMd(
-            context.locale.languageCode,
-          ).add_Hm().format(group.latestMessageAt!.toLocal());
+        : DateFormat.MMMd(context.locale.languageCode)
+            .add_Hm()
+            .format(conversation.lastMessageAt!.toLocal());
 
     return Material(
       color: isDark ? AppColors.card : AppColors.lightCard,
@@ -286,14 +297,14 @@ class _ParticipantTile extends StatelessWidget {
           ),
           child: Row(
             children: [
-              // User avatar (circle)
+              // Profile avatar
               ClipOval(
                 child: SizedBox(
                   width: 54,
                   height: 54,
-                  child: image.startsWith('http')
+                  child: avatar.startsWith('http')
                       ? CachedNetworkImage(
-                          imageUrl: image,
+                          imageUrl: avatar,
                           fit: BoxFit.cover,
                           errorWidget: (_, __, ___) => _AvatarPlaceholder(),
                         )
@@ -310,9 +321,9 @@ class _ParticipantTile extends StatelessWidget {
                       children: [
                         Expanded(
                           child: Text(
-                            group.otherUserName.isNotEmpty
-                                ? group.otherUserName
-                                : group.otherUserId,
+                            name.isNotEmpty
+                                ? name
+                                : conversation.otherUserId(currentUserId),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
@@ -329,30 +340,27 @@ class _ParticipantTile extends StatelessWidget {
                           ),
                       ],
                     ),
-                    const SizedBox(height: 4),
-                    // Context chips
-                    _ContextChips(group: group),
-                    const SizedBox(height: 4),
-                    // Latest message + unread badge
+                    const SizedBox(height: 5),
+                    // Last message + unread badge
                     Row(
                       children: [
                         Expanded(
                           child: Text(
-                            group.latestMessage.isEmpty
+                            conversation.lastMessage.isEmpty
                                 ? 'mkt.messages.startConversation'.tr()
-                                : group.latestMessage,
+                                : conversation.lastMessage,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              color: group.totalUnread > 0 ? text : muted,
+                              color: unread > 0 ? text : muted,
                               fontSize: 12,
-                              fontWeight: group.totalUnread > 0
+                              fontWeight: unread > 0
                                   ? FontWeight.w700
                                   : FontWeight.w500,
                             ),
                           ),
                         ),
-                        if (group.totalUnread > 0)
+                        if (unread > 0)
                           Container(
                             constraints: const BoxConstraints(minWidth: 20),
                             padding: const EdgeInsets.symmetric(
@@ -364,7 +372,7 @@ class _ParticipantTile extends StatelessWidget {
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
-                              '${group.totalUnread}',
+                              '$unread',
                               textAlign: TextAlign.center,
                               style: const TextStyle(
                                 color: Colors.white,
@@ -378,82 +386,8 @@ class _ParticipantTile extends StatelessWidget {
                   ],
                 ),
               ),
-              // Arrow when there are multiple conversations to pick from
-              if (group.conversations.length > 1)
-                Padding(
-                  padding: const EdgeInsets.only(left: 6),
-                  child: Icon(
-                    Icons.chevron_right_rounded,
-                    color: muted,
-                    size: 20,
-                  ),
-                ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ContextChips extends StatelessWidget {
-  final InboxParticipantGroup group;
-
-  const _ContextChips({required this.group});
-
-  @override
-  Widget build(BuildContext context) {
-    final chips = <Widget>[];
-
-    if (group.listingCount > 0) {
-      chips.add(_Chip(
-        label: group.listingCount == 1
-            ? 'mkt.inbox.contextListing'.tr()
-            : '${group.listingCount} ${'mkt.inbox.contextListings'.tr()}',
-        color: AppColors.orange,
-      ));
-    }
-    if (group.reelCount > 0) {
-      chips.add(_Chip(
-        label: group.reelCount == 1
-            ? 'mkt.inbox.contextReel'.tr()
-            : '${group.reelCount} ${'mkt.inbox.contextReels'.tr()}',
-        color: Colors.purple,
-      ));
-    }
-    if (group.directCount > 0) {
-      chips.add(_Chip(
-        label: 'mkt.inbox.contextDirect'.tr(),
-        color: Colors.teal,
-      ));
-    }
-
-    if (chips.isEmpty) return const SizedBox.shrink();
-
-    return Wrap(spacing: 4, runSpacing: 2, children: chips);
-  }
-}
-
-class _Chip extends StatelessWidget {
-  final String label;
-  final Color color;
-
-  const _Chip({required this.label, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: color,
-          fontSize: 10,
-          fontWeight: FontWeight.w800,
         ),
       ),
     );
@@ -469,154 +403,6 @@ class _AvatarPlaceholder extends StatelessWidget {
           color: AppColors.orange,
         ),
       );
-}
-
-// ---------------------------------------------------------------------------
-// Picker sheet — shown when a person has multiple conversations
-// ---------------------------------------------------------------------------
-
-class _ConversationPickerSheet extends StatelessWidget {
-  final InboxParticipantGroup group;
-  final void Function(MarketplaceConversation) onPick;
-
-  const _ConversationPickerSheet({
-    required this.group,
-    required this.onPick,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark ? AppColors.card : AppColors.lightCard;
-    final text = isDark ? AppColors.text : AppColors.lightText;
-    final muted = isDark ? AppColors.gray : AppColors.lightGray;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      child: SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 8),
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.white24,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-              child: Text(
-                'mkt.inbox.selectConversation'.tr(),
-                style: TextStyle(
-                  color: text,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 16,
-                ),
-              ),
-            ),
-            const Divider(height: 1),
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: group.conversations.length,
-              itemBuilder: (_, i) {
-                final conv = group.conversations[i];
-                final isListing = conv.listingId.isNotEmpty;
-                final isReel =
-                    conv.reelId.isNotEmpty && conv.listingId.isEmpty;
-
-                final contextLabel = isListing
-                    ? 'mkt.inbox.contextListing'.tr()
-                    : isReel
-                        ? 'mkt.inbox.contextReel'.tr()
-                        : 'mkt.inbox.contextDirect'.tr();
-                final contextColor = isListing
-                    ? AppColors.orange
-                    : isReel
-                        ? Colors.purple
-                        : Colors.teal;
-                final title = isListing
-                    ? conv.listingTitle
-                    : isReel
-                        ? conv.reelTitle
-                        : group.otherUserName;
-
-                return ListTile(
-                  leading: Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: contextColor.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Icon(
-                      isListing
-                          ? Icons.shopping_bag_outlined
-                          : isReel
-                              ? Icons.play_circle_outline_rounded
-                              : Icons.person_outline_rounded,
-                      color: contextColor,
-                      size: 20,
-                    ),
-                  ),
-                  title: Text(
-                    title.isNotEmpty ? title : contextLabel,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: text,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  subtitle: Text(
-                    conv.lastMessage.isEmpty
-                        ? contextLabel
-                        : conv.lastMessage,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: muted, fontSize: 12),
-                  ),
-                  trailing: conv.unreadFor(
-                              FirebaseAuth.instance.currentUser?.uid ?? '') >
-                          0
-                      ? Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 7,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.orange,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Text(
-                            '${conv.unreadFor(FirebaseAuth.instance.currentUser?.uid ?? '')}',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w900,
-                            ),
-                          ),
-                        )
-                      : null,
-                  onTap: () {
-                    Navigator.pop(context);
-                    onPick(conv);
-                  },
-                );
-              },
-            ),
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
 // ---------------------------------------------------------------------------

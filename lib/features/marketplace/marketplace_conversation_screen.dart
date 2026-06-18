@@ -12,6 +12,9 @@ import 'marketplace_profile_navigation.dart';
 
 class MarketplaceConversationScreen extends StatefulWidget {
   final MarketplaceConversation conversation;
+
+  /// Non-null when opened directly from a listing detail page.
+  /// Shows a compact listing banner at the top of the chat.
   final MarketplaceItem? initialItem;
 
   const MarketplaceConversationScreen({
@@ -72,11 +75,8 @@ class _MarketplaceConversationScreenState
         await MarketplaceService.instance.markConversationRead(
           _conversation.id,
         );
-      } catch (error) {
-        debugPrint(
-          '[Marketplace16E] mark_read id=${_conversation.id} status=failed '
-          'error=$error',
-        );
+      } catch (e) {
+        debugPrint('[16F-D] mark_read failed: $e');
       }
       WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToEnd());
     } catch (_) {
@@ -115,14 +115,8 @@ class _MarketplaceConversationScreenState
   }
 
   Future<void> _showOffer() async {
-    // Guard against a second tap opening a stacked dialog before the first
-    // one resolves — two overlapping dialog routes popping out of order is
-    // a known trigger for the `_dependents.isEmpty` framework assertion.
     if (_offerDialogOpen || _sending) return;
     setState(() => _offerDialogOpen = true);
-    debugPrint(
-      '[Marketplace16E-C] offer_dialog_open conversation=${_conversation.id}',
-    );
 
     final amountController = TextEditingController();
     double? amount;
@@ -158,8 +152,8 @@ class _MarketplaceConversationScreenState
                     );
                     if (parsed == null || parsed <= 0) {
                       setDialogState(
-                        () => errorText = 'mkt.messages.invalidOfferAmount'
-                            .tr(),
+                        () => errorText =
+                            'mkt.messages.invalidOfferAmount'.tr(),
                       );
                       return;
                     }
@@ -177,26 +171,14 @@ class _MarketplaceConversationScreenState
     }
 
     if (mounted) setState(() => _offerDialogOpen = false);
-
-    if (amount == null) {
-      debugPrint(
-        '[Marketplace16E-C] offer_dialog_closed result=cancelled '
-        'conversation=${_conversation.id}',
-      );
-      return;
-    }
+    if (amount == null) return;
     if (!mounted) return;
 
-    final resolvedAmount = amount;
-    debugPrint(
-      '[Marketplace16E-C] offer_submit_start '
-      'conversation=${_conversation.id} amount=$resolvedAmount',
-    );
     setState(() => _sending = true);
     try {
       final offer = await MarketplaceService.instance.sendOffer(
         _conversation.id,
-        amount: resolvedAmount,
+        amount: amount,
         currency: _conversation.listingCurrency,
       );
       if (!mounted) return;
@@ -204,29 +186,16 @@ class _MarketplaceConversationScreenState
         _messages = [..._messages, offer];
         _sending = false;
       });
-      debugPrint(
-        '[Marketplace16E-C] offer_submit_success message=${offer.id}',
-      );
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('mkt.messages.offerSent'.tr())));
-      debugPrint(
-        '[Marketplace16E-C] offer_dialog_closed result=sent '
-        'conversation=${_conversation.id}',
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('mkt.messages.offerSent'.tr())),
       );
       WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToEnd());
-    } catch (error) {
-      debugPrint(
-        '[Marketplace16E-C] offer_submit_failed reason=${error.runtimeType}',
-      );
+    } catch (e) {
+      debugPrint('[16F-D] offer_failed: $e');
       if (!mounted) return;
       setState(() => _sending = false);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('mkt.messages.offerFailed'.tr())));
-      debugPrint(
-        '[Marketplace16E-C] offer_dialog_closed result=failed '
-        'conversation=${_conversation.id}',
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('mkt.messages.offerFailed'.tr())),
       );
     }
   }
@@ -344,12 +313,6 @@ class _MarketplaceConversationScreenState
 
   Future<void> _openParticipantProfile() async {
     final otherUserId = _conversation.otherUserId(_uid);
-    final available = otherUserId.trim().isNotEmpty;
-    debugPrint(
-      '[Marketplace16E-B] conversation_profile_tap '
-      'conversation=${_conversation.id} otherUser=$otherUserId '
-      'available=$available',
-    );
     await openMarketplacePublicProfile(
       context: context,
       source: 'conversation',
@@ -412,11 +375,15 @@ class _MarketplaceConversationScreenState
       ),
       body: Column(
         children: [
-          _ListingHeader(
-            conversation: _conversation,
-            isDark: isDark,
-            onTap: _openListing,
-          ),
+          // Compact listing banner — only when opened from a listing detail page
+          // or when this is an active marketplace conversation with a known listing.
+          // Per spec: not a giant card pinned permanently at top for all contexts.
+          if (_shouldShowListingBanner)
+            _ListingBanner(
+              conversation: _conversation,
+              isDark: isDark,
+              onTap: _openListing,
+            ),
           Expanded(child: _buildMessages(isDark)),
           _Composer(
             controller: _controller,
@@ -429,6 +396,15 @@ class _MarketplaceConversationScreenState
       ),
     );
   }
+
+  /// Show the listing banner when:
+  ///   a) opened directly from a listing detail (initialItem provided), OR
+  ///   b) this conversation was created from a marketplace listing (listingId set)
+  ///      and it's still showing a real title (not empty/unavailable).
+  bool get _shouldShowListingBanner =>
+      widget.initialItem != null ||
+      (_conversation.listingId.isNotEmpty &&
+          _conversation.listingTitle.isNotEmpty);
 
   Widget _buildMessages(bool isDark) {
     if (_loading) {
@@ -460,11 +436,18 @@ class _MarketplaceConversationScreenState
           message: _messages[index],
           isMine: _messages[index].senderId == _uid,
           isDark: isDark,
+          onContextTap: _messages[index].context.isListing
+              ? _openListing
+              : null,
         ),
       ),
     );
   }
 }
+
+// ---------------------------------------------------------------------------
+// App bar participant header
+// ---------------------------------------------------------------------------
 
 class _ParticipantHeader extends StatelessWidget {
   final MarketplaceConversation conversation;
@@ -511,38 +494,23 @@ class _ParticipantHeader extends StatelessWidget {
             ),
             const SizedBox(width: 9),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
+              child: Row(
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          displayName,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
+                  Expanded(
+                    child: Text(
+                      displayName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
                       ),
-                      Icon(
-                        Icons.chevron_right_rounded,
-                        size: 17,
-                        color: isDark ? AppColors.gray : AppColors.lightGray,
-                      ),
-                    ],
-                  ),
-                  Text(
-                    conversation.listingTitle,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: isDark ? AppColors.gray : AppColors.lightGray,
-                      fontSize: 11,
                     ),
+                  ),
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    size: 17,
+                    color: isDark ? AppColors.gray : AppColors.lightGray,
                   ),
                 ],
               ),
@@ -554,12 +522,16 @@ class _ParticipantHeader extends StatelessWidget {
   }
 }
 
-class _ListingHeader extends StatelessWidget {
+// ---------------------------------------------------------------------------
+// Compact listing banner — shown only when conversation has a known listing
+// ---------------------------------------------------------------------------
+
+class _ListingBanner extends StatelessWidget {
   final MarketplaceConversation conversation;
   final bool isDark;
   final VoidCallback onTap;
 
-  const _ListingHeader({
+  const _ListingBanner({
     required this.conversation,
     required this.isDark,
     required this.onTap,
@@ -572,11 +544,11 @@ class _ListingHeader extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: Container(
-        margin: const EdgeInsets.fromLTRB(12, 4, 12, 8),
+        margin: const EdgeInsets.fromLTRB(12, 4, 12, 6),
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
           color: isDark ? AppColors.card : AppColors.lightCard,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: isDark ? Colors.white12 : AppColors.lightBorder,
           ),
@@ -584,10 +556,10 @@ class _ListingHeader extends StatelessWidget {
         child: Row(
           children: [
             ClipRRect(
-              borderRadius: BorderRadius.circular(11),
+              borderRadius: BorderRadius.circular(9),
               child: SizedBox(
-                width: 58,
-                height: 58,
+                width: 44,
+                height: 44,
                 child: conversation.listingImage.startsWith('http')
                     ? CachedNetworkImage(
                         imageUrl: conversation.listingImage,
@@ -597,7 +569,7 @@ class _ListingHeader extends StatelessWidget {
                     : const _ListingIcon(),
               ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 9),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -606,26 +578,29 @@ class _ListingHeader extends StatelessWidget {
                     conversation.listingTitle,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: text, fontWeight: FontWeight.w800),
-                  ),
-                  Text(
-                    '${conversation.listingPrice.toStringAsFixed(conversation.listingPrice % 1 == 0 ? 0 : 2)} ${conversation.listingCurrency}',
-                    style: const TextStyle(
-                      color: AppColors.orange,
-                      fontWeight: FontWeight.w900,
+                    style: TextStyle(
+                      color: text,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 13,
                     ),
                   ),
-                  if (conversation.listingCity.isNotEmpty)
+                  if (conversation.listingPrice > 0)
                     Text(
-                      conversation.listingCity,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: muted, fontSize: 11),
+                      '${conversation.listingPrice.toStringAsFixed(conversation.listingPrice % 1 == 0 ? 0 : 2)} ${conversation.listingCurrency}',
+                      style: const TextStyle(
+                        color: AppColors.orange,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 12,
+                      ),
                     ),
                 ],
               ),
             ),
-            Icon(Icons.chevron_right_rounded, color: muted),
+            Icon(
+              Icons.open_in_new_rounded,
+              color: muted,
+              size: 16,
+            ),
           ],
         ),
       ),
@@ -639,19 +614,25 @@ class _ListingIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
     color: AppColors.orange.withValues(alpha: .1),
-    child: const Icon(Icons.shopping_bag_outlined, color: AppColors.orange),
+    child: const Icon(Icons.shopping_bag_outlined, color: AppColors.orange, size: 20),
   );
 }
+
+// ---------------------------------------------------------------------------
+// Message bubble with optional inline context card
+// ---------------------------------------------------------------------------
 
 class _MessageBubble extends StatelessWidget {
   final MarketplaceMessage message;
   final bool isMine;
   final bool isDark;
+  final VoidCallback? onContextTap;
 
   const _MessageBubble({
     required this.message,
     required this.isMine,
     required this.isDark,
+    this.onContextTap,
   });
 
   @override
@@ -660,80 +641,226 @@ class _MessageBubble extends StatelessWidget {
     final otherText = isDark ? AppColors.text : AppColors.lightText;
     final time = message.createdAt == null
         ? ''
-        : DateFormat.Hm(
-            context.locale.languageCode,
-          ).format(message.createdAt!.toLocal());
+        : DateFormat.Hm(context.locale.languageCode)
+            .format(message.createdAt!.toLocal());
+
     return Align(
       alignment: isMine
           ? AlignmentDirectional.centerEnd
           : AlignmentDirectional.centerStart,
-      child: Container(
+      child: ConstrainedBox(
         constraints: BoxConstraints(
           maxWidth: MediaQuery.sizeOf(context).width * .78,
         ),
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
-        decoration: BoxDecoration(
-          color: message.isOffer
-              ? AppColors.orange.withValues(alpha: isMine ? .95 : .14)
-              : (isMine ? AppColors.orange : otherBubble),
-          borderRadius: BorderRadius.circular(17),
-          border: message.isOffer && !isMine
-              ? Border.all(color: AppColors.orange.withValues(alpha: .45))
-              : null,
-        ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment:
+              isMine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
           children: [
-            if (message.isOffer) ...[
-              Row(
-                mainAxisSize: MainAxisSize.min,
+            // Inline context card sits above the message it belongs to
+            if (message.context.isPresent)
+              _MessageContextCard(
+                context: message.context,
+                isMine: isMine,
+                isDark: isDark,
+                onTap: onContextTap,
+              ),
+            Container(
+              margin: EdgeInsets.only(
+                bottom: message.context.isPresent ? 6 : 8,
+                top: message.context.isPresent ? 2 : 0,
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
+              decoration: BoxDecoration(
+                color: message.isOffer
+                    ? AppColors.orange.withValues(alpha: isMine ? .95 : .14)
+                    : (isMine ? AppColors.orange : otherBubble),
+                borderRadius: BorderRadius.circular(17),
+                border: message.isOffer && !isMine
+                    ? Border.all(
+                        color: AppColors.orange.withValues(alpha: .45),
+                      )
+                    : null,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(
-                    Icons.local_offer_rounded,
-                    size: 15,
-                    color: isMine ? Colors.white : AppColors.orange,
-                  ),
-                  const SizedBox(width: 5),
-                  Text(
-                    'mkt.messages.offer'.tr(),
-                    style: TextStyle(
-                      color: isMine ? Colors.white : AppColors.orange,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 12,
+                  if (message.isOffer) ...[
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.local_offer_rounded,
+                          size: 15,
+                          color: isMine ? Colors.white : AppColors.orange,
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          'mkt.messages.offer'.tr(),
+                          style: TextStyle(
+                            color: isMine ? Colors.white : AppColors.orange,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
+                    const SizedBox(height: 3),
+                    Text(
+                      '${message.offerAmount!.toStringAsFixed(2)} ${message.offerCurrency}',
+                      style: TextStyle(
+                        color: isMine ? Colors.white : otherText,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 18,
+                      ),
+                    ),
+                  ] else
+                    Text(
+                      message.text,
+                      style: TextStyle(
+                        color: isMine ? Colors.white : otherText,
+                        fontSize: 14,
+                        height: 1.35,
+                      ),
+                    ),
+                  if (time.isNotEmpty) ...[
+                    const SizedBox(height: 3),
+                    Text(
+                      time,
+                      style: TextStyle(
+                        color: isMine
+                            ? Colors.white70
+                            : (isDark ? AppColors.gray : AppColors.lightGray),
+                        fontSize: 9,
+                      ),
+                    ),
+                  ],
                 ],
               ),
-              const SizedBox(height: 3),
-              Text(
-                '${message.offerAmount!.toStringAsFixed(2)} ${message.offerCurrency}',
-                style: TextStyle(
-                  color: isMine ? Colors.white : otherText,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 18,
-                ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Compact inline context card (listing or reel attached to a message)
+// ---------------------------------------------------------------------------
+
+class _MessageContextCard extends StatelessWidget {
+  final MessageContext context;
+  final bool isMine;
+  final bool isDark;
+  final VoidCallback? onTap;
+
+  const _MessageContextCard({
+    required this.context,
+    required this.isMine,
+    required this.isDark,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext buildContext) {
+    final muted = isDark ? AppColors.gray : AppColors.lightGray;
+    final cardBg = isDark
+        ? AppColors.card.withValues(alpha: .9)
+        : AppColors.lightCard.withValues(alpha: .9);
+    final borderColor = isDark ? Colors.white12 : AppColors.lightBorder;
+
+    final isListing = context.isListing;
+    final sourceLabel = isListing
+        ? 'mkt.inbox.contextListing'.tr()
+        : 'mkt.inbox.contextReel'.tr();
+    final sourceColor = isListing ? AppColors.orange : Colors.purple;
+    final sourceIcon = isListing
+        ? Icons.shopping_bag_outlined
+        : Icons.play_circle_outline_rounded;
+
+    final titleText = context.contextTitle.isNotEmpty
+        ? context.contextTitle
+        : sourceLabel;
+    final thumbUrl = context.contextThumbnailUrl;
+    final price = context.contextPrice;
+    final currency = context.contextCurrency;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 4),
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: cardBg,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: borderColor),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Thumbnail or icon
+            ClipRRect(
+              borderRadius: BorderRadius.circular(7),
+              child: SizedBox(
+                width: 36,
+                height: 36,
+                child: thumbUrl.startsWith('http')
+                    ? CachedNetworkImage(
+                        imageUrl: thumbUrl,
+                        fit: BoxFit.cover,
+                        errorWidget: (_, __, ___) =>
+                            _ContextIconPlaceholder(icon: sourceIcon, color: sourceColor),
+                      )
+                    : _ContextIconPlaceholder(icon: sourceIcon, color: sourceColor),
               ),
-            ] else
-              Text(
-                message.text,
-                style: TextStyle(
-                  color: isMine ? Colors.white : otherText,
-                  fontSize: 14,
-                  height: 1.35,
-                ),
+            ),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Source label chip
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: sourceColor.withValues(alpha: .12),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      sourceLabel,
+                      style: TextStyle(
+                        color: sourceColor,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    titleText,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: isDark ? AppColors.text : AppColors.lightText,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  if (isListing && price != null && price > 0)
+                    Text(
+                      '${price.toStringAsFixed(price % 1 == 0 ? 0 : 2)} $currency',
+                      style: const TextStyle(
+                        color: AppColors.orange,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                ],
               ),
-            if (time.isNotEmpty) ...[
-              const SizedBox(height: 3),
-              Text(
-                time,
-                style: TextStyle(
-                  color: isMine
-                      ? Colors.white70
-                      : (isDark ? AppColors.gray : AppColors.lightGray),
-                  fontSize: 9,
-                ),
-              ),
+            ),
+            if (onTap != null) ...[
+              const SizedBox(width: 4),
+              Icon(Icons.chevron_right_rounded, color: muted, size: 15),
             ],
           ],
         ),
@@ -741,6 +868,23 @@ class _MessageBubble extends StatelessWidget {
     );
   }
 }
+
+class _ContextIconPlaceholder extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+
+  const _ContextIconPlaceholder({required this.icon, required this.color});
+
+  @override
+  Widget build(BuildContext context) => Container(
+    color: color.withValues(alpha: .1),
+    child: Icon(icon, color: color, size: 18),
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Composer
+// ---------------------------------------------------------------------------
 
 class _Composer extends StatelessWidget {
   final TextEditingController controller;
@@ -825,6 +969,10 @@ class _Composer extends StatelessWidget {
     );
   }
 }
+
+// ---------------------------------------------------------------------------
+// Loading / error state
+// ---------------------------------------------------------------------------
 
 class _MessageState extends StatelessWidget {
   final IconData icon;

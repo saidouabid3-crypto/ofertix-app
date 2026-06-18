@@ -102,134 +102,117 @@ void main() {
     expect(result.hiddenSelf, 0);
   });
 
-  test('dedupeInboxConversations keeps distinct listings for same seller', () {
+  // Canonical dedup: two legacy conversations for the same pair are merged
+  // into one row (the backend now returns one canonical conversation per pair,
+  // and the client safety-net dedup enforces the same rule).
+  test('dedupeInboxConversations collapses multiple conversations for same pair to one row', () {
     final convoA = MarketplaceConversation.fromMap({
-      'id': 'conv-a',
+      'id': 'conv_buyer_seller_marketplace_listing_a',
       'participants': ['buyer', 'seller'],
       'seller_id': 'seller',
       'buyer_id': 'buyer',
       'listing_id': 'listing-a',
+      'last_message_at': '2024-01-02T00:00:00Z',
     });
     final convoB = MarketplaceConversation.fromMap({
-      'id': 'conv-b',
+      'id': 'conv_buyer_seller_marketplace_listing_b',
       'participants': ['buyer', 'seller'],
       'seller_id': 'seller',
       'buyer_id': 'buyer',
       'listing_id': 'listing-b',
+      'last_message_at': '2024-01-01T00:00:00Z',
     });
 
     final result = dedupeInboxConversations([convoA, convoB], 'buyer');
 
-    expect(result.after, 2);
-  });
-
-  // -------------------------------------------------------------------------
-  // groupInboxByParticipant tests
-  // -------------------------------------------------------------------------
-
-  test('groupInboxByParticipant produces one group per person', () {
-    final convA = MarketplaceConversation.fromMap({
-      'id': 'conv-a',
-      'participants': ['buyer', 'seller'],
-      'listing_id': 'listing-1',
-    });
-    final convB = MarketplaceConversation.fromMap({
-      'id': 'conv-b',
-      'participants': ['buyer', 'seller'],
-      'listing_id': 'listing-2',
-    });
-
-    final result = groupInboxByParticipant([convA, convB], 'buyer');
-
-    expect(result.before, 2);
+    // One conversation per pair — the canonical WhatsApp behaviour
     expect(result.after, 1);
-    expect(result.groups.single.otherUserId, 'seller');
-    expect(result.groups.single.conversations.length, 2);
-    expect(result.groups.single.listingCount, 2);
+    // Prefers the more recently active one (convoA)
+    expect(result.conversations.single.id, 'conv_buyer_seller_marketplace_listing_a');
   });
 
-  test('groupInboxByParticipant aggregates unread counts', () {
-    final convA = MarketplaceConversation.fromMap({
-      'id': 'conv-a',
+  test('dedupeInboxConversations canonical id preferred over legacy', () {
+    final canonical = MarketplaceConversation.fromMap({
+      'id': 'conv_buyer_seller',
       'participants': ['buyer', 'seller'],
-      'unread_counts': {'buyer': 3},
-      'listing_id': 'listing-1',
+      'seller_id': 'seller',
+      'buyer_id': 'buyer',
+      'last_message_at': '2024-01-01T00:00:00Z',
     });
-    final convB = MarketplaceConversation.fromMap({
-      'id': 'conv-b',
+    final legacy = MarketplaceConversation.fromMap({
+      'id': 'conv_buyer_seller_marketplace_listing_a',
       'participants': ['buyer', 'seller'],
-      'unread_counts': {'buyer': 2},
-      'listing_id': 'listing-2',
+      'seller_id': 'seller',
+      'buyer_id': 'buyer',
+      'last_message_at': '2024-01-05T00:00:00Z', // newer but legacy
     });
 
-    final result = groupInboxByParticipant([convA, convB], 'buyer');
+    final result = dedupeInboxConversations([canonical, legacy], 'buyer');
 
-    expect(result.groups.single.totalUnread, 5);
-  });
-
-  test('groupInboxByParticipant correctly classifies context counts', () {
-    final listing = MarketplaceConversation.fromMap({
-      'id': 'conv-listing',
-      'participants': ['buyer', 'seller'],
-      'listing_id': 'listing-1',
-      'reel_id': '',
-    });
-    final reel = MarketplaceConversation.fromMap({
-      'id': 'conv-reel',
-      'participants': ['buyer', 'seller'],
-      'listing_id': '',
-      'reel_id': 'reel-1',
-    });
-    final direct = MarketplaceConversation.fromMap({
-      'id': 'conv-direct',
-      'participants': ['buyer', 'seller'],
-      'listing_id': '',
-      'reel_id': '',
-    });
-
-    final result = groupInboxByParticipant([listing, reel, direct], 'buyer');
-
-    final group = result.groups.single;
-    expect(group.listingCount, 1);
-    expect(group.reelCount, 1);
-    expect(group.directCount, 1);
-  });
-
-  test('groupInboxByParticipant hides self-conversations', () {
-    final selfConvo = MarketplaceConversation.fromMap({
-      'id': 'conv-self',
-      'participants': ['buyer', 'buyer'],
-    });
-    final real = MarketplaceConversation.fromMap({
-      'id': 'conv-real',
-      'participants': ['buyer', 'seller'],
-      'listing_id': 'listing-1',
-    });
-
-    final result = groupInboxByParticipant([selfConvo, real], 'buyer');
-
-    expect(result.hiddenSelf, 1);
     expect(result.after, 1);
-    expect(result.groups.single.otherUserId, 'seller');
+    expect(result.conversations.single.id, 'conv_buyer_seller');
   });
 
-  test('groupInboxByParticipant two senders produce two groups', () {
+  test('dedupeInboxConversations two different sellers produce two rows', () {
     final fromSeller1 = MarketplaceConversation.fromMap({
-      'id': 'conv-s1',
+      'id': 'conv_buyer_seller1',
       'participants': ['buyer', 'seller1'],
       'listing_id': 'listing-1',
     });
     final fromSeller2 = MarketplaceConversation.fromMap({
-      'id': 'conv-s2',
+      'id': 'conv_buyer_seller2',
       'participants': ['buyer', 'seller2'],
       'listing_id': 'listing-2',
     });
 
-    final result = groupInboxByParticipant([fromSeller1, fromSeller2], 'buyer');
+    final result = dedupeInboxConversations([fromSeller1, fromSeller2], 'buyer');
 
     expect(result.after, 2);
-    final ids = result.groups.map((g) => g.otherUserId).toSet();
+    final ids = result.conversations.map((c) => c.otherUserId('buyer')).toSet();
     expect(ids, {'seller1', 'seller2'});
+  });
+
+  // -------------------------------------------------------------------------
+  // MessageContext
+  // -------------------------------------------------------------------------
+
+  test('MessageContext.none is not present', () {
+    expect(MessageContext.none.isPresent, isFalse);
+  });
+
+  test('MessageContext with type and id is present', () {
+    final ctx = MessageContext.fromMap({
+      'context_type': 'marketplace_listing',
+      'context_id': 'listing-1',
+      'context_title': 'Phone',
+      'context_price': 120.0,
+      'context_currency': 'EUR',
+    });
+    expect(ctx.isPresent, isTrue);
+    expect(ctx.isListing, isTrue);
+    expect(ctx.isReel, isFalse);
+    expect(ctx.contextTitle, 'Phone');
+    expect(ctx.contextPrice, 120.0);
+  });
+
+  test('MarketplaceMessage synthesises context from legacy reel fields', () {
+    final msg = MarketplaceMessage.fromMap({
+      'id': 'msg-reel',
+      'conversation_id': 'conv-1',
+      'sender_id': 'buyer',
+      'sender_name': 'Buyer',
+      'text': 'Hello from reel',
+      'type': 'text',
+      'reel_id': 'reel-xyz',
+      'reel_title': 'Cool reel',
+      'reel_thumbnail_url': 'https://example.com/reel.jpg',
+      'is_read': false,
+      'created_at': '2024-01-01T10:00:00Z',
+    });
+    expect(msg.context.isPresent, isTrue);
+    expect(msg.context.isReel, isTrue);
+    expect(msg.context.contextId, 'reel-xyz');
+    expect(msg.reelId, 'reel-xyz');
   });
 
   test(

@@ -16,6 +16,7 @@ class MarketplaceConversation {
   final String sellerId;
   final String buyerId;
   final String status;
+  // Legacy reel fields — kept so old conversation documents still parse
   final String reelId;
   final String reelTitle;
   final String reelThumbnailUrl;
@@ -94,6 +95,58 @@ class MarketplaceConversation {
   int unreadFor(String uid) => unreadCounts[uid] ?? 0;
 }
 
+// ---------------------------------------------------------------------------
+// Message model with unified context fields (Batch 16F-D)
+// ---------------------------------------------------------------------------
+
+/// Optional context attached to a specific message — represents the source
+/// content (listing or reel) from which the user sent that particular message.
+class MessageContext {
+  final String contextType; // 'marketplace_listing', 'reel', 'direct', or ''
+  final String contextId;
+  final String contextTitle;
+  final String contextThumbnailUrl;
+  final double? contextPrice;
+  final String contextCurrency;
+
+  const MessageContext({
+    required this.contextType,
+    required this.contextId,
+    required this.contextTitle,
+    required this.contextThumbnailUrl,
+    required this.contextPrice,
+    required this.contextCurrency,
+  });
+
+  bool get isPresent => contextType.isNotEmpty && contextId.isNotEmpty;
+  bool get isListing => contextType == 'marketplace_listing';
+  bool get isReel => contextType == 'reel';
+
+  factory MessageContext.fromMap(Map<String, dynamic> map) {
+    final rawPrice = map['context_price'] ?? map['contextPrice'];
+    return MessageContext(
+      contextType: (map['context_type'] ?? map['contextType'] ?? '').toString(),
+      contextId: (map['context_id'] ?? map['contextId'] ?? '').toString(),
+      contextTitle: (map['context_title'] ?? map['contextTitle'] ?? '').toString(),
+      contextThumbnailUrl:
+          (map['context_thumbnail_url'] ?? map['contextThumbnailUrl'] ?? '')
+              .toString(),
+      contextPrice: rawPrice == null ? null : _double(rawPrice),
+      contextCurrency:
+          (map['context_currency'] ?? map['contextCurrency'] ?? '').toString(),
+    );
+  }
+
+  static const MessageContext none = MessageContext(
+    contextType: '',
+    contextId: '',
+    contextTitle: '',
+    contextThumbnailUrl: '',
+    contextPrice: null,
+    contextCurrency: '',
+  );
+}
+
 class MarketplaceMessage {
   final String id;
   final String conversationId;
@@ -104,6 +157,12 @@ class MarketplaceMessage {
   final double? offerAmount;
   final String offerCurrency;
   final DateTime? createdAt;
+  // Per-message source context (Batch 16F-D)
+  final MessageContext context;
+  // Legacy reel fields — kept for backward compat with old message documents
+  final String reelId;
+  final String reelTitle;
+  final String reelThumbnailUrl;
 
   const MarketplaceMessage({
     required this.id,
@@ -115,10 +174,38 @@ class MarketplaceMessage {
     required this.offerAmount,
     required this.offerCurrency,
     required this.createdAt,
+    this.context = MessageContext.none,
+    this.reelId = '',
+    this.reelTitle = '',
+    this.reelThumbnailUrl = '',
   });
 
   factory MarketplaceMessage.fromMap(Map<String, dynamic> map) {
     final rawAmount = map['offer_amount'] ?? map['offerAmount'];
+
+    // Build context from new fields, or synthesise from legacy reel fields
+    final contextMap = <String, dynamic>{
+      'context_type': map['context_type'] ?? map['contextType'] ?? '',
+      'context_id': map['context_id'] ?? map['contextId'] ?? '',
+      'context_title': map['context_title'] ?? map['contextTitle'] ?? '',
+      'context_thumbnail_url':
+          map['context_thumbnail_url'] ?? map['contextThumbnailUrl'] ?? '',
+      'context_price': map['context_price'] ?? map['contextPrice'],
+      'context_currency': map['context_currency'] ?? map['contextCurrency'] ?? '',
+    };
+
+    // If no explicit context type but legacy reel fields exist, synthesise
+    final hasLegacyReel =
+        (map['reel_id'] ?? map['reelId'] ?? '').toString().isNotEmpty;
+    if (contextMap['context_type'].toString().isEmpty && hasLegacyReel) {
+      contextMap['context_type'] = 'reel';
+      contextMap['context_id'] = (map['reel_id'] ?? map['reelId'] ?? '').toString();
+      contextMap['context_title'] =
+          (map['reel_title'] ?? map['reelTitle'] ?? '').toString();
+      contextMap['context_thumbnail_url'] =
+          (map['reel_thumbnail_url'] ?? map['reelThumbnailUrl'] ?? '').toString();
+    }
+
     return MarketplaceMessage(
       id: (map['id'] ?? '').toString(),
       conversationId: (map['conversation_id'] ?? map['conversationId'] ?? '')
@@ -131,11 +218,31 @@ class MarketplaceMessage {
       offerCurrency: (map['offer_currency'] ?? map['offerCurrency'] ?? '')
           .toString(),
       createdAt: _date(map['created_at'] ?? map['createdAt']),
+      context: MessageContext.fromMap(contextMap),
+      reelId: (map['reel_id'] ?? map['reelId'] ?? '').toString(),
+      reelTitle: (map['reel_title'] ?? map['reelTitle'] ?? '').toString(),
+      reelThumbnailUrl:
+          (map['reel_thumbnail_url'] ?? map['reelThumbnailUrl'] ?? '')
+              .toString(),
     );
   }
 
   bool get isOffer => type == 'offer' && offerAmount != null;
 }
+
+// ---------------------------------------------------------------------------
+// Inbox deduplication safety net (Batch 16F-D)
+//
+// The backend already returns one canonical row per participant pair.
+// This is a client-side safety net to guard against:
+//   - Old legacy conversations appearing alongside canonical ones during rollout
+//   - Malformed/duplicate responses from the server
+//   - Self-conversation documents
+//
+// The old groupInboxByParticipant / InboxParticipantGroup / _ConversationPickerSheet
+// architecture has been removed. The inbox now shows exactly one row per person
+// backed by the canonical conversation document.
+// ---------------------------------------------------------------------------
 
 class InboxDedupeResult {
   final List<MarketplaceConversation> conversations;
@@ -151,28 +258,53 @@ class InboxDedupeResult {
   });
 }
 
-/// Removes self-conversations and exact duplicate conversation ids from an
-/// inbox list. Kept as a low-level safety net; prefer [groupInboxByParticipant]
-/// for the UI layer which also groups by person.
+/// Safety-net deduplication: removes self-conversations and duplicate
+/// conversation IDs.  Also deduplicates by participant pair, preferring
+/// canonical IDs (format: conv_{a}_{b} with no suffix) over legacy ones.
 InboxDedupeResult dedupeInboxConversations(
   List<MarketplaceConversation> conversations,
   String currentUserId,
 ) {
   final seenIds = <String>{};
+  final pairBest = <String, MarketplaceConversation>{}; // pairKey -> best conv
   var hiddenSelf = 0;
-  final result = <MarketplaceConversation>[];
 
-  for (final conversation in conversations) {
-    final isSelf =
-        conversation.otherUserId(currentUserId).isEmpty ||
-        conversation.otherUserId(currentUserId) == currentUserId;
+  for (final conv in conversations) {
+    final otherId = conv.otherUserId(currentUserId);
+    final isSelf = otherId.isEmpty || otherId == currentUserId;
     if (isSelf) {
       hiddenSelf++;
       continue;
     }
-    if (!seenIds.add(conversation.id)) continue;
-    result.add(conversation);
+    if (!seenIds.add(conv.id)) continue;
+
+    final pairKey = _sortedPairKey(currentUserId, otherId);
+    final canonicalId = 'conv_$pairKey';
+    final isCanonical = conv.id == canonicalId;
+
+    if (!pairBest.containsKey(pairKey)) {
+      pairBest[pairKey] = conv;
+    } else {
+      final existing = pairBest[pairKey]!;
+      final existingIsCanonical = existing.id == canonicalId;
+      if (isCanonical && !existingIsCanonical) {
+        pairBest[pairKey] = conv;
+      } else if (!isCanonical && !existingIsCanonical) {
+        // Both legacy — keep the more recently active
+        final newAt = conv.lastMessageAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+        final existAt =
+            existing.lastMessageAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+        if (newAt.isAfter(existAt)) pairBest[pairKey] = conv;
+      }
+    }
   }
+
+  final result = pairBest.values.toList()
+    ..sort((a, b) {
+      final ta = a.lastMessageAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+      final tb = b.lastMessageAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+      return tb.compareTo(ta);
+    });
 
   return InboxDedupeResult(
     conversations: result,
@@ -182,133 +314,14 @@ InboxDedupeResult dedupeInboxConversations(
   );
 }
 
+String _sortedPairKey(String a, String b) {
+  final parts = [a, b]..sort();
+  return '${parts[0]}_${parts[1]}';
+}
+
 // ---------------------------------------------------------------------------
-// Participant-grouped inbox (one row per person, not per conversation)
+// Thread model
 // ---------------------------------------------------------------------------
-
-/// One row in the grouped inbox: represents all conversations with a single
-/// other user, collapsed to show the most recent message and context chips.
-class InboxParticipantGroup {
-  final String otherUserId;
-  final String otherUserName;
-  final String otherUserPhoto;
-  final String latestMessage;
-  final DateTime? latestMessageAt;
-  final int totalUnread;
-  final int listingCount;
-  final int reelCount;
-  final int directCount;
-
-  /// Conversations sorted newest-first. latestConversation == first element.
-  final List<MarketplaceConversation> conversations;
-
-  const InboxParticipantGroup({
-    required this.otherUserId,
-    required this.otherUserName,
-    required this.otherUserPhoto,
-    required this.latestMessage,
-    required this.latestMessageAt,
-    required this.totalUnread,
-    required this.listingCount,
-    required this.reelCount,
-    required this.directCount,
-    required this.conversations,
-  });
-
-  MarketplaceConversation get latestConversation => conversations.first;
-
-  /// Best image to display: prefer the user's own avatar, then fall back to
-  /// the latest listing/reel thumbnail so the tile never looks empty.
-  String get leadingImage {
-    if (otherUserPhoto.startsWith('http')) return otherUserPhoto;
-    for (final c in conversations) {
-      if (c.listingImage.startsWith('http')) return c.listingImage;
-      if (c.reelThumbnailUrl.startsWith('http')) return c.reelThumbnailUrl;
-    }
-    return '';
-  }
-}
-
-class InboxGroupResult {
-  final List<InboxParticipantGroup> groups;
-  final int before;
-  final int after;
-  final int hiddenSelf;
-  final int contexts;
-
-  const InboxGroupResult({
-    required this.groups,
-    required this.before,
-    required this.after,
-    required this.hiddenSelf,
-    required this.contexts,
-  });
-}
-
-/// Groups conversations by the other participant, hiding self-rows and
-/// deduplicating exact conversation IDs.  Produces one [InboxParticipantGroup]
-/// per unique other-user, sorted by most-recent message descending.
-InboxGroupResult groupInboxByParticipant(
-  List<MarketplaceConversation> conversations,
-  String currentUserId,
-) {
-  final seenIds = <String>{};
-  final grouped = <String, List<MarketplaceConversation>>{};
-  var hiddenSelf = 0;
-
-  for (final conv in conversations) {
-    // Skip exact duplicate conversation IDs (safety net).
-    if (!seenIds.add(conv.id)) continue;
-
-    final otherId = conv.otherUserId(currentUserId);
-    if (otherId.isEmpty || otherId == currentUserId) {
-      hiddenSelf++;
-      continue;
-    }
-    grouped.putIfAbsent(otherId, () => []).add(conv);
-  }
-
-  final epoch = DateTime.fromMillisecondsSinceEpoch(0);
-
-  final groups = <InboxParticipantGroup>[];
-  for (final entry in grouped.entries) {
-    final convs = List<MarketplaceConversation>.from(entry.value)
-      ..sort((a, b) =>
-          (b.lastMessageAt ?? epoch).compareTo(a.lastMessageAt ?? epoch));
-
-    final latest = convs.first;
-    final otherId = entry.key;
-
-    groups.add(InboxParticipantGroup(
-      otherUserId: otherId,
-      otherUserName: latest.otherUserName(currentUserId),
-      otherUserPhoto: latest.otherUserPhoto(currentUserId),
-      latestMessage: latest.lastMessage,
-      latestMessageAt: latest.lastMessageAt,
-      totalUnread:
-          convs.fold(0, (sum, c) => sum + c.unreadFor(currentUserId)),
-      listingCount: convs.where((c) => c.listingId.isNotEmpty).length,
-      reelCount: convs
-          .where((c) => c.reelId.isNotEmpty && c.listingId.isEmpty)
-          .length,
-      directCount: convs
-          .where((c) => c.listingId.isEmpty && c.reelId.isEmpty)
-          .length,
-      conversations: convs,
-    ));
-  }
-
-  groups.sort((a, b) =>
-      (b.latestMessageAt ?? epoch).compareTo(a.latestMessageAt ?? epoch));
-
-  return InboxGroupResult(
-    groups: groups,
-    before: conversations.length,
-    after: groups.length,
-    hiddenSelf: hiddenSelf,
-    contexts: conversations.length - hiddenSelf,
-  );
-}
 
 class MarketplaceConversationThread {
   final MarketplaceConversation conversation;
@@ -319,6 +332,10 @@ class MarketplaceConversationThread {
     required this.messages,
   });
 }
+
+// ---------------------------------------------------------------------------
+// Parse helpers
+// ---------------------------------------------------------------------------
 
 List<String> _stringList(dynamic value) =>
     value is List ? value.map((entry) => entry.toString()).toList() : const [];
