@@ -149,6 +149,19 @@ class _MarketplaceListingFormScreenState
 
   void _setCover(int index) => setState(() => _coverIndex = index);
 
+  void _moveImage(int index, int delta) {
+    final newIndex = index + delta;
+    if (newIndex < 0 || newIndex >= _images.length) return;
+    setState(() {
+      final cover = _images.isEmpty ? null : _images[_coverIndex];
+      final image = _images.removeAt(index);
+      _images.insert(newIndex, image);
+      if (cover != null) {
+        _coverIndex = _images.indexOf(cover);
+      }
+    });
+  }
+
   Future<void> _chooseCity() async {
     final cities =
         MarketplaceListingOptions.popularCities[_countryCode] ??
@@ -282,16 +295,32 @@ class _MarketplaceListingFormScreenState
       Navigator.pop(context, result);
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            _isEditing ? 'sell16.editFailed'.tr() : 'sell.submitFailed'.tr(),
-          ),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(_friendlySubmitError(error))));
     } finally {
       if (mounted) setState(() => _saving = false);
     }
+  }
+
+  String _friendlySubmitError(Object error) {
+    final raw = error.toString();
+    if (raw.contains('IMAGE_TOO_LARGE')) {
+      return 'sell16.error.imageTooLarge'.tr();
+    }
+    if (raw.contains('INVALID_TYPE') || raw.contains('INVALID_IMAGE_TYPE')) {
+      return 'sell16.error.invalidImageType'.tr();
+    }
+    if (raw.contains('IMAGES_REQUIRED')) {
+      return 'sell.photosRequired'.tr();
+    }
+    if (raw.contains('INVALID_COVER_IMAGE')) {
+      return 'sell16.error.invalidCover'.tr();
+    }
+    if (raw.contains('LISTING_ARCHIVED')) {
+      return 'sell16.error.archivedListing'.tr();
+    }
+    return _isEditing ? 'sell16.editFailed'.tr() : 'sell.submitFailed'.tr();
   }
 
   @override
@@ -321,6 +350,8 @@ class _MarketplaceListingFormScreenState
               onAdd: _pickImages,
               onRemove: _removeImage,
               onSetCover: _setCover,
+              onMoveLeft: (index) => _moveImage(index, -1),
+              onMoveRight: (index) => _moveImage(index, 1),
             ),
             const SizedBox(height: 18),
             _TextField(
@@ -486,6 +517,8 @@ class _PhotoEditor extends StatelessWidget {
   final VoidCallback onAdd;
   final ValueChanged<int> onRemove;
   final ValueChanged<int> onSetCover;
+  final ValueChanged<int> onMoveLeft;
+  final ValueChanged<int> onMoveRight;
 
   const _PhotoEditor({
     required this.images,
@@ -495,6 +528,8 @@ class _PhotoEditor extends StatelessWidget {
     required this.onAdd,
     required this.onRemove,
     required this.onSetCover,
+    required this.onMoveLeft,
+    required this.onMoveRight,
   });
 
   @override
@@ -586,10 +621,50 @@ class _PhotoEditor extends StatelessWidget {
                       Positioned(
                         top: 4,
                         right: 12,
-                        child: IconButton.filled(
-                          visualDensity: VisualDensity.compact,
-                          onPressed: enabled ? () => onRemove(index) : null,
-                          icon: const Icon(Icons.close_rounded, size: 16),
+                        child: SizedBox.square(
+                          dimension: 30,
+                          child: IconButton.filled(
+                            padding: EdgeInsets.zero,
+                            visualDensity: VisualDensity.compact,
+                            onPressed: enabled ? () => onRemove(index) : null,
+                            icon: const Icon(Icons.close_rounded, size: 16),
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        top: 4,
+                        left: 4,
+                        child: Row(
+                          children: [
+                            SizedBox.square(
+                              dimension: 28,
+                              child: IconButton.filledTonal(
+                                padding: EdgeInsets.zero,
+                                visualDensity: VisualDensity.compact,
+                                onPressed: enabled && index > 0
+                                    ? () => onMoveLeft(index)
+                                    : null,
+                                icon: const Icon(
+                                  Icons.chevron_left_rounded,
+                                  size: 16,
+                                ),
+                              ),
+                            ),
+                            SizedBox.square(
+                              dimension: 28,
+                              child: IconButton.filledTonal(
+                                padding: EdgeInsets.zero,
+                                visualDensity: VisualDensity.compact,
+                                onPressed: enabled && index < images.length - 1
+                                    ? () => onMoveRight(index)
+                                    : null,
+                                icon: const Icon(
+                                  Icons.chevron_right_rounded,
+                                  size: 16,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],

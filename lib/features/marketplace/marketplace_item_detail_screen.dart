@@ -94,8 +94,9 @@ class _MarketplaceItemDetailScreenState
       final items = await MarketplaceService.instance.fetchSimilarItems(
         _item.id,
       );
-      final safe =
-          items.where((i) => i.isPublicMarketplaceVisible).toList(growable: false);
+      final safe = items
+          .where((i) => i.isPublicMarketplaceVisible)
+          .toList(growable: false);
       if (!mounted) return;
       setState(() => _similarItems = safe);
     } catch (_) {
@@ -204,6 +205,37 @@ class _MarketplaceItemDetailScreenState
   }
 
   // ─── Contact seller ────────────────────────────────────────────────────────
+
+  Future<void> _markSold() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('sell16.markSoldTitle'.tr()),
+        content: Text('sell16.markSoldMessage'.tr()),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('common.cancel'.tr()),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text('sell16.markSold'.tr()),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    try {
+      final sold = await MarketplaceService.instance.markMyItemSold(_item.id);
+      if (!mounted) return;
+      setState(() => _item = sold);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('sell16.markSoldFailed'.tr())));
+    }
+  }
 
   Future<void> _contact() async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
@@ -567,7 +599,7 @@ class _MarketplaceItemDetailScreenState
                   const SizedBox(height: 16),
                 ],
 
-                SizedBox(height: MediaQuery.of(context).padding.bottom + 72),
+                SizedBox(height: MediaQuery.of(context).padding.bottom + 128),
               ],
             ),
           ),
@@ -596,22 +628,24 @@ class _MarketplaceItemDetailScreenState
         border: Border(top: BorderSide(color: border)),
       ),
       child: isOwner
-          ? Row(
+          ? Wrap(
+              spacing: 8,
+              runSpacing: 8,
               children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: _item.canEdit ? _edit : null,
-                    icon: const Icon(Icons.edit_outlined),
-                    label: Text('sell16.edit'.tr()),
-                  ),
+                _OwnerActionButton(
+                  onPressed: _item.canEdit ? _edit : null,
+                  icon: Icons.edit_outlined,
+                  label: 'sell16.edit'.tr(),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: _item.isArchived ? null : _archive,
-                    icon: const Icon(Icons.archive_outlined),
-                    label: Text('sell16.archive'.tr()),
-                  ),
+                _OwnerActionButton(
+                  onPressed: _item.canMarkSold ? _markSold : null,
+                  icon: Icons.check_circle_outline_rounded,
+                  label: 'sell16.markSold'.tr(),
+                ),
+                _OwnerActionButton(
+                  onPressed: _item.isArchived || _item.isSold ? null : _archive,
+                  icon: Icons.archive_outlined,
+                  label: 'sell16.archive'.tr(),
                 ),
               ],
             )
@@ -676,6 +710,7 @@ class _MarketplaceItemDetailScreenState
 
   Color _statusColor(String status) => switch (status) {
     'approved' || 'active' || 'published' => AppColors.green,
+    'sold' => AppColors.green,
     'rejected' => AppColors.red,
     'hidden' || 'archived' => AppColors.gray,
     _ => AppColors.orange,
@@ -683,6 +718,28 @@ class _MarketplaceItemDetailScreenState
 }
 
 // ─── Image gallery (PageView + counter + dots) ────────────────────────────────
+
+class _OwnerActionButton extends StatelessWidget {
+  final VoidCallback? onPressed;
+  final IconData icon;
+  final String label;
+
+  const _OwnerActionButton({
+    required this.onPressed,
+    required this.icon,
+    required this.label,
+  });
+
+  @override
+  Widget build(BuildContext context) => ConstrainedBox(
+    constraints: const BoxConstraints(minWidth: 116),
+    child: OutlinedButton.icon(
+      onPressed: onPressed,
+      icon: Icon(icon),
+      label: Text(label, overflow: TextOverflow.ellipsis),
+    ),
+  );
+}
 
 class _ImageGallery extends StatelessWidget {
   final List<String> urls;

@@ -38,6 +38,7 @@ class MarketplaceItem {
   final DateTime? approvedAt;
   final DateTime? rejectedAt;
   final DateTime? archivedAt;
+  final DateTime? soldAt;
   final String rejectionReason;
   final String status;
 
@@ -87,6 +88,7 @@ class MarketplaceItem {
     this.approvedAt,
     this.rejectedAt,
     this.archivedAt,
+    this.soldAt,
     this.rejectionReason = '',
     this.status = '',
   }) : currencyCode = currencyCode ?? currency ?? 'EUR',
@@ -171,6 +173,7 @@ class MarketplaceItem {
       approvedAt: _toDate(map['approvedAt'] ?? map['approved_at']),
       rejectedAt: _toDate(map['rejectedAt'] ?? map['rejected_at']),
       archivedAt: _toDate(map['archivedAt'] ?? map['archived_at']),
+      soldAt: _toDate(map['soldAt'] ?? map['sold_at']),
       rejectionReason: (map['rejectionReason'] ?? '').toString(),
       status: rawStatus.isNotEmpty
           ? rawStatus.toLowerCase()
@@ -230,6 +233,7 @@ class MarketplaceItem {
     'approvedAt': approvedAt?.toIso8601String(),
     'rejectedAt': rejectedAt?.toIso8601String(),
     'archivedAt': archivedAt?.toIso8601String(),
+    'soldAt': soldAt?.toIso8601String(),
     'rejectionReason': rejectionReason,
   };
 
@@ -243,7 +247,10 @@ class MarketplaceItem {
       coverImage.isNotEmpty ? coverImage : (images.isEmpty ? '' : images.first);
   bool get hasImage => mainImage.isNotEmpty;
   bool get isArchived => status == 'archived';
-  bool get canEdit => !{'archived', 'deleted', 'hidden'}.contains(status);
+  bool get isSold => status == 'sold';
+  bool get canEdit =>
+      !{'archived', 'deleted', 'hidden', 'sold'}.contains(status);
+  bool get canMarkSold => {'approved', 'active', 'published'}.contains(status);
   bool get isPublicMarketplaceVisible {
     const publicStatuses = {'active', 'approved', 'published'};
     const blockedStatuses = {
@@ -254,6 +261,7 @@ class MarketplaceItem {
       'pending',
       'rejected',
       'review',
+      'sold',
       'under_review',
     };
     return isActive &&

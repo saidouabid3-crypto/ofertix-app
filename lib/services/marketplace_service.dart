@@ -437,6 +437,23 @@ class MarketplaceService {
     return item;
   }
 
+  Future<MarketplaceItem> markMyItemSold(String itemId) async {
+    final token = await _freshToken();
+    final response = await _api.post(
+      ApiEndpoints.marketplaceMyItemMarkSold(itemId),
+      authorized: true,
+      extraHeaders: {'Authorization': 'Bearer $token'},
+    );
+    final item = MarketplaceItem.fromMap(
+      Map<String, dynamic>.from(response as Map),
+      response['id']?.toString() ?? itemId,
+    );
+    if (kDebugMode) {
+      debugPrint('[Sell16A] item marked sold id=${item.id}');
+    }
+    return item;
+  }
+
   Future<void> favoriteItem(String itemId, String userId) async {
     await _api.post(
       ApiEndpoints.marketplaceItemFavorite(itemId),

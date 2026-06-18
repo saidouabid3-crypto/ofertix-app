@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ofertix/core/config/api_endpoints.dart';
 import 'package:ofertix/features/marketplace/marketplace_listing_options.dart';
 import 'package:ofertix/models/marketplace_item.dart';
 
@@ -71,5 +72,39 @@ void main() {
       'both',
     ]);
     expect(MarketplaceListingOptions.popularCities['ES'], contains('Madrid'));
+  });
+
+  test('sold listings are not editable or public', () {
+    final item = MarketplaceItem.fromMap({
+      'sellerId': 'owner-1',
+      'status': 'sold',
+      'title': 'Camera',
+      'description': 'Working camera',
+      'price': 40,
+      'currencyCode': 'EUR',
+      'countryCode': 'ES',
+      'city': 'Madrid',
+      'categoryKey': 'electronics',
+      'conditionKey': 'good',
+      'deliveryMethodKey': 'pickup',
+      'images': ['https://cdn.example.com/a.jpg'],
+      'coverImage': 'https://cdn.example.com/a.jpg',
+      'isActive': false,
+      'visibleToUsers': false,
+      'soldAt': '2026-06-18T10:00:00Z',
+    }, 'item-1');
+
+    expect(item.isSold, isTrue);
+    expect(item.canEdit, isFalse);
+    expect(item.canMarkSold, isFalse);
+    expect(item.isPublicMarketplaceVisible, isFalse);
+    expect(item.soldAt, isNotNull);
+  });
+
+  test('mark sold endpoint uses owner scoped my-items route', () {
+    expect(
+      ApiEndpoints.marketplaceMyItemMarkSold('item-1'),
+      '/marketplace/my-items/item-1/mark-sold',
+    );
   });
 }

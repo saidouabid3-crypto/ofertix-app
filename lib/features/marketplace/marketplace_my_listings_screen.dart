@@ -28,6 +28,7 @@ class _MarketplaceMyListingsScreenState
     'rejected',
     'hidden',
     'archived',
+    'sold',
   ];
 
   @override
@@ -41,7 +42,11 @@ class _MarketplaceMyListingsScreenState
 
   Future<void> _reload() async {
     final next = _load();
-    if (mounted) setState(() { _future = next; });
+    if (mounted) {
+      setState(() {
+        _future = next;
+      });
+    }
     try {
       await next;
     } catch (_) {}
@@ -84,6 +89,36 @@ class _MarketplaceMyListingsScreenState
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('sell16.archiveFailed'.tr())));
+    }
+  }
+
+  Future<void> _markSold(MarketplaceItem item) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('sell16.markSoldTitle'.tr()),
+        content: Text('sell16.markSoldMessage'.tr()),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('common.cancel'.tr()),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text('sell16.markSold'.tr()),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      await MarketplaceService.instance.markMyItemSold(item.id);
+      if (mounted) await _reload();
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('sell16.markSoldFailed'.tr())));
     }
   }
 
@@ -178,7 +213,11 @@ class _MarketplaceMyListingsScreenState
                         onEdit: items[index].canEdit
                             ? () => _edit(items[index])
                             : null,
-                        onArchive: items[index].isArchived
+                        onMarkSold: items[index].canMarkSold
+                            ? () => _markSold(items[index])
+                            : null,
+                        onArchive:
+                            items[index].isArchived || items[index].isSold
                             ? null
                             : () => _archive(items[index]),
                       ),
@@ -215,12 +254,14 @@ class _MyListingCard extends StatelessWidget {
   final MarketplaceItem item;
   final VoidCallback onOpen;
   final VoidCallback? onEdit;
+  final VoidCallback? onMarkSold;
   final VoidCallback? onArchive;
 
   const _MyListingCard({
     required this.item,
     required this.onOpen,
     required this.onEdit,
+    required this.onMarkSold,
     required this.onArchive,
   });
 
@@ -290,22 +331,24 @@ class _MyListingCard extends StatelessWidget {
                 ],
               ),
               const Divider(height: 20),
-              Row(
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
                 children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: onEdit,
-                      icon: const Icon(Icons.edit_outlined),
-                      label: Text('sell16.edit'.tr()),
-                    ),
+                  _ListingActionButton(
+                    onPressed: onEdit,
+                    icon: Icons.edit_outlined,
+                    label: 'sell16.edit'.tr(),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: onArchive,
-                      icon: const Icon(Icons.archive_outlined),
-                      label: Text('sell16.archive'.tr()),
-                    ),
+                  _ListingActionButton(
+                    onPressed: onMarkSold,
+                    icon: Icons.check_circle_outline_rounded,
+                    label: 'sell16.markSold'.tr(),
+                  ),
+                  _ListingActionButton(
+                    onPressed: onArchive,
+                    icon: Icons.archive_outlined,
+                    label: 'sell16.archive'.tr(),
                   ),
                 ],
               ),
@@ -327,6 +370,7 @@ class _StatusChip extends StatelessWidget {
     final normalized = status.toLowerCase();
     final color = switch (normalized) {
       'approved' || 'active' || 'published' => AppColors.green,
+      'sold' => AppColors.green,
       'rejected' => AppColors.red,
       'hidden' || 'archived' => AppColors.gray,
       _ => AppColors.orange,
@@ -348,6 +392,28 @@ class _StatusChip extends StatelessWidget {
       ),
     );
   }
+}
+
+class _ListingActionButton extends StatelessWidget {
+  final VoidCallback? onPressed;
+  final IconData icon;
+  final String label;
+
+  const _ListingActionButton({
+    required this.onPressed,
+    required this.icon,
+    required this.label,
+  });
+
+  @override
+  Widget build(BuildContext context) => ConstrainedBox(
+    constraints: const BoxConstraints(minWidth: 128),
+    child: OutlinedButton.icon(
+      onPressed: onPressed,
+      icon: Icon(icon),
+      label: Text(label, overflow: TextOverflow.ellipsis),
+    ),
+  );
 }
 
 class _Placeholder extends StatelessWidget {
