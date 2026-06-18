@@ -167,11 +167,6 @@ class _ChatScreenState extends State<ChatScreen> {
       ),
       body: Column(
         children: [
-          if (widget.sourceReelTitle.isNotEmpty)
-            _SourceReelCard(
-              title: widget.sourceReelTitle,
-              thumbnailUrl: widget.sourceReelThumbnailUrl,
-            ),
           Expanded(
             child: loading
                 ? Center(child: CircularProgressIndicator(color: Colors.white))
@@ -243,55 +238,6 @@ class _ChatScreenState extends State<ChatScreen> {
                     ),
                   ),
                 ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SourceReelCard extends StatelessWidget {
-  _SourceReelCard({required this.title, required this.thumbnailUrl});
-
-  final String title;
-  final String thumbnailUrl;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: EdgeInsets.fromLTRB(12, 6, 12, 8),
-      padding: EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.07),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white10),
-      ),
-      child: Row(
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: SizedBox(
-              width: 48,
-              height: 56,
-              child: thumbnailUrl.startsWith('http')
-                  ? CachedNetworkImage(
-                      imageUrl: thumbnailUrl,
-                      fit: BoxFit.cover,
-                    )
-                  : Container(color: Colors.white10),
-            ),
-          ),
-          SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              title,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w900,
               ),
             ),
           ),

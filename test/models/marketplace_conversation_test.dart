@@ -153,6 +153,30 @@ void main() {
     expect(result.conversations.single.id, 'conv_buyer_seller');
   });
 
+  // conv_v1_* is rank 2 and must beat conv_{a}_{b} (rank 1) regardless of recency
+  test('dedupeInboxConversations conv_v1_* preferred over old underscore canonical', () {
+    const v1Id = 'conv_v1_abc123def456abc123def456abc123def456abc123def456abc123def456ab';
+    final v1Conv = MarketplaceConversation.fromMap({
+      'id': v1Id,
+      'participants': ['buyer', 'seller'],
+      'seller_id': 'seller',
+      'buyer_id': 'buyer',
+      'last_message_at': '2024-01-01T00:00:00Z', // older
+    });
+    final oldCanonical = MarketplaceConversation.fromMap({
+      'id': 'conv_buyer_seller',
+      'participants': ['buyer', 'seller'],
+      'seller_id': 'seller',
+      'buyer_id': 'buyer',
+      'last_message_at': '2024-01-05T00:00:00Z', // newer but rank 1
+    });
+
+    final result = dedupeInboxConversations([v1Conv, oldCanonical], 'buyer');
+
+    expect(result.after, 1);
+    expect(result.conversations.single.id, v1Id);
+  });
+
   test('dedupeInboxConversations two different sellers produce two rows', () {
     final fromSeller1 = MarketplaceConversation.fromMap({
       'id': 'conv_buyer_seller1',

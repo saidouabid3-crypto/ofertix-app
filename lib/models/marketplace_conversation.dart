@@ -279,18 +279,17 @@ InboxDedupeResult dedupeInboxConversations(
     if (!seenIds.add(conv.id)) continue;
 
     final pairKey = _sortedPairKey(currentUserId, otherId);
-    final canonicalId = 'conv_$pairKey';
-    final isCanonical = conv.id == canonicalId;
+    final rank = _convRank(conv.id, pairKey);
 
     if (!pairBest.containsKey(pairKey)) {
       pairBest[pairKey] = conv;
     } else {
       final existing = pairBest[pairKey]!;
-      final existingIsCanonical = existing.id == canonicalId;
-      if (isCanonical && !existingIsCanonical) {
+      final existingRank = _convRank(existing.id, pairKey);
+      if (rank > existingRank) {
         pairBest[pairKey] = conv;
-      } else if (!isCanonical && !existingIsCanonical) {
-        // Both legacy — keep the more recently active
+      } else if (rank == existingRank) {
+        // Same rank — keep the more recently active
         final newAt = conv.lastMessageAt ?? DateTime.fromMillisecondsSinceEpoch(0);
         final existAt =
             existing.lastMessageAt ?? DateTime.fromMillisecondsSinceEpoch(0);
@@ -317,6 +316,16 @@ InboxDedupeResult dedupeInboxConversations(
 String _sortedPairKey(String a, String b) {
   final parts = [a, b]..sort();
   return '${parts[0]}_${parts[1]}';
+}
+
+/// Canonical rank for a conversation ID relative to its expected pair key.
+/// 2 = new SHA-256 canonical (conv_v1_*)
+/// 1 = old underscore canonical (conv_{a}_{b}, exact match, no suffix)
+/// 0 = legacy per-listing / per-reel document
+int _convRank(String convId, String pairKey) {
+  if (convId.startsWith('conv_v1_')) return 2;
+  if (convId == 'conv_$pairKey') return 1;
+  return 0;
 }
 
 // ---------------------------------------------------------------------------
