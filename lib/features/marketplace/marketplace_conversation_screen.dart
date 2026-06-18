@@ -14,7 +14,8 @@ class MarketplaceConversationScreen extends StatefulWidget {
   final MarketplaceConversation conversation;
 
   /// Non-null when opened directly from a listing detail page.
-  /// Shows a compact listing banner at the top of the chat.
+  /// Kept only so listing navigation can resolve the already-loaded item.
+  /// Context is shown inline on the relevant message, not pinned to the chat.
   final MarketplaceItem? initialItem;
 
   const MarketplaceConversationScreen({
@@ -152,8 +153,8 @@ class _MarketplaceConversationScreenState
                     );
                     if (parsed == null || parsed <= 0) {
                       setDialogState(
-                        () => errorText =
-                            'mkt.messages.invalidOfferAmount'.tr(),
+                        () =>
+                            errorText = 'mkt.messages.invalidOfferAmount'.tr(),
                       );
                       return;
                     }
@@ -186,17 +187,17 @@ class _MarketplaceConversationScreenState
         _messages = [..._messages, offer];
         _sending = false;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('mkt.messages.offerSent'.tr())),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('mkt.messages.offerSent'.tr())));
       WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToEnd());
     } catch (e) {
       debugPrint('[16F-D] offer_failed: $e');
       if (!mounted) return;
       setState(() => _sending = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('mkt.messages.offerFailed'.tr())),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('mkt.messages.offerFailed'.tr())));
     }
   }
 
@@ -230,8 +231,7 @@ class _MarketplaceConversationScreenState
                             : Icons.star_border_rounded,
                         color: AppColors.orange,
                       ),
-                      onPressed: () =>
-                          setDialogState(() => rating = starValue),
+                      onPressed: () => setDialogState(() => rating = starValue),
                     );
                   }),
                 ),
@@ -281,9 +281,9 @@ class _MarketplaceConversationScreenState
       );
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('mkt.profile.reviewFailed'.tr())),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('mkt.profile.reviewFailed'.tr())));
     } finally {
       commentController.dispose();
     }
@@ -375,15 +375,6 @@ class _MarketplaceConversationScreenState
       ),
       body: Column(
         children: [
-          // Compact listing banner — only when opened from a listing detail page
-          // or when this is an active marketplace conversation with a known listing.
-          // Per spec: not a giant card pinned permanently at top for all contexts.
-          if (_shouldShowListingBanner)
-            _ListingBanner(
-              conversation: _conversation,
-              isDark: isDark,
-              onTap: _openListing,
-            ),
           Expanded(child: _buildMessages(isDark)),
           _Composer(
             controller: _controller,
@@ -396,15 +387,6 @@ class _MarketplaceConversationScreenState
       ),
     );
   }
-
-  /// Show the listing banner when:
-  ///   a) opened directly from a listing detail (initialItem provided), OR
-  ///   b) this conversation was created from a marketplace listing (listingId set)
-  ///      and it's still showing a real title (not empty/unavailable).
-  bool get _shouldShowListingBanner =>
-      widget.initialItem != null ||
-      (_conversation.listingId.isNotEmpty &&
-          _conversation.listingTitle.isNotEmpty);
 
   Widget _buildMessages(bool isDark) {
     if (_loading) {
@@ -430,18 +412,53 @@ class _MarketplaceConversationScreenState
       onRefresh: _load,
       child: ListView.builder(
         controller: _scrollController,
-        padding: const EdgeInsets.fromLTRB(14, 16, 14, 20),
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 20),
         itemCount: _messages.length,
-        itemBuilder: (_, index) => _MessageBubble(
-          message: _messages[index],
-          isMine: _messages[index].senderId == _uid,
-          isDark: isDark,
-          onContextTap: _messages[index].context.isListing
-              ? _openListing
-              : null,
-        ),
+        itemBuilder: (_, index) {
+          final message = _messages[index];
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (_showsDateSeparator(index))
+                _DateSeparator(
+                  label: _dateSeparatorLabel(message.createdAt),
+                  isDark: isDark,
+                ),
+              _MessageBubble(
+                message: message,
+                isMine: message.senderId == _uid,
+                isDark: isDark,
+                onContextTap: message.context.isListing ? _openListing : null,
+              ),
+            ],
+          );
+        },
       ),
     );
+  }
+
+  bool _showsDateSeparator(int index) {
+    final current = _messages[index].createdAt?.toLocal();
+    if (current == null) return index == 0;
+    if (index == 0) return true;
+    final previous = _messages[index - 1].createdAt?.toLocal();
+    if (previous == null) return true;
+    return current.year != previous.year ||
+        current.month != previous.month ||
+        current.day != previous.day;
+  }
+
+  String _dateSeparatorLabel(DateTime? date) {
+    if (date == null) return '';
+    final local = date.toLocal();
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final messageDay = DateTime(local.year, local.month, local.day);
+    if (messageDay == today) return 'mkt.messages.today'.tr();
+    if (messageDay == today.subtract(const Duration(days: 1))) {
+      return 'mkt.messages.yesterday'.tr();
+    }
+    return DateFormat.yMMMd(context.locale.languageCode).format(local);
   }
 }
 
@@ -523,104 +540,41 @@ class _ParticipantHeader extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Compact listing banner — shown only when conversation has a known listing
+// Message bubble with optional inline context card
 // ---------------------------------------------------------------------------
 
-class _ListingBanner extends StatelessWidget {
-  final MarketplaceConversation conversation;
+class _DateSeparator extends StatelessWidget {
+  final String label;
   final bool isDark;
-  final VoidCallback onTap;
 
-  const _ListingBanner({
-    required this.conversation,
-    required this.isDark,
-    required this.onTap,
-  });
+  const _DateSeparator({required this.label, required this.isDark});
 
   @override
   Widget build(BuildContext context) {
-    final text = isDark ? AppColors.text : AppColors.lightText;
-    final muted = isDark ? AppColors.gray : AppColors.lightGray;
-    return InkWell(
-      onTap: onTap,
+    if (label.isEmpty) return const SizedBox.shrink();
+    return Center(
       child: Container(
-        margin: const EdgeInsets.fromLTRB(12, 4, 12, 6),
-        padding: const EdgeInsets.all(10),
+        margin: const EdgeInsets.symmetric(vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
         decoration: BoxDecoration(
-          color: isDark ? AppColors.card : AppColors.lightCard,
-          borderRadius: BorderRadius.circular(14),
+          color: isDark ? AppColors.card2 : AppColors.lightCard,
+          borderRadius: BorderRadius.circular(999),
           border: Border.all(
-            color: isDark ? Colors.white12 : AppColors.lightBorder,
+            color: isDark ? Colors.white10 : AppColors.lightBorder,
           ),
         ),
-        child: Row(
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(9),
-              child: SizedBox(
-                width: 44,
-                height: 44,
-                child: conversation.listingImage.startsWith('http')
-                    ? CachedNetworkImage(
-                        imageUrl: conversation.listingImage,
-                        fit: BoxFit.cover,
-                        errorWidget: (_, __, ___) => const _ListingIcon(),
-                      )
-                    : const _ListingIcon(),
-              ),
-            ),
-            const SizedBox(width: 9),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    conversation.listingTitle,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: text,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 13,
-                    ),
-                  ),
-                  if (conversation.listingPrice > 0)
-                    Text(
-                      '${conversation.listingPrice.toStringAsFixed(conversation.listingPrice % 1 == 0 ? 0 : 2)} ${conversation.listingCurrency}',
-                      style: const TextStyle(
-                        color: AppColors.orange,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 12,
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            Icon(
-              Icons.open_in_new_rounded,
-              color: muted,
-              size: 16,
-            ),
-          ],
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isDark ? AppColors.gray : AppColors.lightGray,
+            fontSize: 11,
+            fontWeight: FontWeight.w800,
+          ),
         ),
       ),
     );
   }
 }
-
-class _ListingIcon extends StatelessWidget {
-  const _ListingIcon();
-
-  @override
-  Widget build(BuildContext context) => Container(
-    color: AppColors.orange.withValues(alpha: .1),
-    child: const Icon(Icons.shopping_bag_outlined, color: AppColors.orange, size: 20),
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Message bubble with optional inline context card
-// ---------------------------------------------------------------------------
 
 class _MessageBubble extends StatelessWidget {
   final MarketplaceMessage message;
@@ -641,8 +595,9 @@ class _MessageBubble extends StatelessWidget {
     final otherText = isDark ? AppColors.text : AppColors.lightText;
     final time = message.createdAt == null
         ? ''
-        : DateFormat.Hm(context.locale.languageCode)
-            .format(message.createdAt!.toLocal());
+        : DateFormat.Hm(
+            context.locale.languageCode,
+          ).format(message.createdAt!.toLocal());
 
     return Align(
       alignment: isMine
@@ -653,14 +608,14 @@ class _MessageBubble extends StatelessWidget {
           maxWidth: MediaQuery.sizeOf(context).width * .78,
         ),
         child: Column(
-          crossAxisAlignment:
-              isMine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+          crossAxisAlignment: isMine
+              ? CrossAxisAlignment.end
+              : CrossAxisAlignment.start,
           children: [
             // Inline context card sits above the message it belongs to
             if (message.context.isPresent)
               _MessageContextCard(
                 context: message.context,
-                isMine: isMine,
                 isDark: isDark,
                 onTap: onContextTap,
               ),
@@ -676,9 +631,7 @@ class _MessageBubble extends StatelessWidget {
                     : (isMine ? AppColors.orange : otherBubble),
                 borderRadius: BorderRadius.circular(17),
                 border: message.isOffer && !isMine
-                    ? Border.all(
-                        color: AppColors.orange.withValues(alpha: .45),
-                      )
+                    ? Border.all(color: AppColors.orange.withValues(alpha: .45))
                     : null,
               ),
               child: Column(
@@ -750,13 +703,11 @@ class _MessageBubble extends StatelessWidget {
 
 class _MessageContextCard extends StatelessWidget {
   final MessageContext context;
-  final bool isMine;
   final bool isDark;
   final VoidCallback? onTap;
 
   const _MessageContextCard({
     required this.context,
-    required this.isMine,
     required this.isDark,
     this.onTap,
   });
@@ -780,7 +731,7 @@ class _MessageContextCard extends StatelessWidget {
 
     final titleText = context.contextTitle.isNotEmpty
         ? context.contextTitle
-        : sourceLabel;
+        : 'mkt.messages.contentUnavailable'.tr();
     final thumbUrl = context.contextThumbnailUrl;
     final price = context.contextPrice;
     final currency = context.contextCurrency;
@@ -808,10 +759,15 @@ class _MessageContextCard extends StatelessWidget {
                     ? CachedNetworkImage(
                         imageUrl: thumbUrl,
                         fit: BoxFit.cover,
-                        errorWidget: (_, __, ___) =>
-                            _ContextIconPlaceholder(icon: sourceIcon, color: sourceColor),
+                        errorWidget: (_, __, ___) => _ContextIconPlaceholder(
+                          icon: sourceIcon,
+                          color: sourceColor,
+                        ),
                       )
-                    : _ContextIconPlaceholder(icon: sourceIcon, color: sourceColor),
+                    : _ContextIconPlaceholder(
+                        icon: sourceIcon,
+                        color: sourceColor,
+                      ),
               ),
             ),
             const SizedBox(width: 8),
@@ -821,7 +777,10 @@ class _MessageContextCard extends StatelessWidget {
                 children: [
                   // Source label chip
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 5,
+                      vertical: 1,
+                    ),
                     decoration: BoxDecoration(
                       color: sourceColor.withValues(alpha: .12),
                       borderRadius: BorderRadius.circular(4),

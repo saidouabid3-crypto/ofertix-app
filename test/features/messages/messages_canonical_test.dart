@@ -15,6 +15,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:ofertix/features/marketplace/marketplace_messages_screen.dart';
 import 'package:ofertix/models/marketplace_conversation.dart';
 
 // ---------------------------------------------------------------------------
@@ -30,6 +31,8 @@ MarketplaceConversation _conv({
   String listingId = '',
   String reelId = '',
   String status = 'active',
+  String? sellerId,
+  String? buyerId,
 }) {
   final now = lastMessageAt ?? DateTime(2024, 1, 1);
   return MarketplaceConversation(
@@ -50,8 +53,8 @@ MarketplaceConversation _conv({
     listingPrice: listingId.isNotEmpty ? 10.0 : 0.0,
     listingCurrency: 'EUR',
     listingCity: '',
-    sellerId: participants.length > 1 ? participants[1] : '',
-    buyerId: participants[0],
+    sellerId: sellerId ?? (participants.length > 1 ? participants[1] : ''),
+    buyerId: buyerId ?? participants[0],
     status: status,
     reelId: reelId,
     reelTitle: reelId.isNotEmpty ? 'Reel $reelId' : '',
@@ -68,7 +71,9 @@ void main() {
     const uid = 'userA';
 
     test('single conversation returned unchanged', () {
-      final convs = [_conv(id: 'conv_userA_userB', participants: ['userA', 'userB'])];
+      final convs = [
+        _conv(id: 'conv_userA_userB', participants: ['userA', 'userB']),
+      ];
       final result = dedupeInboxConversations(convs, uid);
       expect(result.conversations.length, 1);
       expect(result.conversations.first.id, 'conv_userA_userB');
@@ -123,7 +128,9 @@ void main() {
     });
 
     test('self-conversation is hidden', () {
-      final convs = [_conv(id: 'conv_userA_userA', participants: ['userA', 'userA'])];
+      final convs = [
+        _conv(id: 'conv_userA_userA', participants: ['userA', 'userA']),
+      ];
       final result = dedupeInboxConversations(convs, uid);
       expect(result.after, 0);
       expect(result.hiddenSelf, 1);
@@ -191,10 +198,9 @@ void main() {
       // If this compiles, it means the class is gone.
       // We verify by confirming dedupeInboxConversations returns MarketplaceConversation,
       // not InboxParticipantGroup.
-      final result = dedupeInboxConversations(
-        [_conv(id: 'conv_userA_userB', participants: ['userA', 'userB'])],
-        'userA',
-      );
+      final result = dedupeInboxConversations([
+        _conv(id: 'conv_userA_userB', participants: ['userA', 'userB']),
+      ], 'userA');
       expect(result.conversations.first, isA<MarketplaceConversation>());
     });
 
@@ -203,6 +209,129 @@ void main() {
       expect(result, isA<InboxDedupeResult>());
       expect(result.conversations, isA<List<MarketplaceConversation>>());
     });
+  });
+
+  // -------------------------------------------------------------------------
+  // 2b. Premium inbox filters/search preserve canonical rows
+  // -------------------------------------------------------------------------
+
+  group('filterInboxConversations', () {
+    const uid = 'buyer';
+
+    test('all filter keeps one canonical row after dedupe', () {
+      final deduped = dedupeInboxConversations([
+        _conv(
+          id: 'conv_buyer_seller_marketplace_l1',
+          participants: ['buyer', 'seller'],
+          listingId: 'l1',
+          lastMessageAt: DateTime(2024, 1, 2),
+        ),
+        _conv(
+          id: 'conv_buyer_seller_marketplace_l2',
+          participants: ['buyer', 'seller'],
+          listingId: 'l2',
+          lastMessageAt: DateTime(2024, 1, 1),
+        ),
+      ], uid).conversations;
+
+      final filtered = filterInboxConversations(
+        conversations: deduped,
+        currentUserId: uid,
+        filter: MessagesInboxFilter.all,
+        query: '',
+      );
+
+      expect(filtered.length, 1);
+      expect(filtered.first.otherUserId(uid), 'seller');
+    });
+
+    test('buying and selling filters use real participant roles', () {
+      final conversations = [
+        _conv(
+          id: 'conv_buyer_seller',
+          participants: ['buyer', 'seller'],
+          listingId: 'listing_a',
+          buyerId: 'buyer',
+          sellerId: 'seller',
+        ),
+        _conv(
+          id: 'conv_buyer_customer',
+          participants: ['buyer', 'customer'],
+          listingId: 'listing_b',
+          buyerId: 'customer',
+          sellerId: 'buyer',
+        ),
+      ];
+
+      final buying = filterInboxConversations(
+        conversations: conversations,
+        currentUserId: uid,
+        filter: MessagesInboxFilter.buying,
+        query: '',
+      );
+      final selling = filterInboxConversations(
+        conversations: conversations,
+        currentUserId: uid,
+        filter: MessagesInboxFilter.selling,
+        query: '',
+      );
+
+      expect(buying.map((c) => c.id), ['conv_buyer_seller']);
+      expect(selling.map((c) => c.id), ['conv_buyer_customer']);
+    });
+
+    test(
+      'unread filter only returns conversations unread for current user',
+      () {
+        final filtered = filterInboxConversations(
+          conversations: [
+            _conv(
+              id: 'conv_buyer_seller',
+              participants: ['buyer', 'seller'],
+              unreadCounts: {'buyer': 2},
+            ),
+            _conv(
+              id: 'conv_buyer_customer',
+              participants: ['buyer', 'customer'],
+              unreadCounts: {'buyer': 0},
+            ),
+          ],
+          currentUserId: uid,
+          filter: MessagesInboxFilter.unread,
+          query: '',
+        );
+
+        expect(filtered.map((c) => c.id), ['conv_buyer_seller']);
+      },
+    );
+
+    test(
+      'search matches name, message, and listing context without grouping',
+      () {
+        final conversations = [
+          _conv(
+            id: 'conv_buyer_seller',
+            participants: ['buyer', 'seller'],
+            lastMessage: 'Is the camera available?',
+            listingId: 'camera',
+          ),
+          _conv(
+            id: 'conv_buyer_customer',
+            participants: ['buyer', 'customer'],
+            lastMessage: 'Thanks',
+          ),
+        ];
+
+        final filtered = filterInboxConversations(
+          conversations: conversations,
+          currentUserId: uid,
+          filter: MessagesInboxFilter.all,
+          query: 'camera',
+        );
+
+        expect(filtered.map((c) => c.id), ['conv_buyer_seller']);
+      },
+    );
   });
 
   // -------------------------------------------------------------------------
@@ -403,10 +532,7 @@ void main() {
           home: Scaffold(
             body: _TestConversationTile(
               isDark: false,
-              conversation: _conv(
-                id: 'conv_a_b',
-                participants: ['a', 'b'],
-              ),
+              conversation: _conv(id: 'conv_a_b', participants: ['a', 'b']),
               currentUserId: 'a',
             ),
           ),
@@ -418,7 +544,9 @@ void main() {
       expect(find.byKey(const Key('conversation_picker_sheet')), findsNothing);
     });
 
-    testWidgets('RTL Arabic renders inbox tile without overflow', (tester) async {
+    testWidgets('RTL Arabic renders inbox tile without overflow', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Directionality(
@@ -551,7 +679,11 @@ void main() {
           home: Directionality(
             textDirection: TextDirection.rtl,
             child: Scaffold(
-              body: _TestContextCard(context: ctx, isMine: false, isDark: false),
+              body: _TestContextCard(
+                context: ctx,
+                isMine: false,
+                isDark: false,
+              ),
             ),
           ),
         ),
@@ -613,7 +745,11 @@ class _TestContextCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (context.contextTitle.isNotEmpty)
-            Text(context.contextTitle, maxLines: 1, overflow: TextOverflow.ellipsis),
+            Text(
+              context.contextTitle,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
           if (context.isListing && context.contextPrice != null)
             Text(
               '${context.contextPrice!.toStringAsFixed(0)} ${context.contextCurrency}',
