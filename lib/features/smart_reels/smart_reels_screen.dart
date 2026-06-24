@@ -826,49 +826,66 @@ class _SmartReelPageState extends State<_SmartReelPage> {
               top: 88,
               child: _DiscountBadge(label: reel.discountLabel),
             ),
-          // Action rail
-          Positioned(
-            right: 12,
-            bottom: 234,
-            child: _RightActions(
-              reel: reel,
-              onLike: widget.onLike,
-              onComment: widget.onComment,
-              onSave: widget.onSave,
-              onShare: widget.onShare,
-              onMenu: widget.onMenu,
-            ),
-          ),
-          // Creator / title / price info
-          Positioned(
-            left: 16,
-            right: 84,
-            bottom: 234,
-            child: _ReelInfo(
-              reel: reel,
-              onFollow: widget.onFollow,
-              onOpenProfile: widget.onOpenProfile,
-            ),
-          ),
-          // Full-width CTA above bottom navigation
-          Positioned(
-            left: 12,
-            right: 12,
-            bottom: 182,
-            child: _ReelCtaButton(reel: reel, onBuy: widget.onBuy),
-          ),
-          // Progress bar
-          Positioned(
-            left: 16,
-            right: 16,
-            bottom: 68,
-            child: _ProgressBar(controller: controller),
-          ),
           // Mute toggle
           Positioned(
             right: 16,
             top: 92,
             child: _MuteBadge(muted: muted, onTap: toggleMute),
+          ),
+          // Bottom zone — layout-driven, no hardcoded offsets
+          // SafeArea(top:false) handles system-nav insets.
+          // SizedBox(80) clears the floating pill nav (68px tall + 12px padding).
+          Positioned.fill(
+            child: SafeArea(
+              top: false,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Info row: creator/title/price on left, action rail on right
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.only(left: 16),
+                          child: _ReelInfo(
+                            reel: reel,
+                            onFollow: widget.onFollow,
+                            onOpenProfile: widget.onOpenProfile,
+                          ),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.only(right: 12),
+                        child: _RightActions(
+                          reel: reel,
+                          onLike: widget.onLike,
+                          onComment: widget.onComment,
+                          onSave: widget.onSave,
+                          onShare: widget.onShare,
+                          onMenu: widget.onMenu,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  // Full-width CTA
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: _ReelCtaButton(reel: reel, onBuy: widget.onBuy),
+                  ),
+                  const SizedBox(height: 6),
+                  // Progress bar
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: _ProgressBar(controller: controller),
+                  ),
+                  // Pill nav clearance: 68px height + 12px bottom padding = 80px
+                  const SizedBox(height: 80),
+                ],
+              ),
+            ),
           ),
         ],
       ),
