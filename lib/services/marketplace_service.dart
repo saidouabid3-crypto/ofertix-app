@@ -413,6 +413,18 @@ class MarketplaceService {
     return item;
   }
 
+  Future<void> deleteMyItem(String itemId) async {
+    final token = await _freshToken();
+    await _api.post(
+      ApiEndpoints.marketplaceMyItemDelete(itemId),
+      authorized: true,
+      extraHeaders: {'Authorization': 'Bearer $token'},
+    );
+    if (kDebugMode) {
+      debugPrint('[Sell16] item deleted (tombstone) id=$itemId');
+    }
+  }
+
   Future<MarketplaceItem> archiveMyItem(String itemId) async {
     final token = await _freshToken();
     final response = await _api.delete(
