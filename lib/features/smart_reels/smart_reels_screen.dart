@@ -398,7 +398,7 @@ class _SmartReelsScreenState extends State<SmartReelsScreen>
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _CommentsSheet(reel: reel, service: service),
+      builder: (_) => _CommentsSheet(reel: reel, service: service, baseUrl: widget.baseUrl),
     );
 
     if (added == true) {
@@ -1507,10 +1507,11 @@ class _MenuTile extends StatelessWidget {
 }
 
 class _CommentsSheet extends StatefulWidget {
-  _CommentsSheet({required this.reel, required this.service});
+  _CommentsSheet({required this.reel, required this.service, required this.baseUrl});
 
   final SmartReelModel reel;
   final SmartReelService service;
+  final String baseUrl;
 
   @override
   State<_CommentsSheet> createState() => _CommentsSheetState();
@@ -1522,6 +1523,16 @@ class _CommentsSheetState extends State<_CommentsSheet> {
   bool loading = true;
   bool sending = false;
   List<SmartReelComment> comments = [];
+  final Set<String> _likedIds = {}; // local-only heart toggle — no backend count
+
+  String _ago(DateTime? dt) {
+    if (dt == null) return '';
+    final d = DateTime.now().difference(dt);
+    if (d.inMinutes < 1) return 'ahora';
+    if (d.inHours < 1) return '${d.inMinutes}m';
+    if (d.inDays < 1) return '${d.inHours}h';
+    return '${d.inDays}d';
+  }
 
   @override
   void initState() {
@@ -1654,44 +1665,119 @@ class _CommentsSheetState extends State<_CommentsSheet> {
                         ),
                       ),
                     )
-                  : ListView.separated(
-                      padding: EdgeInsets.symmetric(horizontal: 16),
+                  : ListView.builder(
+                      padding: const EdgeInsets.fromLTRB(14, 4, 14, 8),
                       itemCount: comments.length,
-                      separatorBuilder: (_, __) =>
-                          Divider(color: Colors.white10),
                       itemBuilder: (context, index) {
-                        final comment = comments[index];
+                        final c = comments[index];
+                        final handle = c.username.trim().isNotEmpty
+                            ? '@${c.username.trim()}'
+                            : c.userName;
+                        final liked = _likedIds.contains(c.id);
+                        final ago = _ago(c.createdAt);
 
-                        return ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          leading: CircleAvatar(
-                            backgroundColor: Colors.white12,
-                            backgroundImage:
-                                comment.userAvatarUrl.startsWith('http')
-                                ? NetworkImage(comment.userAvatarUrl)
-                                : null,
-                            child: comment.userAvatarUrl.startsWith('http')
-                                ? null
-                                : Icon(
-                                    Icons.person_rounded,
-                                    color: Colors.white,
+                        void goProfile() {
+                          if (c.userId.trim().isEmpty) return;
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => CreatorProfileScreen(
+                                creatorId: c.userId,
+                                baseUrl: widget.baseUrl,
+                              ),
+                            ),
+                          );
+                        }
+
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 9),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Avatar — tap → profile
+                              GestureDetector(
+                                onTap: goProfile,
+                                child: CircleAvatar(
+                                  radius: 18,
+                                  backgroundColor: Colors.white12,
+                                  backgroundImage: c.userAvatarUrl
+                                          .startsWith('http')
+                                      ? CachedNetworkImageProvider(
+                                          c.userAvatarUrl,
+                                        )
+                                      : null,
+                                  child: c.userAvatarUrl.startsWith('http')
+                                      ? null
+                                      : const Icon(
+                                          Icons.person_rounded,
+                                          color: Colors.white70,
+                                          size: 18,
+                                        ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              // Name + text
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    GestureDetector(
+                                      onTap: goProfile,
+                                      child: Row(
+                                        children: [
+                                          Text(
+                                            handle,
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.w800,
+                                              fontSize: 13,
+                                            ),
+                                          ),
+                                          if (ago.isNotEmpty) ...[
+                                            const SizedBox(width: 6),
+                                            Text(
+                                              ago,
+                                              style: const TextStyle(
+                                                color: Colors.white38,
+                                                fontSize: 11,
+                                              ),
+                                            ),
+                                          ],
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(height: 3),
+                                    Text(
+                                      c.text,
+                                      style: const TextStyle(
+                                        color: Colors.white70,
+                                        fontSize: 13.5,
+                                        height: 1.3,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              // Heart — local toggle only
+                              GestureDetector(
+                                onTap: () => setState(() => liked
+                                    ? _likedIds.remove(c.id)
+                                    : _likedIds.add(c.id)),
+                                child: Padding(
+                                  padding: const EdgeInsets.fromLTRB(4, 0, 0, 0),
+                                  child: Icon(
+                                    liked
+                                        ? Icons.favorite_rounded
+                                        : Icons.favorite_border_rounded,
+                                    color: liked
+                                        ? Colors.redAccent
+                                        : Colors.white30,
+                                    size: 18,
                                   ),
-                          ),
-                          title: Text(
-                            comment.username.trim().isNotEmpty
-                                ? '@${comment.username.trim()}'
-                                : comment.userName,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w900,
-                            ),
-                          ),
-                          subtitle: Text(
-                            comment.text,
-                            style: TextStyle(
-                              color: Colors.white70,
-                              fontWeight: FontWeight.w600,
-                            ),
+                                ),
+                              ),
+                            ],
                           ),
                         );
                       },
