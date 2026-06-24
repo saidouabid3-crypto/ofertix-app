@@ -407,9 +407,9 @@ class _MarketplaceHomeScreenState extends State<MarketplaceHomeScreen> {
                 sliver: SliverGrid(
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
-                    mainAxisSpacing: 14,
-                    crossAxisSpacing: 12,
-                    childAspectRatio: 0.63,
+                    mainAxisSpacing: 12,
+                    crossAxisSpacing: 10,
+                    childAspectRatio: 0.82,
                   ),
                   delegate: SliverChildBuilderDelegate(
                     (_, __) => const _SkeletonCard(),
@@ -451,9 +451,9 @@ class _MarketplaceHomeScreenState extends State<MarketplaceHomeScreen> {
                 sliver: SliverGrid(
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
-                    mainAxisSpacing: 14,
-                    crossAxisSpacing: 12,
-                    childAspectRatio: 0.63,
+                    mainAxisSpacing: 12,
+                    crossAxisSpacing: 10,
+                    childAspectRatio: 0.82,
                   ),
                   delegate: SliverChildBuilderDelegate(
                     (context, i) => MarketplaceListingCard(
@@ -960,36 +960,33 @@ class MarketplaceListingCard extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: () => onTap(item),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(14),
         child: Ink(
           decoration: BoxDecoration(
             color: card,
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(14),
             border: Border.all(color: border),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: isDark ? 0.40 : 0.08),
-                blurRadius: isDark ? 18 : 22,
-                offset: const Offset(0, 6),
+                blurRadius: isDark ? 16 : 20,
+                offset: const Offset(0, 4),
                 spreadRadius: -2,
               ),
             ],
           ),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(14),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 AspectRatio(
-                  aspectRatio: 1.0,
-                  child: _ListingImage(
-                    url: item.mainImage,
-                    countryCode: item.countryCode,
-                  ),
+                  aspectRatio: 1.42,
+                  child: _ListingImage(url: item.mainImage),
                 ),
                 Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(11, 9, 11, 10),
+                    padding: const EdgeInsets.fromLTRB(9, 7, 9, 8),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -1001,47 +998,34 @@ class MarketplaceListingCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             color: text,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w800,
-                            height: 1.18,
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w700,
+                            height: 1.2,
                           ),
                         ),
-                        const Spacer(),
+                        const SizedBox(height: 4),
                         Text(
                           item.formattedPrice,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             color: AppColors.orange,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w900,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
                             height: 1.05,
                           ),
                         ),
-                        const SizedBox(height: 6),
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.location_on_rounded,
-                              size: 13,
-                              color: AppColors.green.withValues(alpha: 0.90),
-                            ),
-                            const SizedBox(width: 3),
-                            Expanded(
-                              child: Text(
-                                location,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  color: muted,
-                                  fontSize: 11.5,
-                                  fontWeight: FontWeight.w600,
-                                  height: 1.1,
-                                ),
-                              ),
-                            ),
-                            _DeliveryIcon(method: item.deliveryMethodKey),
-                          ],
+                        const SizedBox(height: 3),
+                        Text(
+                          location,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: muted,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            height: 1.1,
+                          ),
                         ),
                       ],
                     ),
@@ -1058,9 +1042,8 @@ class MarketplaceListingCard extends StatelessWidget {
 
 class _ListingImage extends StatelessWidget {
   final String url;
-  final String countryCode;
 
-  const _ListingImage({required this.url, required this.countryCode});
+  const _ListingImage({required this.url});
 
   @override
   Widget build(BuildContext context) {
@@ -1070,38 +1053,28 @@ class _ListingImage extends StatelessWidget {
         ? const Color(0xFF13262E)
         : AppColors.lightCard2;
 
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        if (imageUrl.isEmpty)
-          _ImageFallback(fill: fallbackFill, broken: false)
-        else
-          CachedNetworkImage(
-            imageUrl: imageUrl,
-            fit: BoxFit.cover,
-            fadeInDuration: const Duration(milliseconds: 180),
-            placeholder: (_, __) => Container(
-              color: fallbackFill,
-              child: Center(
-                child: SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 1.6,
-                    color: AppColors.orange.withValues(alpha: 0.82),
-                  ),
-                ),
-              ),
+    if (imageUrl.isEmpty) {
+      return _ImageFallback(fill: fallbackFill, broken: false);
+    }
+    return CachedNetworkImage(
+      imageUrl: imageUrl,
+      fit: BoxFit.cover,
+      fadeInDuration: const Duration(milliseconds: 180),
+      placeholder: (_, __) => Container(
+        color: fallbackFill,
+        child: Center(
+          child: SizedBox(
+            width: 16,
+            height: 16,
+            child: CircularProgressIndicator(
+              strokeWidth: 1.5,
+              color: AppColors.orange.withValues(alpha: 0.75),
             ),
-            errorWidget: (_, __, ___) =>
-                _ImageFallback(fill: fallbackFill, broken: true),
           ),
-        PositionedDirectional(
-          start: 8,
-          top: 8,
-          child: _CountryBadge(countryCode: countryCode),
         ),
-      ],
+      ),
+      errorWidget: (_, __, ___) =>
+          _ImageFallback(fill: fallbackFill, broken: true),
     );
   }
 }
@@ -1122,60 +1095,6 @@ class _ImageFallback extends StatelessWidget {
           color: AppColors.orange.withValues(alpha: 0.82),
           size: 34,
         ),
-      ),
-    );
-  }
-}
-
-class _CountryBadge extends StatelessWidget {
-  final String countryCode;
-
-  const _CountryBadge({required this.countryCode});
-
-  @override
-  Widget build(BuildContext context) {
-    final label = countryCode.trim().toUpperCase();
-    if (label.isEmpty) return const SizedBox.shrink();
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.52),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
-      ),
-      child: Text(
-        label,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 9.5,
-          fontWeight: FontWeight.w900,
-          height: 1,
-        ),
-      ),
-    );
-  }
-}
-
-class _DeliveryIcon extends StatelessWidget {
-  final String method;
-
-  const _DeliveryIcon({required this.method});
-
-  @override
-  Widget build(BuildContext context) {
-    final icon = switch (method) {
-      'shipping' => Icons.local_shipping_outlined,
-      'both' => Icons.sync_alt_rounded,
-      _ => Icons.storefront_rounded,
-    };
-    return Padding(
-      padding: const EdgeInsetsDirectional.only(start: 6),
-      child: Icon(
-        icon,
-        size: 14,
-        color: AppColors.orange.withValues(alpha: 0.86),
       ),
     );
   }
@@ -1261,13 +1180,13 @@ class _SkeletonCardState extends State<_SkeletonCard>
         return Container(
           decoration: BoxDecoration(
             color: bg,
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(14),
             border: Border.all(color: border),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: isDark ? 0.38 : 0.07),
-                blurRadius: 18,
-                offset: const Offset(0, 6),
+                blurRadius: 16,
+                offset: const Offset(0, 4),
                 spreadRadius: -2,
               ),
             ],
@@ -1275,58 +1194,57 @@ class _SkeletonCardState extends State<_SkeletonCard>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Image area placeholder
-              Expanded(
-                flex: 10,
+              // Image area — matches real card AspectRatio(1.42)
+              AspectRatio(
+                aspectRatio: 1.42,
                 child: Container(
                   decoration: BoxDecoration(
                     color: pulse,
                     borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(20),
+                      top: Radius.circular(14),
                     ),
                   ),
                 ),
               ),
-              // Content area placeholder
+              // Content area
               Expanded(
-                flex: 6,
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(11, 10, 11, 10),
+                  padding: const EdgeInsets.fromLTRB(9, 7, 9, 8),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Container(
-                        height: 10,
+                        height: 9,
                         decoration: BoxDecoration(
                           color: pulse,
-                          borderRadius: BorderRadius.circular(4),
+                          borderRadius: BorderRadius.circular(3),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      FractionallySizedBox(
+                        widthFactor: 0.62,
+                        child: Container(
+                          height: 9,
+                          decoration: BoxDecoration(
+                            color: pulse,
+                            borderRadius: BorderRadius.circular(3),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      FractionallySizedBox(
+                        widthFactor: 0.48,
+                        child: Container(
+                          height: 12,
+                          decoration: BoxDecoration(
+                            color: pulse,
+                            borderRadius: BorderRadius.circular(3),
+                          ),
                         ),
                       ),
                       const SizedBox(height: 5),
                       FractionallySizedBox(
-                        widthFactor: 0.65,
-                        child: Container(
-                          height: 10,
-                          decoration: BoxDecoration(
-                            color: pulse,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                        ),
-                      ),
-                      const Spacer(),
-                      FractionallySizedBox(
-                        widthFactor: 0.50,
-                        child: Container(
-                          height: 14,
-                          decoration: BoxDecoration(
-                            color: pulse,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 7),
-                      FractionallySizedBox(
-                        widthFactor: 0.38,
+                        widthFactor: 0.36,
                         child: Container(
                           height: 8,
                           decoration: BoxDecoration(

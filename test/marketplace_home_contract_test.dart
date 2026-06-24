@@ -44,8 +44,8 @@ Widget _wrap(Widget child, {TextDirection direction = TextDirection.ltr}) {
     home: Directionality(
       textDirection: direction,
       child: Scaffold(
-        // Height reflects real grid childAspectRatio 0.63: 190 / 0.63 ≈ 302
-        body: Center(child: SizedBox(width: 190, height: 302, child: child)),
+        // Height reflects real grid childAspectRatio 0.82: 190 / 0.82 ≈ 232
+        body: Center(child: SizedBox(width: 190, height: 232, child: child)),
       ),
     ),
   );
