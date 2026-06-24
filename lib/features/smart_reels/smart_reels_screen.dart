@@ -1519,11 +1519,21 @@ class _CommentsSheet extends StatefulWidget {
 
 class _CommentsSheetState extends State<_CommentsSheet> {
   final TextEditingController controller = TextEditingController();
+  final FocusNode _focusNode = FocusNode();
 
   bool loading = true;
   bool sending = false;
   List<SmartReelComment> comments = [];
   final Set<String> _likedIds = {}; // local-only heart toggle — no backend count
+
+  void _replyTo(String handle) {
+    final prefix = '@$handle ';
+    controller.text = prefix;
+    controller.selection = TextSelection.fromPosition(
+      TextPosition(offset: prefix.length),
+    );
+    _focusNode.requestFocus();
+  }
 
   String _ago(DateTime? dt) {
     if (dt == null) return '';
@@ -1543,6 +1553,7 @@ class _CommentsSheetState extends State<_CommentsSheet> {
   @override
   void dispose() {
     controller.dispose();
+    _focusNode.dispose();
     super.dispose();
   }
 
@@ -1755,6 +1766,22 @@ class _CommentsSheetState extends State<_CommentsSheet> {
                                         height: 1.3,
                                       ),
                                     ),
+                                    const SizedBox(height: 5),
+                                    GestureDetector(
+                                      onTap: () => _replyTo(
+                                        c.username.trim().isNotEmpty
+                                            ? c.username.trim()
+                                            : c.userName,
+                                      ),
+                                      child: const Text(
+                                        'Répondre',
+                                        style: TextStyle(
+                                          color: Colors.white38,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ),
@@ -1783,9 +1810,11 @@ class _CommentsSheetState extends State<_CommentsSheet> {
                       },
                     ),
             ),
-            Container(
-              padding: EdgeInsets.fromLTRB(14, 10, 14, 14),
-              decoration: BoxDecoration(
+            SafeArea(
+              top: false,
+              child: Container(
+              padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+              decoration: const BoxDecoration(
                 border: Border(top: BorderSide(color: Colors.white10)),
               ),
               child: Row(
@@ -1793,7 +1822,8 @@ class _CommentsSheetState extends State<_CommentsSheet> {
                   Expanded(
                     child: TextField(
                       controller: controller,
-                      style: TextStyle(color: Colors.white),
+                      focusNode: _focusNode,
+                      style: const TextStyle(color: Colors.white),
                       minLines: 1,
                       maxLines: 3,
                       decoration: InputDecoration(
@@ -1832,6 +1862,7 @@ class _CommentsSheetState extends State<_CommentsSheet> {
                 ],
               ),
             ),
+            ), // SafeArea
           ],
         ),
       ),
