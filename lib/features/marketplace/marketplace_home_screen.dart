@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
@@ -19,6 +20,52 @@ import 'marketplace_my_listings_screen.dart';
 
 class MarketplaceHomeScreen extends StatefulWidget {
   const MarketplaceHomeScreen({super.key});
+
+  @visibleForTesting
+  static bool homeEligibleItem(MarketplaceItem item) {
+    const publicStatuses = {'active', 'approved', 'published'};
+    const blockedStatuses = {
+      'archived',
+      'blocked',
+      'deleted',
+      'hidden',
+      'pending',
+      'rejected',
+      'review',
+      'sold',
+      'under_review',
+    };
+    final status = item.status.trim().toLowerCase();
+    return item.isActive &&
+        publicStatuses.contains(status) &&
+        !blockedStatuses.contains(status);
+  }
+
+  @visibleForTesting
+  static List<MarketplaceItem> visibleItemsForHome({
+    required List<MarketplaceItem> items,
+    required String selectedCategory,
+    required String searchQuery,
+  }) {
+    var result = items.where(homeEligibleItem).toList(growable: false);
+    if (selectedCategory != 'all') {
+      result = result
+          .where((item) => item.categoryKey == selectedCategory)
+          .toList(growable: false);
+    }
+    final q = searchQuery.trim().toLowerCase();
+    if (q.isNotEmpty) {
+      result = result
+          .where((item) {
+            return item.title.toLowerCase().contains(q) ||
+                item.description.toLowerCase().contains(q) ||
+                item.city.toLowerCase().contains(q) ||
+                item.sellerName.toLowerCase().contains(q);
+          })
+          .toList(growable: false);
+    }
+    return result;
+  }
 
   @override
   State<MarketplaceHomeScreen> createState() => _MarketplaceHomeScreenState();
@@ -77,8 +124,9 @@ class _MarketplaceHomeScreenState extends State<MarketplaceHomeScreen> {
     final t0 = DateTime.now();
 
     final country = await CountryService.instance.getCurrentCountry();
-    final normalized =
-        country.trim().isEmpty ? 'global' : country.trim().toLowerCase();
+    final normalized = country.trim().isEmpty
+        ? 'global'
+        : country.trim().toLowerCase();
 
     if (mounted) {
       setState(() {
@@ -98,7 +146,9 @@ class _MarketplaceHomeScreenState extends State<MarketplaceHomeScreen> {
         );
         debugPrint('[Marketplace16B] raw_count=${items.length}');
         debugPrint('[Marketplace16B] parsed_count=${items.length}');
-        debugPrint('[Marketplace16B] displayed_count=${_displayed(items).length}');
+        debugPrint(
+          '[Marketplace16B] displayed_count=${_displayed(items).length}',
+        );
       }
       if (mounted) {
         setState(() {
@@ -110,7 +160,8 @@ class _MarketplaceHomeScreenState extends State<MarketplaceHomeScreen> {
       }
     } catch (e) {
       if (kDebugMode) debugPrint('[Marketplace16B] fetch_error $e');
-      final isQuota = e is AppException &&
+      final isQuota =
+          e is AppException &&
           (e.toString().contains('FIRESTORE_QUOTA') ||
               e.toString().contains('temporarily'));
       if (mounted) {
@@ -127,21 +178,11 @@ class _MarketplaceHomeScreenState extends State<MarketplaceHomeScreen> {
   // ─── Filtering (local — backend has no search/query param) ───────────────
 
   List<MarketplaceItem> _displayed([List<MarketplaceItem>? src]) {
-    var items = src ?? _allItems;
-    if (_selectedCategory != 'all') {
-      items = items
-          .where((i) => i.categoryKey == _selectedCategory)
-          .toList();
-    }
-    if (_searchQuery.isNotEmpty) {
-      items = items.where((i) {
-        final q = _searchQuery;
-        return i.title.toLowerCase().contains(q) ||
-            i.description.toLowerCase().contains(q) ||
-            i.city.toLowerCase().contains(q);
-      }).toList();
-    }
-    return items;
+    return MarketplaceHomeScreen.visibleItemsForHome(
+      items: src ?? _allItems,
+      selectedCategory: _selectedCategory,
+      searchQuery: _searchQuery,
+    );
   }
 
   void _onSearchChanged(String value) {
@@ -170,12 +211,14 @@ class _MarketplaceHomeScreenState extends State<MarketplaceHomeScreen> {
   // ─── Navigation ───────────────────────────────────────────────────────────
 
   Future<void> _openSell() async {
-    if (kDebugMode) debugPrint('[Marketplace16B-A] quick_action_sell_open_form');
+    if (kDebugMode) {
+      debugPrint('[Marketplace16B-A] quick_action_sell_open_form');
+    }
     if (FirebaseAuth.instance.currentUser == null) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('profile.loginRequired'.tr())),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('profile.loginRequired'.tr())));
       return;
     }
     final result = await Navigator.push<MarketplaceItem>(
@@ -222,7 +265,7 @@ class _MarketplaceHomeScreenState extends State<MarketplaceHomeScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark ? AppColors.background : AppColors.lightBackground;
+    final bg = isDark ? const Color(0xFF050D11) : AppColors.lightBackground;
     final displayed = _displayed();
 
     return Scaffold(
@@ -234,15 +277,13 @@ class _MarketplaceHomeScreenState extends State<MarketplaceHomeScreen> {
           slivers: [
             // ── Safe-area top spacer ──────────────────────────────────────
             SliverToBoxAdapter(
-              child: SizedBox(
-                height: MediaQuery.of(context).padding.top + 10,
-              ),
+              child: SizedBox(height: MediaQuery.of(context).padding.top + 14),
             ),
 
             // ── Header ───────────────────────────────────────────────────
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                 child: _Header(isDark: isDark),
               ),
             ),
@@ -250,7 +291,7 @@ class _MarketplaceHomeScreenState extends State<MarketplaceHomeScreen> {
             // ── Search bar ───────────────────────────────────────────────
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
                 child: _SearchBar(
                   controller: _searchCtrl,
                   onChanged: _onSearchChanged,
@@ -266,7 +307,7 @@ class _MarketplaceHomeScreenState extends State<MarketplaceHomeScreen> {
             // ── Category chips ────────────────────────────────────────────
             SliverToBoxAdapter(
               child: SizedBox(
-                height: 40,
+                height: 44,
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -305,21 +346,39 @@ class _MarketplaceHomeScreenState extends State<MarketplaceHomeScreen> {
             const SliverToBoxAdapter(child: SizedBox(height: 14)),
 
             // ── Ad / sponsored reserved slot ───────────────────────────────
-            const SliverToBoxAdapter(child: _AdSlot()),
-
-            const SliverToBoxAdapter(child: SizedBox(height: 14)),
+            const SliverToBoxAdapter(child: SizedBox(height: 6)),
 
             // ── Section title ──────────────────────────────────────────────
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-                child: Text(
-                  'marketplace.availableListings'.tr(),
-                  style: TextStyle(
-                    color: isDark ? AppColors.text : AppColors.lightText,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w900,
-                  ),
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 3,
+                      height: 22,
+                      decoration: BoxDecoration(
+                        color: AppColors.orange,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                    const SizedBox(width: 9),
+                    Expanded(
+                      child: Text(
+                        'marketplace.availableListings'.tr(),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: isDark ? AppColors.text : AppColors.lightText,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w900,
+                          height: 1.05,
+                        ),
+                      ),
+                    ),
+                    if (displayed.isNotEmpty)
+                      _CountPill(count: displayed.length, isDark: isDark),
+                  ],
                 ),
               ),
             ),
@@ -336,15 +395,28 @@ class _MarketplaceHomeScreenState extends State<MarketplaceHomeScreen> {
                 ),
               ),
 
-            // ── Loading spinner (first load only) ─────────────────────────
+            // ── Loading skeleton (first load only) ────────────────────────
             if (_loading && _allItems.isEmpty)
-              const SliverFillRemaining(
-                hasScrollBody: false,
-                child: Center(
-                  child: CircularProgressIndicator(color: AppColors.orange),
+              SliverPadding(
+                padding: EdgeInsets.fromLTRB(
+                  16,
+                  0,
+                  16,
+                  MediaQuery.of(context).padding.bottom + 110,
+                ),
+                sliver: SliverGrid(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    mainAxisSpacing: 14,
+                    crossAxisSpacing: 12,
+                    childAspectRatio: 0.63,
+                  ),
+                  delegate: SliverChildBuilderDelegate(
+                    (_, __) => const _SkeletonCard(),
+                    childCount: 6,
+                  ),
                 ),
               )
-
             // ── Hard error (no cached data) ────────────────────────────────
             else if (_hasError && _allItems.isEmpty)
               SliverFillRemaining(
@@ -358,7 +430,6 @@ class _MarketplaceHomeScreenState extends State<MarketplaceHomeScreen> {
                   onAction: () => _fetch(reason: 'refresh'),
                 ),
               )
-
             // ── Empty list (search/category filtered) ─────────────────────
             else if (!_loading && displayed.isEmpty)
               SliverFillRemaining(
@@ -368,22 +439,27 @@ class _MarketplaceHomeScreenState extends State<MarketplaceHomeScreen> {
                   title: 'mkt.noResults'.tr(),
                 ),
               )
-
             // ── Listing grid ───────────────────────────────────────────────
             else
               SliverPadding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 40),
+                padding: EdgeInsets.fromLTRB(
+                  16,
+                  0,
+                  16,
+                  MediaQuery.of(context).padding.bottom + 110,
+                ),
                 sliver: SliverGrid(
-                  gridDelegate:
-                      const SliverGridDelegateWithFixedCrossAxisCount(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
-                    mainAxisSpacing: 12,
+                    mainAxisSpacing: 14,
                     crossAxisSpacing: 12,
-                    childAspectRatio: 0.72,
+                    childAspectRatio: 0.63,
                   ),
                   delegate: SliverChildBuilderDelegate(
-                    (context, i) =>
-                        _ListingCard(item: displayed[i], onTap: _openDetail),
+                    (context, i) => MarketplaceListingCard(
+                      item: displayed[i],
+                      onTap: _openDetail,
+                    ),
                     childCount: displayed.length,
                   ),
                 ),
@@ -408,31 +484,55 @@ class _Header extends StatelessWidget {
     return Row(
       children: [
         Container(
-          width: 40,
-          height: 40,
+          width: 54,
+          height: 54,
           decoration: BoxDecoration(
-            gradient: AppColors.orangeGradient,
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: const Icon(Icons.storefront_rounded, color: Colors.white, size: 22),
-        ),
-        const SizedBox(width: 10),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'marketplace.title'.tr(),
-              style: TextStyle(
-                color: text,
-                fontSize: 18,
-                fontWeight: FontWeight.w900,
+            color: AppColors.orange,
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.orange.withValues(alpha: 0.22),
+                blurRadius: 22,
+                offset: const Offset(0, 10),
               ),
-            ),
-            Text(
-              'marketplace.subtitle'.tr(),
-              style: TextStyle(color: muted, fontSize: 11, fontWeight: FontWeight.w600),
-            ),
-          ],
+            ],
+          ),
+          child: const Icon(
+            Icons.storefront_rounded,
+            color: Colors.white,
+            size: 28,
+          ),
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'marketplace.title'.tr(),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: text,
+                  fontSize: 26,
+                  fontWeight: FontWeight.w900,
+                  height: 1.05,
+                ),
+              ),
+              const SizedBox(height: 5),
+              Text(
+                'marketplace.subtitle'.tr(),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: muted,
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w700,
+                  height: 1.15,
+                ),
+              ),
+            ],
+          ),
         ),
       ],
     );
@@ -456,16 +556,26 @@ class _SearchBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fill = isDark ? AppColors.card : AppColors.lightCard;
-    final border = isDark ? Colors.white12 : AppColors.lightBorder;
+    final fill = isDark ? const Color(0xFF0E1B22) : AppColors.lightCard;
+    final border = isDark
+        ? Colors.white.withValues(alpha: 0.10)
+        : AppColors.lightBorder;
     final hint = isDark ? AppColors.gray : AppColors.lightGray;
 
     return Container(
-      height: 46,
+      height: 58,
       decoration: BoxDecoration(
         color: fill,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(22),
         border: Border.all(color: border),
+        boxShadow: [
+          if (!isDark)
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
+            ),
+        ],
       ),
       child: TextField(
         controller: controller,
@@ -476,19 +586,23 @@ class _SearchBar extends StatelessWidget {
         ),
         decoration: InputDecoration(
           hintText: 'mkt.searchHint'.tr(),
-          hintStyle: TextStyle(color: hint, fontSize: 14),
-          prefixIcon: Icon(Icons.search_rounded, color: hint, size: 20),
+          hintStyle: TextStyle(
+            color: hint,
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+          ),
+          prefixIcon: Icon(Icons.search_rounded, color: hint, size: 24),
           suffixIcon: ValueListenableBuilder<TextEditingValue>(
             valueListenable: controller,
             builder: (_, v, __) => v.text.isEmpty
                 ? const SizedBox.shrink()
                 : IconButton(
-                    icon: Icon(Icons.close_rounded, color: hint, size: 18),
+                    icon: Icon(Icons.close_rounded, color: hint, size: 20),
                     onPressed: onClear,
                   ),
           ),
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(vertical: 13),
+          contentPadding: const EdgeInsets.symmetric(vertical: 17),
         ),
       ),
     );
@@ -510,20 +624,23 @@ class _CategoryChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final inactiveFill = isDark
+        ? const Color(0xFF101D24)
+        : AppColors.lightCard2;
+    final inactiveBorder = isDark
+        ? Colors.white.withValues(alpha: 0.07)
+        : AppColors.lightBorder;
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
-          color: selected
-              ? AppColors.orange
-              : (Theme.of(context).brightness == Brightness.dark
-                  ? AppColors.card
-                  : AppColors.lightCard),
-          borderRadius: BorderRadius.circular(20),
+          color: selected ? AppColors.orange : inactiveFill,
+          borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: selected ? AppColors.orange : Colors.transparent,
+            color: selected ? AppColors.orange : inactiveBorder,
           ),
         ),
         child: Text(
@@ -531,11 +648,9 @@ class _CategoryChip extends StatelessWidget {
           style: TextStyle(
             color: selected
                 ? Colors.white
-                : (Theme.of(context).brightness == Brightness.dark
-                    ? AppColors.gray
-                    : AppColors.lightGray),
+                : (isDark ? AppColors.gray : AppColors.lightGray),
             fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-            fontSize: 12.5,
+            fontSize: 13,
           ),
         ),
       ),
@@ -560,36 +675,41 @@ class _QuickActionRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: _ActionTile(
-            icon: Icons.add_business_rounded,
-            label: 'marketplace.sell'.tr(),
-            onTap: onSell,
-            isDark: isDark,
-            accent: true,
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _ActionTile(
-            icon: Icons.list_alt_rounded,
-            label: 'marketplace.myListings'.tr(),
-            onTap: onMyListings,
-            isDark: isDark,
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _ActionTile(
-            icon: Icons.chat_bubble_outline_rounded,
-            label: 'marketplace.messages'.tr(),
-            onTap: onMessages,
-            isDark: isDark,
-          ),
-        ),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final gap = constraints.maxWidth < 360 ? 8.0 : 10.0;
+        return Row(
+          children: [
+            Expanded(
+              child: _ActionTile(
+                icon: Icons.add_business_rounded,
+                label: 'marketplace.sell'.tr(),
+                onTap: onSell,
+                isDark: isDark,
+                accent: true,
+              ),
+            ),
+            SizedBox(width: gap),
+            Expanded(
+              child: _ActionTile(
+                icon: Icons.list_alt_rounded,
+                label: 'marketplace.myListings'.tr(),
+                onTap: onMyListings,
+                isDark: isDark,
+              ),
+            ),
+            SizedBox(width: gap),
+            Expanded(
+              child: _ActionTile(
+                icon: Icons.chat_bubble_outline_rounded,
+                label: 'marketplace.messages'.tr(),
+                onTap: onMessages,
+                isDark: isDark,
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -611,46 +731,71 @@ class _ActionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final card = isDark ? AppColors.card : AppColors.lightCard;
-    final border = isDark ? Colors.white12 : AppColors.lightBorder;
+    final card = isDark ? const Color(0xFF101D24) : AppColors.lightCard;
+    final border = isDark
+        ? Colors.white.withValues(alpha: 0.08)
+        : AppColors.lightBorder;
     final text = isDark ? AppColors.text : AppColors.lightText;
+    final iconFill = accent
+        ? Colors.white.withValues(alpha: 0.22)
+        : (isDark
+              ? Colors.white.withValues(alpha: 0.06)
+              : AppColors.lightCard2);
+    final tileColor = accent ? AppColors.orange : card;
+    final tileBorder = accent ? AppColors.orange : border;
+    final iconColor = accent ? Colors.white : AppColors.orange;
+    final labelColor = accent ? Colors.white : text;
 
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 8),
-        decoration: BoxDecoration(
-          color: accent
-              ? AppColors.orange.withValues(alpha: 0.12)
-              : card.withValues(alpha: 0.92),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: accent
-                ? AppColors.orange.withValues(alpha: 0.35)
-                : border,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Ink(
+          height: 88,
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+          decoration: BoxDecoration(
+            color: tileColor,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: tileBorder),
+            boxShadow: accent
+                ? [
+                    BoxShadow(
+                      color: AppColors.orange.withValues(alpha: 0.28),
+                      blurRadius: 14,
+                      offset: const Offset(0, 5),
+                      spreadRadius: -3,
+                    ),
+                  ]
+                : null,
           ),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              color: AppColors.orange,
-              size: 24,
-            ),
-            const SizedBox(height: 5),
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: text,
-                fontSize: 11,
-                fontWeight: FontWeight.w800,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: iconFill,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: iconColor, size: 20),
               ),
-            ),
-          ],
+              const SizedBox(height: 8),
+              Text(
+                label,
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: labelColor,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  height: 1.05,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -659,6 +804,7 @@ class _ActionTile extends StatelessWidget {
 
 // ─── Ad / sponsored reserved slot ────────────────────────────────────────────
 
+// ignore: unused_element
 class _AdSlot extends StatelessWidget {
   const _AdSlot();
 
@@ -690,8 +836,11 @@ class _ErrorBanner extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(Icons.warning_amber_rounded,
-              color: AppColors.orange, size: 18),
+          const Icon(
+            Icons.warning_amber_rounded,
+            color: AppColors.orange,
+            size: 18,
+          ),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
@@ -699,7 +848,10 @@ class _ErrorBanner extends StatelessWidget {
                   ? 'mkt.serviceUnavailable'.tr()
                   : 'marketplace.listingUnavailable'.tr(),
               style: const TextStyle(
-                  color: AppColors.orange, fontSize: 12, fontWeight: FontWeight.w700),
+                color: AppColors.orange,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
           TextButton(
@@ -707,7 +859,10 @@ class _ErrorBanner extends StatelessWidget {
             child: Text(
               'common.retry'.tr(),
               style: const TextStyle(
-                  color: AppColors.orange, fontSize: 12, fontWeight: FontWeight.w800),
+                color: AppColors.orange,
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+              ),
             ),
           ),
         ],
@@ -749,7 +904,10 @@ class _EmptyState extends StatelessWidget {
               title,
               textAlign: TextAlign.center,
               style: TextStyle(
-                  color: text, fontWeight: FontWeight.w800, fontSize: 15),
+                color: text,
+                fontWeight: FontWeight.w800,
+                fontSize: 15,
+              ),
             ),
             if (actionLabel != null) ...[
               const SizedBox(height: 12),
@@ -775,87 +933,123 @@ class _EmptyState extends StatelessWidget {
 
 // ─── Listing card ─────────────────────────────────────────────────────────────
 
-class _ListingCard extends StatelessWidget {
+class MarketplaceListingCard extends StatelessWidget {
   final MarketplaceItem item;
   final ValueChanged<MarketplaceItem> onTap;
 
-  const _ListingCard({required this.item, required this.onTap});
+  const MarketplaceListingCard({
+    super.key,
+    required this.item,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final card = isDark ? AppColors.card : AppColors.lightCard;
+    final card = isDark ? const Color(0xFF0D1A20) : AppColors.lightCard;
     final text = isDark ? AppColors.text : AppColors.lightText;
     final muted = isDark ? AppColors.gray : AppColors.lightGray;
-    final border = isDark ? Colors.white12 : AppColors.lightBorder;
+    final border = isDark
+        ? Colors.white.withValues(alpha: 0.12)
+        : AppColors.lightBorder;
+    final location = item.city.trim().isNotEmpty
+        ? item.city.trim()
+        : item.countryCode.trim();
 
-    return GestureDetector(
-      onTap: () => onTap(item),
-      child: Container(
-        decoration: BoxDecoration(
-          color: card.withValues(alpha: 0.92),
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: border),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Image
-            Expanded(
-              child: _ListingImage(url: item.mainImage),
-            ),
-            // Info
-            Padding(
-              padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    item.title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: text,
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w800,
-                      height: 1.2,
-                    ),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => onTap(item),
+        borderRadius: BorderRadius.circular(20),
+        child: Ink(
+          decoration: BoxDecoration(
+            color: card,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: border),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isDark ? 0.40 : 0.08),
+                blurRadius: isDark ? 18 : 22,
+                offset: const Offset(0, 6),
+                spreadRadius: -2,
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                AspectRatio(
+                  aspectRatio: 1.0,
+                  child: _ListingImage(
+                    url: item.mainImage,
+                    countryCode: item.countryCode,
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    item.formattedPrice,
-                    style: const TextStyle(
-                      color: AppColors.orange,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  const SizedBox(height: 5),
-                  Row(
-                    children: [
-                      Icon(Icons.location_on_rounded,
-                          size: 11, color: AppColors.green),
-                      const SizedBox(width: 2),
-                      Expanded(
-                        child: Text(
-                          item.city.isEmpty ? item.countryCode : item.city,
-                          maxLines: 1,
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(11, 9, 11, 10),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          item.title.trim().isEmpty
+                              ? 'marketplace.listingUnavailable'.tr()
+                              : item.title.trim(),
+                          maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                              color: muted,
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.w600),
+                            color: text,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                            height: 1.18,
+                          ),
                         ),
-                      ),
-                    ],
+                        const Spacer(),
+                        Text(
+                          item.formattedPrice,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: AppColors.orange,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
+                            height: 1.05,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.location_on_rounded,
+                              size: 13,
+                              color: AppColors.green.withValues(alpha: 0.90),
+                            ),
+                            const SizedBox(width: 3),
+                            Expanded(
+                              child: Text(
+                                location,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: muted,
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w600,
+                                  height: 1.1,
+                                ),
+                              ),
+                            ),
+                            _DeliveryIcon(method: item.deliveryMethodKey),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 3),
-                  _DeliveryBadge(method: item.deliveryMethodKey),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -864,72 +1058,291 @@ class _ListingCard extends StatelessWidget {
 
 class _ListingImage extends StatelessWidget {
   final String url;
-  const _ListingImage({required this.url});
+  final String countryCode;
+
+  const _ListingImage({required this.url, required this.countryCode});
 
   @override
   Widget build(BuildContext context) {
-    if (url.isEmpty) {
-      return Container(
-        color: AppColors.orange.withValues(alpha: 0.08),
-        child: const Center(
-          child: Icon(Icons.shopping_bag_rounded,
-              color: AppColors.orange, size: 36),
-        ),
-      );
-    }
-    return Image.network(
-      url,
-      fit: BoxFit.cover,
-      width: double.infinity,
-      errorBuilder: (_, __, ___) => Container(
-        color: AppColors.orange.withValues(alpha: 0.08),
-        child: const Center(
-          child: Icon(Icons.broken_image_rounded,
-              color: AppColors.orange, size: 28),
-        ),
-      ),
-      loadingBuilder: (_, child, progress) => progress == null
-          ? child
-          : Container(
-              color: AppColors.orange.withValues(alpha: 0.04),
-              child: const Center(
+    final imageUrl = url.trim();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final fallbackFill = isDark
+        ? const Color(0xFF13262E)
+        : AppColors.lightCard2;
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        if (imageUrl.isEmpty)
+          _ImageFallback(fill: fallbackFill, broken: false)
+        else
+          CachedNetworkImage(
+            imageUrl: imageUrl,
+            fit: BoxFit.cover,
+            fadeInDuration: const Duration(milliseconds: 180),
+            placeholder: (_, __) => Container(
+              color: fallbackFill,
+              child: Center(
                 child: SizedBox(
-                  width: 20,
-                  height: 20,
+                  width: 18,
+                  height: 18,
                   child: CircularProgressIndicator(
-                    strokeWidth: 1.5,
-                    color: AppColors.orange,
+                    strokeWidth: 1.6,
+                    color: AppColors.orange.withValues(alpha: 0.82),
                   ),
                 ),
               ),
             ),
+            errorWidget: (_, __, ___) =>
+                _ImageFallback(fill: fallbackFill, broken: true),
+          ),
+        PositionedDirectional(
+          start: 8,
+          top: 8,
+          child: _CountryBadge(countryCode: countryCode),
+        ),
+      ],
     );
   }
 }
 
-class _DeliveryBadge extends StatelessWidget {
-  final String method;
-  const _DeliveryBadge({required this.method});
+class _ImageFallback extends StatelessWidget {
+  final Color fill;
+  final bool broken;
+
+  const _ImageFallback({required this.fill, required this.broken});
 
   @override
   Widget build(BuildContext context) {
-    if (method == 'shipping' || method == 'both') {
-      return Row(
-        children: [
-          Icon(Icons.local_shipping_outlined,
-              size: 10, color: AppColors.orange.withValues(alpha: 0.7)),
-          const SizedBox(width: 2),
-          Text(
-            'sell16.delivery.$method'.tr(),
-            style: TextStyle(
-              color: AppColors.orange.withValues(alpha: 0.8),
-              fontSize: 9.5,
-              fontWeight: FontWeight.w700,
-            ),
+    return Container(
+      color: fill,
+      child: Center(
+        child: Icon(
+          broken ? Icons.broken_image_rounded : Icons.shopping_bag_rounded,
+          color: AppColors.orange.withValues(alpha: 0.82),
+          size: 34,
+        ),
+      ),
+    );
+  }
+}
+
+class _CountryBadge extends StatelessWidget {
+  final String countryCode;
+
+  const _CountryBadge({required this.countryCode});
+
+  @override
+  Widget build(BuildContext context) {
+    final label = countryCode.trim().toUpperCase();
+    if (label.isEmpty) return const SizedBox.shrink();
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.52),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+      ),
+      child: Text(
+        label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 9.5,
+          fontWeight: FontWeight.w900,
+          height: 1,
+        ),
+      ),
+    );
+  }
+}
+
+class _DeliveryIcon extends StatelessWidget {
+  final String method;
+
+  const _DeliveryIcon({required this.method});
+
+  @override
+  Widget build(BuildContext context) {
+    final icon = switch (method) {
+      'shipping' => Icons.local_shipping_outlined,
+      'both' => Icons.sync_alt_rounded,
+      _ => Icons.storefront_rounded,
+    };
+    return Padding(
+      padding: const EdgeInsetsDirectional.only(start: 6),
+      child: Icon(
+        icon,
+        size: 14,
+        color: AppColors.orange.withValues(alpha: 0.86),
+      ),
+    );
+  }
+}
+
+class _CountPill extends StatelessWidget {
+  final int count;
+  final bool isDark;
+
+  const _CountPill({required this.count, required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(minWidth: 34),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: isDark
+            ? Colors.white.withValues(alpha: 0.06)
+            : AppColors.lightCard2,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.08)
+              : AppColors.lightBorder,
+        ),
+      ),
+      child: Text(
+        NumberFormat.compact().format(count),
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          color: isDark ? AppColors.gray : AppColors.lightGray,
+          fontSize: 12,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Skeleton card (loading placeholder) ─────────────────────────────────────
+
+class _SkeletonCard extends StatefulWidget {
+  const _SkeletonCard();
+
+  @override
+  State<_SkeletonCard> createState() => _SkeletonCardState();
+}
+
+class _SkeletonCardState extends State<_SkeletonCard>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 950),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark ? const Color(0xFF0D1A20) : AppColors.lightCard;
+    final lo = isDark ? const Color(0xFF0F1E28) : const Color(0xFFECF2F6);
+    final hi = isDark ? const Color(0xFF162737) : const Color(0xFFD8E4EC);
+    final border = isDark
+        ? Colors.white.withValues(alpha: 0.09)
+        : AppColors.lightBorder;
+
+    return AnimatedBuilder(
+      animation: _ctrl,
+      builder: (_, __) {
+        final pulse = Color.lerp(lo, hi, _ctrl.value)!;
+        return Container(
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: border),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isDark ? 0.38 : 0.07),
+                blurRadius: 18,
+                offset: const Offset(0, 6),
+                spreadRadius: -2,
+              ),
+            ],
           ),
-        ],
-      );
-    }
-    return const SizedBox.shrink();
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Image area placeholder
+              Expanded(
+                flex: 10,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: pulse,
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(20),
+                    ),
+                  ),
+                ),
+              ),
+              // Content area placeholder
+              Expanded(
+                flex: 6,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(11, 10, 11, 10),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        height: 10,
+                        decoration: BoxDecoration(
+                          color: pulse,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      FractionallySizedBox(
+                        widthFactor: 0.65,
+                        child: Container(
+                          height: 10,
+                          decoration: BoxDecoration(
+                            color: pulse,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                      ),
+                      const Spacer(),
+                      FractionallySizedBox(
+                        widthFactor: 0.50,
+                        child: Container(
+                          height: 14,
+                          decoration: BoxDecoration(
+                            color: pulse,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 7),
+                      FractionallySizedBox(
+                        widthFactor: 0.38,
+                        child: Container(
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: pulse,
+                            borderRadius: BorderRadius.circular(3),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 }
