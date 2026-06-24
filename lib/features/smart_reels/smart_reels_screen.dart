@@ -1526,6 +1526,65 @@ class _CommentsSheetState extends State<_CommentsSheet> {
   List<SmartReelComment> comments = [];
   final Set<String> _likedIds = {}; // local-only heart toggle — no backend count
 
+  void _deleteComment(SmartReelComment c) {
+    setState(() => comments.removeWhere((x) => x.id == c.id));
+  }
+
+  Future<void> _editComment(SmartReelComment c) async {
+    final tc = TextEditingController(text: c.text);
+    final updated = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A1A),
+        title: const Text(
+          'Editar comentario',
+          style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800),
+        ),
+        content: TextField(
+          controller: tc,
+          autofocus: true,
+          style: const TextStyle(color: Colors.white),
+          maxLines: 4,
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: Colors.white12,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancelar', style: TextStyle(color: Colors.white54)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, tc.text.trim()),
+            child: const Text('Guardar', style: TextStyle(color: Color(0xFFFF8A00), fontWeight: FontWeight.w800)),
+          ),
+        ],
+      ),
+    );
+    tc.dispose();
+    if (updated == null || updated.isEmpty) return;
+    setState(() {
+      final idx = comments.indexWhere((x) => x.id == c.id);
+      if (idx != -1) {
+        comments[idx] = SmartReelComment(
+          id: c.id,
+          reelId: c.reelId,
+          userId: c.userId,
+          userName: c.userName,
+          username: c.username,
+          userAvatarUrl: c.userAvatarUrl,
+          text: updated,
+          createdAt: c.createdAt,
+        );
+      }
+    });
+  }
+
   void _replyTo(String handle) {
     final prefix = '@$handle ';
     controller.text = prefix;
@@ -1804,6 +1863,39 @@ class _CommentsSheetState extends State<_CommentsSheet> {
                                   ),
                                 ),
                               ),
+                              // Edit / delete — own comments only
+                              if (c.userId.trim().isNotEmpty &&
+                                  c.userId == AuthService.instance.currentUserId)
+                                PopupMenuButton<String>(
+                                  onSelected: (v) {
+                                    if (v == 'edit') _editComment(c);
+                                    if (v == 'delete') _deleteComment(c);
+                                  },
+                                  color: const Color(0xFF1A1A1A),
+                                  icon: const Icon(
+                                    Icons.more_vert_rounded,
+                                    color: Colors.white30,
+                                    size: 18,
+                                  ),
+                                  itemBuilder: (_) => [
+                                    PopupMenuItem<String>(
+                                      value: 'edit',
+                                      child: Row(children: [
+                                        const Icon(Icons.edit_outlined, size: 15, color: Colors.white70),
+                                        const SizedBox(width: 8),
+                                        Text('Editar', style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 14)),
+                                      ]),
+                                    ),
+                                    PopupMenuItem<String>(
+                                      value: 'delete',
+                                      child: Row(children: [
+                                        const Icon(Icons.delete_outline_rounded, size: 15, color: Colors.redAccent),
+                                        const SizedBox(width: 8),
+                                        const Text('Eliminar', style: TextStyle(color: Colors.redAccent, fontSize: 14)),
+                                      ]),
+                                    ),
+                                  ],
+                                ),
                             ],
                           ),
                         );
