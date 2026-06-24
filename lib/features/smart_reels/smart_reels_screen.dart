@@ -881,8 +881,7 @@ class _SmartReelPageState extends State<_SmartReelPage> {
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: _ProgressBar(controller: controller),
                   ),
-                  // Pill nav clearance: 68px height + 12px bottom padding = 80px
-                  const SizedBox(height: 80),
+                  const SizedBox(height: 6),
                 ],
               ),
             ),
