@@ -277,13 +277,13 @@ class _MarketplaceHomeScreenState extends State<MarketplaceHomeScreen> {
           slivers: [
             // ── Safe-area top spacer ──────────────────────────────────────
             SliverToBoxAdapter(
-              child: SizedBox(height: MediaQuery.of(context).padding.top + 14),
+              child: SizedBox(height: MediaQuery.of(context).padding.top + 8),
             ),
 
             // ── Header ───────────────────────────────────────────────────
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
                 child: _Header(isDark: isDark),
               ),
             ),
@@ -291,7 +291,7 @@ class _MarketplaceHomeScreenState extends State<MarketplaceHomeScreen> {
             // ── Search bar ───────────────────────────────────────────────
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
                 child: _SearchBar(
                   controller: _searchCtrl,
                   onChanged: _onSearchChanged,
@@ -307,12 +307,12 @@ class _MarketplaceHomeScreenState extends State<MarketplaceHomeScreen> {
             // ── Category chips ────────────────────────────────────────────
             SliverToBoxAdapter(
               child: SizedBox(
-                height: 44,
+                height: 34,
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   itemCount: _categoryKeys.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 8),
+                  separatorBuilder: (_, __) => const SizedBox(width: 6),
                   itemBuilder: (_, i) {
                     final key = _categoryKeys[i];
                     final selected = _selectedCategory == key;
@@ -328,7 +328,7 @@ class _MarketplaceHomeScreenState extends State<MarketplaceHomeScreen> {
               ),
             ),
 
-            const SliverToBoxAdapter(child: SizedBox(height: 14)),
+            const SliverToBoxAdapter(child: SizedBox(height: 10)),
 
             // ── Quick actions ─────────────────────────────────────────────
             SliverToBoxAdapter(
@@ -343,26 +343,26 @@ class _MarketplaceHomeScreenState extends State<MarketplaceHomeScreen> {
               ),
             ),
 
-            const SliverToBoxAdapter(child: SizedBox(height: 14)),
+            const SliverToBoxAdapter(child: SizedBox(height: 10)),
 
             // ── Ad / sponsored reserved slot ───────────────────────────────
-            const SliverToBoxAdapter(child: SizedBox(height: 6)),
+            const SliverToBoxAdapter(child: SizedBox(height: 2)),
 
             // ── Section title ──────────────────────────────────────────────
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
                 child: Row(
                   children: [
                     Container(
                       width: 3,
-                      height: 22,
+                      height: 16,
                       decoration: BoxDecoration(
                         color: AppColors.orange,
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
-                    const SizedBox(width: 9),
+                    const SizedBox(width: 7),
                     Expanded(
                       child: Text(
                         'marketplace.availableListings'.tr(),
@@ -370,8 +370,8 @@ class _MarketplaceHomeScreenState extends State<MarketplaceHomeScreen> {
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           color: isDark ? AppColors.text : AppColors.lightText,
-                          fontSize: 20,
-                          fontWeight: FontWeight.w900,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
                           height: 1.05,
                         ),
                       ),
@@ -402,7 +402,7 @@ class _MarketplaceHomeScreenState extends State<MarketplaceHomeScreen> {
                   16,
                   0,
                   16,
-                  MediaQuery.of(context).padding.bottom + 110,
+                  MediaQuery.of(context).padding.bottom + 90,
                 ),
                 sliver: SliverGrid(
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -446,7 +446,7 @@ class _MarketplaceHomeScreenState extends State<MarketplaceHomeScreen> {
                   16,
                   0,
                   16,
-                  MediaQuery.of(context).padding.bottom + 110,
+                  MediaQuery.of(context).padding.bottom + 90,
                 ),
                 sliver: SliverGrid(
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -484,26 +484,26 @@ class _Header extends StatelessWidget {
     return Row(
       children: [
         Container(
-          width: 54,
-          height: 54,
+          width: 42,
+          height: 42,
           decoration: BoxDecoration(
             color: AppColors.orange,
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(14),
             boxShadow: [
               BoxShadow(
                 color: AppColors.orange.withValues(alpha: 0.22),
-                blurRadius: 22,
-                offset: const Offset(0, 10),
+                blurRadius: 14,
+                offset: const Offset(0, 6),
               ),
             ],
           ),
           child: const Icon(
             Icons.storefront_rounded,
             color: Colors.white,
-            size: 28,
+            size: 22,
           ),
         ),
-        const SizedBox(width: 14),
+        const SizedBox(width: 11),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -514,20 +514,20 @@ class _Header extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   color: text,
-                  fontSize: 26,
-                  fontWeight: FontWeight.w900,
+                  fontSize: 19,
+                  fontWeight: FontWeight.w800,
                   height: 1.05,
                 ),
               ),
-              const SizedBox(height: 5),
+              const SizedBox(height: 2),
               Text(
                 'marketplace.subtitle'.tr(),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   color: muted,
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.w700,
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w600,
                   height: 1.15,
                 ),
               ),
@@ -563,17 +563,17 @@ class _SearchBar extends StatelessWidget {
     final hint = isDark ? AppColors.gray : AppColors.lightGray;
 
     return Container(
-      height: 58,
+      height: 44,
       decoration: BoxDecoration(
         color: fill,
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: border),
         boxShadow: [
           if (!isDark)
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 18,
-              offset: const Offset(0, 8),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
             ),
         ],
       ),
@@ -582,27 +582,27 @@ class _SearchBar extends StatelessWidget {
         onChanged: onChanged,
         style: TextStyle(
           color: isDark ? AppColors.text : AppColors.lightText,
-          fontSize: 14,
+          fontSize: 13,
         ),
         decoration: InputDecoration(
           hintText: 'mkt.searchHint'.tr(),
           hintStyle: TextStyle(
             color: hint,
-            fontSize: 15,
-            fontWeight: FontWeight.w700,
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
           ),
-          prefixIcon: Icon(Icons.search_rounded, color: hint, size: 24),
+          prefixIcon: Icon(Icons.search_rounded, color: hint, size: 20),
           suffixIcon: ValueListenableBuilder<TextEditingValue>(
             valueListenable: controller,
             builder: (_, v, __) => v.text.isEmpty
                 ? const SizedBox.shrink()
                 : IconButton(
-                    icon: Icon(Icons.close_rounded, color: hint, size: 20),
+                    icon: Icon(Icons.close_rounded, color: hint, size: 18),
                     onPressed: onClear,
                   ),
           ),
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(vertical: 17),
+          contentPadding: const EdgeInsets.symmetric(vertical: 12),
         ),
       ),
     );
@@ -635,10 +635,10 @@ class _CategoryChip extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
           color: selected ? AppColors.orange : inactiveFill,
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: selected ? AppColors.orange : inactiveBorder,
           ),
@@ -649,8 +649,8 @@ class _CategoryChip extends StatelessWidget {
             color: selected
                 ? Colors.white
                 : (isDark ? AppColors.gray : AppColors.lightGray),
-            fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-            fontSize: 13,
+            fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+            fontSize: 12,
           ),
         ),
       ),
@@ -677,7 +677,7 @@ class _QuickActionRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final gap = constraints.maxWidth < 360 ? 8.0 : 10.0;
+        final gap = constraints.maxWidth < 360 ? 6.0 : 8.0;
         return Row(
           children: [
             Expanded(
@@ -750,13 +750,13 @@ class _ActionTile extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         child: Ink(
-          height: 88,
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+          height: 72,
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
           decoration: BoxDecoration(
             color: tileColor,
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(color: tileBorder),
             boxShadow: accent
                 ? [
@@ -773,15 +773,15 @@ class _ActionTile extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                width: 36,
-                height: 36,
+                width: 30,
+                height: 30,
                 decoration: BoxDecoration(
                   color: iconFill,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(icon, color: iconColor, size: 20),
+                child: Icon(icon, color: iconColor, size: 17),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               Text(
                 label,
                 textAlign: TextAlign.center,
@@ -789,8 +789,8 @@ class _ActionTile extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   color: labelColor,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w800,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
                   height: 1.05,
                 ),
               ),
@@ -986,7 +986,7 @@ class MarketplaceListingCard extends StatelessWidget {
                 ),
                 Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(9, 7, 9, 8),
+                    padding: const EdgeInsets.fromLTRB(8, 6, 8, 7),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -998,31 +998,31 @@ class MarketplaceListingCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             color: text,
-                            fontSize: 12.5,
+                            fontSize: 11.5,
                             fontWeight: FontWeight.w700,
                             height: 1.2,
                           ),
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 3),
                         Text(
                           item.formattedPrice,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             color: AppColors.orange,
-                            fontSize: 15,
+                            fontSize: 13.5,
                             fontWeight: FontWeight.w800,
                             height: 1.05,
                           ),
                         ),
-                        const SizedBox(height: 3),
+                        const SizedBox(height: 2),
                         Text(
                           location,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             color: muted,
-                            fontSize: 11,
+                            fontSize: 10.5,
                             fontWeight: FontWeight.w500,
                             height: 1.1,
                           ),
