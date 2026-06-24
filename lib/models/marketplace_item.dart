@@ -115,18 +115,43 @@ class MarketplaceItem {
     final rawStatus = (map['status'] ?? '').toString();
     return MarketplaceItem(
       id: id,
-      sellerId:
-          map['sellerId']?.toString() ?? map['seller_id']?.toString() ?? '',
-      sellerName:
-          map['sellerName']?.toString() ?? map['seller_name']?.toString() ?? '',
-      sellerUsername: (map['sellerUsername'] ?? map['seller_username'] ?? '')
-          .toString(),
-      sellerAvatarUrl:
-          (map['sellerAvatarUrl'] ??
-                  map['seller_avatar_url'] ??
-                  map['sellerPhotoUrl'] ??
-                  '')
-              .toString(),
+      sellerId: _firstString(map, const [
+        'sellerId',
+        'seller_id',
+        'userId',
+        'user_id',
+        'ownerId',
+        'owner_id',
+        'creatorId',
+        'creator_id',
+      ]),
+      sellerName: _firstString(map, const [
+        'sellerName',
+        'seller_name',
+        'ownerName',
+        'owner_name',
+        'creatorName',
+        'creator_name',
+        'userName',
+        'user_name',
+      ]),
+      sellerUsername: _firstString(map, const [
+        'sellerUsername',
+        'seller_username',
+        'username',
+      ]),
+      sellerAvatarUrl: _firstString(map, const [
+        'sellerAvatarUrl',
+        'seller_avatar_url',
+        'sellerPhotoUrl',
+        'seller_photo_url',
+        'ownerAvatarUrl',
+        'owner_avatar_url',
+        'creatorAvatarUrl',
+        'creator_avatar_url',
+        'photoUrl',
+        'photo_url',
+      ]),
       sellerVerified:
           map['sellerVerified'] == true || map['seller_verified'] == true,
       title: map['title']?.toString() ?? '',
@@ -299,6 +324,14 @@ class MarketplaceItem {
     final ships = _toList(map['shipsTo'] ?? map['ships_to']);
     if (pickup && ships.isNotEmpty) return 'both';
     return pickup ? 'pickup' : 'shipping';
+  }
+
+  static String _firstString(Map<String, dynamic> map, List<String> keys) {
+    for (final key in keys) {
+      final value = map[key]?.toString().trim();
+      if (value != null && value.isNotEmpty) return value;
+    }
+    return '';
   }
 
   static double _toDouble(dynamic value) {

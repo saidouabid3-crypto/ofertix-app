@@ -58,6 +58,32 @@ void main() {
     expect(payload.containsKey('isActive'), isFalse);
   });
 
+  test('seller identity resolves from supported ownership aliases', () {
+    expect(
+      MarketplaceItem.fromMap({
+        'sellerId': 'seller-primary',
+        'userId': 'legacy-user',
+      }, 'listing-1').sellerId,
+      'seller-primary',
+    );
+    expect(
+      MarketplaceItem.fromMap({'userId': 'legacy-user'}, 'listing-2').sellerId,
+      'legacy-user',
+    );
+    expect(
+      MarketplaceItem.fromMap({
+        'ownerId': 'legacy-owner',
+      }, 'listing-3').sellerId,
+      'legacy-owner',
+    );
+    expect(
+      MarketplaceItem.fromMap({
+        'creatorId': 'legacy-creator',
+      }, 'listing-4').sellerId,
+      'legacy-creator',
+    );
+  });
+
   test('seller pickers expose the required normalized choices', () {
     expect(
       MarketplaceListingOptions.countries

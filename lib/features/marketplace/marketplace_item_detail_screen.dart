@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/errors/app_exception.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/marketplace_item.dart';
 import '../../services/marketplace_service.dart';
@@ -46,6 +47,60 @@ class MarketplaceItemDetailScreen extends StatefulWidget {
     }
     if (result.isEmpty) add(item.mainImage);
     return result;
+  }
+
+  @visibleForTesting
+  static String sellerProfileTarget(MarketplaceItem item) =>
+      item.sellerId.trim();
+
+  @visibleForTesting
+  static bool canContactSeller({
+    required MarketplaceItem item,
+    required String? currentUserId,
+    bool showOwnerStatus = false,
+  }) {
+    final sellerId = sellerProfileTarget(item);
+    final uid = currentUserId?.trim() ?? '';
+    if (showOwnerStatus || sellerId.isEmpty) return false;
+    if (uid.isNotEmpty && uid == sellerId) return false;
+    return true;
+  }
+
+  @visibleForTesting
+  static String contactErrorKey(Object error) {
+    if (error is UnauthorizedException) {
+      return 'mkt.messages.loginRequired';
+    }
+    if (error is ForbiddenException) {
+      final message = error.message.toLowerCase();
+      if (message.contains('self') ||
+          message.contains('yourself') ||
+          message.contains('same user')) {
+        return 'mkt.inbox.cannotMessageSelf';
+      }
+      return 'mkt.messages.listingUnavailable';
+    }
+    if (error is NotFoundException) {
+      return 'mkt.messages.listingUnavailable';
+    }
+    if (error is ServerException || error is TimeoutAppException) {
+      return 'mkt.messages.serviceUnavailable';
+    }
+    if (error is NetworkException) {
+      final status = error.statusCode ?? 0;
+      final message = error.message.toLowerCase();
+      if (status == 400 && message.contains('seller')) {
+        return 'mkt.profile.unavailable';
+      }
+      if (status == 403) {
+        return message.contains('self')
+            ? 'mkt.inbox.cannotMessageSelf'
+            : 'mkt.messages.listingUnavailable';
+      }
+      if (status == 404) return 'mkt.messages.listingUnavailable';
+      if (status >= 500) return 'mkt.messages.serviceUnavailable';
+    }
+    return 'mkt.messages.conversationUnavailable';
   }
 
   @override
@@ -239,28 +294,31 @@ class _MarketplaceItemDetailScreenState
 
   Future<void> _contact() async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (kDebugMode) {
-      debugPrint(
-        '[Marketplace16D] contact_tap item=${_item.id} seller=${_item.sellerId} auth=${uid != null ? 'yes' : 'no'}',
-      );
-    }
     if (uid == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('mkt.messages.loginRequired'.tr())),
       );
       return;
     }
-    if (uid == _item.sellerId || _contacting) return;
+    final sellerId = MarketplaceItemDetailScreen.sellerProfileTarget(_item);
+    if (sellerId.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('mkt.profile.unavailable'.tr())));
+      return;
+    }
+    if (uid == sellerId) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('mkt.inbox.cannotMessageSelf'.tr())),
+      );
+      return;
+    }
+    if (_contacting) return;
     setState(() => _contacting = true);
     try {
       final conversation = await MarketplaceService.instance
           .startConversationForListing(_item);
       if (!mounted) return;
-      if (kDebugMode) {
-        debugPrint(
-          '[Marketplace16E] contact_open_conversation id=${conversation.id}',
-        );
-      }
       await Navigator.push(
         context,
         MaterialPageRoute(
@@ -270,10 +328,14 @@ class _MarketplaceItemDetailScreenState
           ),
         ),
       );
-    } catch (_) {
+    } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('mkt.messages.serviceUnavailable'.tr())),
+        SnackBar(
+          content: Text(
+            MarketplaceItemDetailScreen.contactErrorKey(error).tr(),
+          ),
+        ),
       );
     } finally {
       if (mounted) setState(() => _contacting = false);
@@ -610,9 +672,18 @@ class _MarketplaceItemDetailScreenState
   }
 
   Widget? _buildBottomBar(bool isDark, Color text, Color muted) {
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+    final canContact = MarketplaceItemDetailScreen.canContactSeller(
+      item: _item,
+      currentUserId: currentUserId,
+      showOwnerStatus: widget.showOwnerStatus,
+    );
     final isOwner =
         widget.showOwnerStatus ||
-        FirebaseAuth.instance.currentUser?.uid == _item.sellerId;
+        (MarketplaceItemDetailScreen.sellerProfileTarget(_item).isNotEmpty &&
+            currentUserId ==
+                MarketplaceItemDetailScreen.sellerProfileTarget(_item));
+    if (!isOwner && !canContact) return null;
     final bg = isDark ? AppColors.card : AppColors.lightCard;
     final border = isDark ? Colors.white12 : AppColors.lightBorder;
 
@@ -692,10 +763,17 @@ class _MarketplaceItemDetailScreenState
   }
 
   void _openSellerProfile() {
+    final sellerId = MarketplaceItemDetailScreen.sellerProfileTarget(_item);
+    if (sellerId.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('mkt.profile.unavailable'.tr())));
+      return;
+    }
     openMarketplacePublicProfile(
       context: context,
       source: 'detail_bottom_bar',
-      userId: _item.sellerId,
+      userId: sellerId,
     );
   }
 
@@ -989,24 +1067,19 @@ class _SellerCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final sellerId = MarketplaceItemDetailScreen.sellerProfileTarget(item);
     void openProfile() {
-      final available = item.sellerId.trim().isNotEmpty;
-      if (kDebugMode) {
-        debugPrint(
-          '[Marketplace16E-A] detail_profile_tap '
-          'seller=${item.sellerId} available=$available',
-        );
-      }
+      if (sellerId.isEmpty) return;
       openMarketplacePublicProfile(
         context: context,
         source: 'detail',
-        userId: item.sellerId,
+        userId: sellerId,
       );
     }
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: openProfile,
+      onTap: sellerId.isEmpty ? null : openProfile,
       child: _Card(
         color: card,
         border: border,
@@ -1076,7 +1149,7 @@ class _SellerCard extends StatelessWidget {
                 ],
               ),
             ),
-            if (item.sellerId.isNotEmpty) ...[
+            if (sellerId.isNotEmpty) ...[
               InkWell(
                 onTap: openProfile,
                 borderRadius: BorderRadius.circular(10),

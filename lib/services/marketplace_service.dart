@@ -24,13 +24,6 @@ class MarketplaceService {
     MarketplaceItem item, {
     String initialMessage = '',
   }) async {
-    final auth = FirebaseAuth.instance.currentUser;
-    if (kDebugMode) {
-      debugPrint(
-        '[Marketplace16E] start_conversation item=${item.id} '
-        'seller=${item.sellerId} auth=${auth == null ? 'no' : 'yes'}',
-      );
-    }
     final token = await _freshToken();
     final response = await _api.post(
       ApiEndpoints.marketplaceMessagesStart,

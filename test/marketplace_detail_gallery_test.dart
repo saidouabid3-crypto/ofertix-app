@@ -1,30 +1,32 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ofertix/core/errors/app_exception.dart';
 import 'package:ofertix/features/marketplace/marketplace_item_detail_screen.dart';
 import 'package:ofertix/models/marketplace_item.dart';
 
 MarketplaceItem _item({
+  String id = 'test-id',
+  String sellerId = 's1',
   String coverImage = '',
   List<String> images = const [],
-}) =>
-    MarketplaceItem(
-      id: 'test-id',
-      sellerId: 's1',
-      sellerName: 'Seller',
-      title: 'Test',
-      description: 'Desc',
-      price: 10,
-      city: 'Madrid',
-      sellerCountryCode: 'es',
-      availableCountries: const ['es'],
-      shipsTo: const [],
-      pickupOnly: true,
-      isActive: true,
-      isFeatured: false,
-      isSponsored: false,
-      createdAt: null,
-      images: images,
-      coverImage: coverImage,
-    );
+}) => MarketplaceItem(
+  id: id,
+  sellerId: sellerId,
+  sellerName: 'Seller',
+  title: 'Test',
+  description: 'Desc',
+  price: 10,
+  city: 'Madrid',
+  sellerCountryCode: 'es',
+  availableCountries: const ['es'],
+  shipsTo: const [],
+  pickupOnly: true,
+  isActive: true,
+  isFeatured: false,
+  isSponsored: false,
+  createdAt: null,
+  images: images,
+  coverImage: coverImage,
+);
 
 void main() {
   group('MarketplaceItemDetailScreen.buildGalleryUrls', () {
@@ -37,11 +39,13 @@ void main() {
 
     test('images[] 3 returns 3', () {
       final urls = MarketplaceItemDetailScreen.buildGalleryUrls(
-        _item(images: [
-          'https://example.com/1.jpg',
-          'https://example.com/2.jpg',
-          'https://example.com/3.jpg',
-        ]),
+        _item(
+          images: [
+            'https://example.com/1.jpg',
+            'https://example.com/2.jpg',
+            'https://example.com/3.jpg',
+          ],
+        ),
       );
       expect(urls.length, 3);
     });
@@ -73,11 +77,13 @@ void main() {
 
     test('duplicate URLs removed', () {
       final urls = MarketplaceItemDetailScreen.buildGalleryUrls(
-        _item(images: [
-          'https://example.com/same.jpg',
-          'https://example.com/same.jpg',
-          'https://example.com/other.jpg',
-        ]),
+        _item(
+          images: [
+            'https://example.com/same.jpg',
+            'https://example.com/same.jpg',
+            'https://example.com/other.jpg',
+          ],
+        ),
       );
       expect(urls.length, 2);
     });
@@ -141,6 +147,68 @@ void main() {
     test('unverified seller has sellerVerified=false', () {
       final item = _item();
       expect(item.sellerVerified, isFalse);
+    });
+  });
+
+  group('seller actions', () {
+    test('profile target uses seller ID, not listing ID', () {
+      final item = _item(id: 'listing-1', sellerId: 'seller-1');
+      expect(MarketplaceItemDetailScreen.sellerProfileTarget(item), 'seller-1');
+      expect(
+        MarketplaceItemDetailScreen.sellerProfileTarget(item),
+        isNot('listing-1'),
+      );
+    });
+
+    test('contact is unavailable for missing seller and own listings', () {
+      expect(
+        MarketplaceItemDetailScreen.canContactSeller(
+          item: _item(sellerId: ''),
+          currentUserId: 'buyer-1',
+        ),
+        isFalse,
+      );
+      expect(
+        MarketplaceItemDetailScreen.canContactSeller(
+          item: _item(sellerId: 'owner-1'),
+          currentUserId: 'owner-1',
+        ),
+        isFalse,
+      );
+      expect(
+        MarketplaceItemDetailScreen.canContactSeller(
+          item: _item(sellerId: 'seller-1'),
+          currentUserId: 'buyer-1',
+        ),
+        isTrue,
+      );
+    });
+
+    test('contact error mapping preserves actionable backend failures', () {
+      expect(
+        MarketplaceItemDetailScreen.contactErrorKey(
+          const NotFoundException('listing unavailable'),
+        ),
+        'mkt.messages.listingUnavailable',
+      );
+      expect(
+        MarketplaceItemDetailScreen.contactErrorKey(
+          const ForbiddenException('cannot contact yourself'),
+        ),
+        'mkt.inbox.cannotMessageSelf',
+      );
+      expect(
+        MarketplaceItemDetailScreen.contactErrorKey(
+          const NetworkException('seller unavailable', statusCode: 400),
+        ),
+        'mkt.profile.unavailable',
+      );
+      expect(
+        MarketplaceItemDetailScreen.contactErrorKey(
+          const ServerException('server unavailable', statusCode: 503),
+        ),
+        'mkt.messages.serviceUnavailable',
+      );
     });
   });
 }
