@@ -538,9 +538,9 @@ class _SmartReelsScreenState extends State<SmartReelsScreen>
   @override
   Widget build(BuildContext context) {
     if (loading) {
-      return Scaffold(
+      return const Scaffold(
         backgroundColor: Colors.black,
-        body: Center(child: CircularProgressIndicator(color: Colors.white)),
+        body: _LoadingReels(),
       );
     }
 
@@ -625,9 +625,9 @@ class _SmartReelsScreenState extends State<SmartReelsScreen>
                     'auto.smart_reels_smart_reels_screen.ofertix_reels'.tr(),
                     style: TextStyle(
                       color: Colors.white,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 21,
-                      letterSpacing: -0.4,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 17,
+                      letterSpacing: -0.3,
                       shadows: [Shadow(color: Colors.black54, blurRadius: 10)],
                     ),
                   ),
@@ -819,9 +819,17 @@ class _SmartReelPageState extends State<_SmartReelPage> {
             failed: failed,
           ),
           _DarkGradientOverlay(),
+          // Discount badge — top-left, real data only
+          if (reel.hasDiscount)
+            PositionedDirectional(
+              start: 14,
+              top: 88,
+              child: _DiscountBadge(label: reel.discountLabel),
+            ),
+          // Action rail
           Positioned(
             right: 12,
-            bottom: 116,
+            bottom: 234,
             child: _RightActions(
               reel: reel,
               onLike: widget.onLike,
@@ -831,23 +839,32 @@ class _SmartReelPageState extends State<_SmartReelPage> {
               onMenu: widget.onMenu,
             ),
           ),
+          // Creator / title / price info
           Positioned(
             left: 16,
-            right: 82,
-            bottom: 106,
+            right: 84,
+            bottom: 234,
             child: _ReelInfo(
               reel: reel,
-              onBuy: widget.onBuy,
               onFollow: widget.onFollow,
               onOpenProfile: widget.onOpenProfile,
             ),
           ),
+          // Full-width CTA above bottom navigation
+          Positioned(
+            left: 12,
+            right: 12,
+            bottom: 182,
+            child: _ReelCtaButton(reel: reel, onBuy: widget.onBuy),
+          ),
+          // Progress bar
           Positioned(
             left: 16,
             right: 16,
             bottom: 68,
             child: _ProgressBar(controller: controller),
           ),
+          // Mute toggle
           Positioned(
             right: 16,
             top: 92,
@@ -974,13 +991,13 @@ class _DarkGradientOverlay extends StatelessWidget {
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [
-              Colors.black.withValues(alpha: 0.48),
+              Colors.black.withValues(alpha: 0.54),
               Colors.transparent,
-              Colors.black.withValues(alpha: 0.84),
+              Colors.black.withValues(alpha: 0.92),
             ],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            stops: [0.0, 0.42, 1.0],
+            stops: [0.0, 0.36, 1.0],
           ),
         ),
       ),
@@ -1069,7 +1086,7 @@ class _ActionButton extends StatelessWidget {
     final color = active ? activeColor : Colors.white;
 
     return Padding(
-      padding: EdgeInsets.only(bottom: 15),
+      padding: EdgeInsets.only(bottom: 12),
       child: GestureDetector(
         onTap: onTap,
         child: Column(
@@ -1077,16 +1094,16 @@ class _ActionButton extends StatelessWidget {
             Icon(
               icon,
               color: color,
-              size: 31,
+              size: 26,
               shadows: [Shadow(color: Colors.black87, blurRadius: 8)],
             ),
             if (label.isNotEmpty) ...[
-              SizedBox(height: 4),
+              SizedBox(height: 3),
               Text(
                 label,
                 style: TextStyle(
                   color: Colors.white,
-                  fontSize: 10.5,
+                  fontSize: 10,
                   fontWeight: FontWeight.w800,
                   shadows: [Shadow(color: Colors.black87, blurRadius: 8)],
                 ),
@@ -1102,13 +1119,11 @@ class _ActionButton extends StatelessWidget {
 class _ReelInfo extends StatelessWidget {
   _ReelInfo({
     required this.reel,
-    required this.onBuy,
     required this.onFollow,
     required this.onOpenProfile,
   });
 
   final SmartReelModel reel;
-  final VoidCallback onBuy;
   final VoidCallback onFollow;
   final VoidCallback onOpenProfile;
 
@@ -1150,10 +1165,10 @@ class _ReelInfo extends StatelessWidget {
                   ),
                 ),
                 child: Text(
-                  reel.isFollowing ? 'Following' : 'Follow',
+                  reel.isFollowing ? 'reels.following'.tr() : 'reels.follow'.tr(),
                   style: TextStyle(
                     color: Colors.white,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w800,
                     fontSize: 10.5,
                   ),
                 ),
@@ -1189,33 +1204,24 @@ class _ReelInfo extends StatelessWidget {
           ),
         ],
         SizedBox(height: 9),
-        Wrap(
-          spacing: 7,
-          runSpacing: 7,
-          children: [
-            _InfoPill(icon: Icons.storefront_rounded, label: reel.store),
-            if (reel.hasDiscount)
-              _InfoPill(
-                icon: Icons.local_offer_rounded,
-                label: reel.discountLabel,
-              ),
-          ],
-        ),
-        SizedBox(height: 11),
+        // Store pill — discount badge is now shown as top-left overlay
+        if (reel.store.trim().isNotEmpty)
+          _InfoPill(icon: Icons.storefront_rounded, label: reel.store),
+        SizedBox(height: 10),
         Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Text(
               reel.priceLabel,
               style: TextStyle(
-                color: Colors.white,
+                color: Color(0xFFFF8A00),
                 fontWeight: FontWeight.w900,
-                fontSize: 23,
-                letterSpacing: -0.7,
+                fontSize: 22,
+                letterSpacing: -0.6,
                 shadows: [Shadow(color: Colors.black87, blurRadius: 10)],
               ),
             ),
-            SizedBox(width: 9),
+            SizedBox(width: 8),
             if (reel.hasDiscount)
               Flexible(
                 child: Text(
@@ -1225,7 +1231,7 @@ class _ReelInfo extends StatelessWidget {
                   style: TextStyle(
                     color: Colors.white54,
                     fontSize: 13,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w600,
                     decoration: TextDecoration.lineThrough,
                     decorationColor: Colors.white54,
                     shadows: [Shadow(color: Colors.black87, blurRadius: 8)],
@@ -1233,27 +1239,6 @@ class _ReelInfo extends StatelessWidget {
                 ),
               ),
           ],
-        ),
-        SizedBox(height: 11),
-        SizedBox(
-          height: 44,
-          child: ElevatedButton.icon(
-            onPressed: onBuy,
-            icon: Icon(Icons.shopping_bag_rounded, size: 20),
-            label: Text(
-              'auto.smart_reels_smart_reels_screen.ver_oferta'.tr(),
-              style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14),
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.white,
-              foregroundColor: Colors.black,
-              elevation: 0,
-              padding: EdgeInsets.symmetric(horizontal: 17),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(15),
-              ),
-            ),
-          ),
         ),
       ],
     );
@@ -2174,6 +2159,98 @@ class _ErrorState extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Discount badge overlay ───────────────────────────────────────────────────
+
+class _DiscountBadge extends StatelessWidget {
+  final String label;
+
+  const _DiscountBadge({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFF8A00),
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFFF8A00).withValues(alpha: 0.38),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w900,
+          fontSize: 12.5,
+          height: 1.0,
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Full-width CTA button ────────────────────────────────────────────────────
+
+class _ReelCtaButton extends StatelessWidget {
+  final SmartReelModel reel;
+  final VoidCallback onBuy;
+
+  const _ReelCtaButton({required this.reel, required this.onBuy});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 46,
+      width: double.infinity,
+      child: ElevatedButton.icon(
+        onPressed: onBuy,
+        icon: const Icon(Icons.shopping_bag_rounded, size: 19),
+        label: Text(
+          'auto.smart_reels_smart_reels_screen.ver_oferta'.tr(),
+          style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFFFF8A00),
+          foregroundColor: Colors.white,
+          elevation: 0,
+          shadowColor: Colors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Branded loading state ────────────────────────────────────────────────────
+
+class _LoadingReels extends StatelessWidget {
+  const _LoadingReels();
+
+  @override
+  Widget build(BuildContext context) {
+    return const ColoredBox(
+      color: Colors.black,
+      child: Center(
+        child: SizedBox(
+          width: 32,
+          height: 32,
+          child: CircularProgressIndicator(
+            strokeWidth: 2.5,
+            color: Color(0xFFFF8A00),
           ),
         ),
       ),
