@@ -869,13 +869,13 @@ class _SmartReelPageState extends State<_SmartReelPage> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 8),
                   // Full-width CTA
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                     child: _ReelCtaButton(reel: reel, onBuy: widget.onBuy),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 4),
                   // Progress bar
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -2229,22 +2229,23 @@ class _ReelCtaButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 46,
+      height: 38,
       width: double.infinity,
       child: ElevatedButton.icon(
         onPressed: onBuy,
-        icon: const Icon(Icons.shopping_bag_rounded, size: 19),
+        icon: const Icon(Icons.shopping_bag_rounded, size: 16),
         label: Text(
           'auto.smart_reels_smart_reels_screen.ver_oferta'.tr(),
-          style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14),
+          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
         ),
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFFFF8A00),
           foregroundColor: Colors.white,
           elevation: 0,
           shadowColor: Colors.transparent,
+          padding: const EdgeInsets.symmetric(horizontal: 14),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(12),
           ),
         ),
       ),
