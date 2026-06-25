@@ -97,9 +97,19 @@ class _ScanScreenState extends State<ScanScreen>
                 const SizedBox(width: 4),
               ],
             ),
-            body: hasResults
+            body: provider.isLoading
+                ? const _LoadingView()
+                : hasResults
                 ? _ResultsView(
                     provider: provider,
+                    onScanAgain: () {
+                      provider.resetScanner();
+                      _urlCtrl.clear();
+                    },
+                  )
+                : (provider.hasScanned && provider.lastCode.isNotEmpty)
+                ? _NoResultsView(
+                    code: provider.lastCode,
                     onScanAgain: () {
                       provider.resetScanner();
                       _urlCtrl.clear();
@@ -317,30 +327,6 @@ class _ScannerView extends StatelessWidget {
           ),
         ),
 
-        // Loading overlay
-        if (provider.isLoading)
-          Container(
-            color: Colors.black.withValues(alpha: 0.55),
-            child: const Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  CircularProgressIndicator(
-                    color: AppColors.orange,
-                    strokeWidth: 2.5,
-                  ),
-                  SizedBox(height: 16),
-                  Text(
-                    'Analizando...',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
       ],
     );
   }
@@ -422,6 +408,113 @@ class _ResultsView extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ─── Loading view ────────────────────────────────────────────────────────────
+
+class _LoadingView extends StatelessWidget {
+  const _LoadingView();
+
+  @override
+  Widget build(BuildContext context) {
+    return const ColoredBox(
+      color: Colors.black,
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(color: AppColors.orange, strokeWidth: 2.5),
+            SizedBox(height: 16),
+            Text(
+              'Analizando...',
+              style: TextStyle(
+                color: Colors.white70,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── No results view ──────────────────────────────────────────────────────────
+
+class _NoResultsView extends StatelessWidget {
+  final String code;
+  final VoidCallback onScanAgain;
+
+  const _NoResultsView({required this.code, required this.onScanAgain});
+
+  @override
+  Widget build(BuildContext context) {
+    final isBarcode = RegExp(r'^\d{8,14}$').hasMatch(code.trim());
+    return ColoredBox(
+      color: const Color(0xFF050D11),
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  color: AppColors.orange.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.search_off_rounded,
+                  color: AppColors.orange,
+                  size: 36,
+                ),
+              ),
+              const SizedBox(height: 18),
+              const Text(
+                'Sin resultados',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                isBarcode
+                    ? 'Este producto no está en Ofertix todavía.\nPrueba buscar por nombre o texto.'
+                    : 'No encontramos resultados para este término.\nPrueba con otras palabras.',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: AppColors.gray,
+                  fontSize: 13.5,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: onScanAgain,
+                  icon: const Icon(Icons.qr_code_scanner_rounded, size: 18),
+                  label: Text('scan.scanAgain'.tr()),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.orange,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
