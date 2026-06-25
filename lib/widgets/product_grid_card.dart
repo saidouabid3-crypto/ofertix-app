@@ -10,7 +10,6 @@ import 'package:visibility_detector/visibility_detector.dart';
 
 import '../core/theme/app_theme.dart';
 import '../core/utils/price_utils.dart';
-import '../core/utils/product_trust_ui.dart';
 import '../models/ai_deal_brain_result.dart';
 import '../models/product.dart';
 import '../providers/watchlist_provider.dart';
@@ -253,8 +252,6 @@ class _ProductGridCardState extends State<ProductGridCard> {
 
   @override
   Widget build(BuildContext context) {
-    final distance = distanceLabel;
-
     return VisibilityDetector(
       key: ValueKey('ai-badge-${product.id}'),
       onVisibilityChanged: (info) {
@@ -411,11 +408,7 @@ class _ProductGridCardState extends State<ProductGridCard> {
                             ),
                           ),
 
-                          Positioned(
-                            left: 8,
-                            bottom: 8,
-                            child: _DarkSourcePill(text: sourceLabel),
-                          ),
+                          // source pill removed — added clutter without value
 
                           if (_aiResult != null)
                             Positioned(
@@ -438,61 +431,12 @@ class _ProductGridCardState extends State<ProductGridCard> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            if (product.isHot ||
-                                product.isTrending ||
-                                distance != null)
-                              Row(
-                                children: [
-                                  if (product.isHot || product.isTrending)
-                                    const _SoftPill(
-                                      text: 'HOT',
-                                      icon: Icons.local_fire_department_rounded,
-                                      color: AppColors.green,
-                                    ),
-                                  if (distance != null) ...[
-                                    const SizedBox(width: 5),
-                                    _SoftPill(
-                                      text: distance,
-                                      icon: Icons.near_me_rounded,
-                                      color: AppColors.orange,
-                                    ),
-                                  ],
-                                ],
-                              ),
-
-                            if (product.isHot ||
-                                product.isTrending ||
-                                distance != null)
-                              const SizedBox(height: 6),
-
-                            Builder(builder: (ctx) {
-                              final ts = ProductTrustUi.resolve(product);
-                              return Row(
-                                children: [
-                                  _SoftPill(
-                                    text: verdictLabel,
-                                    icon: Icons.auto_awesome_rounded,
-                                    color: verdictColor,
-                                  ),
-                                  if (ts != ProductTrustState.none) ...[
-                                    const SizedBox(width: 5),
-                                    _SoftPill(
-                                      text: ProductTrustUi.shortKey(ts).tr(),
-                                      icon: ProductTrustUi.icon(ts),
-                                      color: ProductTrustUi.color(ts),
-                                    ),
-                                  ] else if (product.rating > 0) ...[
-                                    const SizedBox(width: 5),
-                                    _SoftPill(
-                                      text: product.rating.toStringAsFixed(1),
-                                      icon: Icons.star_rounded,
-                                      color: AppColors.orange,
-                                    ),
-                                  ],
-                                ],
-                              );
-                            }),
-
+                            // Single verdict pill — clean, no clutter
+                            _SoftPill(
+                              text: verdictLabel,
+                              icon: Icons.auto_awesome_rounded,
+                              color: verdictColor,
+                            ),
                             const SizedBox(height: 6),
 
                             Text(
@@ -636,43 +580,6 @@ class _Badge extends StatelessWidget {
           height: 1,
           fontWeight: FontWeight.w900,
         ),
-      ),
-    );
-  }
-}
-
-class _DarkSourcePill extends StatelessWidget {
-  final String text;
-
-  const _DarkSourcePill({required this.text});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      constraints: const BoxConstraints(maxWidth: 88),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.58),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.public_rounded, color: AppColors.orange, size: 12),
-          const SizedBox(width: 4),
-          Flexible(
-            child: Text(
-              text,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 10,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
