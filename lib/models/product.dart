@@ -159,9 +159,10 @@ class Product {
   static int toInt(dynamic value) {
     if (value == null) return 0;
     if (value is num) return value.toInt();
-    if (value is String)
+    if (value is String) {
       return int.tryParse(value.replaceAll('%', '').trim()) ??
           toDouble(value).round();
+    }
     return 0;
   }
 
@@ -180,6 +181,7 @@ class Product {
       return value
           .map((e) => e.toString().trim())
           .where((e) => e.isNotEmpty)
+          .take(12)
           .toSet()
           .toList();
     }
@@ -188,10 +190,32 @@ class Product {
           .split(RegExp(r'[,|;]'))
           .map((e) => e.trim())
           .where((e) => e.isNotEmpty)
+          .take(12)
           .toSet()
           .toList();
     }
     return const [];
+  }
+
+  static String _text(dynamic value, {String fallback = '', int max = 500}) {
+    final raw = value?.toString().trim() ?? '';
+    final resolved = raw.isEmpty ? fallback : raw;
+    if (resolved.length <= max) return resolved;
+    return resolved.substring(0, max).trimRight();
+  }
+
+  static String _currency(dynamic value) {
+    final raw = value?.toString().trim().toUpperCase() ?? '';
+    return RegExp(r'^[A-Z]{3}$').hasMatch(raw) ? raw : 'EUR';
+  }
+
+  static String _url(dynamic value) {
+    final raw = value?.toString().trim() ?? '';
+    if (raw.isEmpty || raw.length > 2048) return '';
+    final uri = Uri.tryParse(raw);
+    if (uri == null || !uri.hasScheme || uri.host.isEmpty) return '';
+    final scheme = uri.scheme.toLowerCase();
+    return scheme == 'http' || scheme == 'https' ? raw : '';
   }
 
   static DateTime? toDate(dynamic value) {
@@ -206,31 +230,40 @@ class Product {
   }
 
   factory Product.fromMap(Map<String, dynamic> map, String documentId) {
-    final rawName =
-        map['name']?.toString() ?? map['title']?.toString() ?? 'Product';
-    final fullTitle =
-        map['fullTitle']?.toString() ?? map['title']?.toString() ?? rawName;
+    final rawName = _text(
+      map['name'] ?? map['title'],
+      fallback: 'Product',
+      max: 140,
+    );
+    final fullTitle = _text(
+      map['fullTitle'] ?? map['title'],
+      fallback: rawName,
+      max: 220,
+    );
     // Aggregate all possible image field variants — deduplication happens below.
     final rawImages = <String>{};
     for (final key in [
-      'images', 'imageUrls', 'image_urls', 'gallery',
-      'galleryImages', 'gallery_images',
-      'productImages', 'product_images',
-      'media', 'photos', 'pictures',
+      'images',
+      'imageUrls',
+      'image_urls',
+      'gallery',
+      'galleryImages',
+      'gallery_images',
+      'productImages',
+      'product_images',
+      'media',
+      'photos',
+      'pictures',
     ]) {
       rawImages.addAll(toList(map[key]));
     }
-    final image =
-        (map['mainImage'] ??
-                map['image'] ??
-                map['imageUrl'] ??
-                map['image_url'] ??
-                '')
-            .toString();
+    final image = _url(
+      map['mainImage'] ?? map['image'] ?? map['imageUrl'] ?? map['image_url'],
+    );
     final images = <String>[
       if (image.trim().isNotEmpty) image.trim(),
       ...rawImages,
-    ].where((e) => e.startsWith('http')).toSet().toList();
+    ].map(_url).where((e) => e.isNotEmpty).toSet().take(8).toList();
     final mainImage = images.isNotEmpty ? images.first : image;
     final country =
         (map['countryCode'] ??
@@ -275,34 +308,35 @@ class Product {
       newPrice: newPrice,
       discount: finalDiscount,
       store: map['store']?.toString() ?? map['source']?.toString() ?? 'Store',
-      category: map['category']?.toString() ?? 'General',
-      categoryGroup:
-          map['categoryGroup']?.toString() ??
-          map['category']?.toString() ??
-          'General',
-      description: map['description']?.toString() ?? fullTitle,
-      affiliateUrl:
-          map['affiliateUrl']?.toString() ??
-          map['affiliate_url']?.toString() ??
-          map['affiliateURL']?.toString() ??
-          map['productUrl']?.toString() ??
-          map['product_url']?.toString() ??
-          map['productURL']?.toString() ??
-          map['sourceUrl']?.toString() ??
-          map['source_url']?.toString() ??
-          map['originalUrl']?.toString() ??
-          map['original_url']?.toString() ??
-          map['storeUrl']?.toString() ??
-          map['store_url']?.toString() ??
-          map['link']?.toString() ??
-          map['url']?.toString() ??
-          '',
+      category: _text(map['category'], fallback: 'General', max: 80),
+      categoryGroup: _text(
+        map['categoryGroup'] ?? map['category'],
+        fallback: 'General',
+        max: 80,
+      ),
+      description: _text(map['description'], fallback: fullTitle, max: 1200),
+      affiliateUrl: _url(
+        map['affiliateUrl'] ??
+            map['affiliate_url'] ??
+            map['affiliateURL'] ??
+            map['productUrl'] ??
+            map['product_url'] ??
+            map['productURL'] ??
+            map['sourceUrl'] ??
+            map['source_url'] ??
+            map['originalUrl'] ??
+            map['original_url'] ??
+            map['storeUrl'] ??
+            map['store_url'] ??
+            map['link'] ??
+            map['url'],
+      ),
       isHot: toBool(map['isHot']) || toInt(map['dealScore']) >= 75,
       country: country,
       countryCode: country,
       availableCountries: available,
       shipsTo: ships,
-      currency: map['currency']?.toString() ?? 'EUR',
+      currency: _currency(map['currency']),
       lat: lat,
       lng: lng,
       isOnline: online,

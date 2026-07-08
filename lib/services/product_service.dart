@@ -13,22 +13,7 @@ class ProductService {
   List<Product>? _similarProductsCache;
 
   Stream<List<Product>> getProducts({String countryCode = 'es'}) {
-    final country = countryCode.toLowerCase();
-
-    return _db.collection('products').snapshots().map((snapshot) {
-      final products = snapshot.docs
-          .map((doc) => Product.fromMap(doc.data(), doc.id))
-          .where((p) {
-            if (p.image.isEmpty) return false;
-            if (p.newPrice <= 0) return false;
-            if (p.isOnline) return true;
-            return p.country.toLowerCase() == country;
-          })
-          .toList();
-
-      products.sort(_sortProducts);
-      return products;
-    });
+    return Stream.fromFuture(getProductsOnce(countryCode: countryCode));
   }
 
   Stream<List<Product>> getHotProducts({String countryCode = 'es'}) {
@@ -61,21 +46,11 @@ class ProductService {
     String countryCode = 'es',
     int limit = 300,
   }) async {
-    final snapshot = await _db.collection('products').limit(limit).get();
-    final country = countryCode.toLowerCase();
-
-    final products = snapshot.docs
-        .map((doc) => Product.fromMap(doc.data(), doc.id))
-        .where((p) {
-          if (p.image.isEmpty) return false;
-          if (p.newPrice <= 0) return false;
-          if (p.isOnline) return true;
-          return p.country.toLowerCase() == country;
-        })
-        .toList();
-
-    products.sort(_sortProducts);
-    return products;
+    try {
+      return await _loadBackendProducts(countryCode: countryCode, limit: limit);
+    } catch (_) {
+      return _loadFirestoreProducts(countryCode: countryCode, limit: limit);
+    }
   }
 
   Future<List<Product>> _searchFirebase(
@@ -105,6 +80,48 @@ class ProductService {
         .toList();
   }
 
+  Future<List<Product>> _loadBackendProducts({
+    required String countryCode,
+    required int limit,
+  }) async {
+    final page = await ApiService.instance.getProductsPage(
+      page: 1,
+      limit: limit.clamp(1, 40).toInt(),
+      countryCode: countryCode,
+    );
+    final products = page.products.where(_isDisplayableProduct).toList();
+    products.sort(_sortProducts);
+    return products;
+  }
+
+  Future<List<Product>> _loadFirestoreProducts({
+    required String countryCode,
+    required int limit,
+  }) async {
+    final snapshot = await _db
+        .collection('products')
+        .where('visibleToUsers', isEqualTo: true)
+        .limit(limit.clamp(1, 80).toInt())
+        .get();
+    final country = countryCode.toLowerCase();
+
+    final products = snapshot.docs
+        .map((doc) => Product.fromMap(doc.data(), doc.id))
+        .where((p) => _isDisplayableProduct(p, country: country))
+        .toList();
+
+    products.sort(_sortProducts);
+    return products;
+  }
+
+  bool _isDisplayableProduct(Product p, {String? country}) {
+    if (p.image.isEmpty) return false;
+    if (p.newPrice <= 0) return false;
+    if (p.isOnline) return true;
+    final target = (country ?? 'es').toLowerCase();
+    return p.country.toLowerCase() == target;
+  }
+
   Future<List<Product>> _searchBackend(
     String query, {
     String countryCode = 'es',
@@ -112,10 +129,7 @@ class ProductService {
     try {
       final response = await ApiService.instance.post(
         '/api/products/search',
-        body: {
-          'query': query,
-          'country': countryCode,
-        },
+        body: {'query': query, 'country': countryCode},
       );
 
       if (response is List) {
@@ -163,15 +177,18 @@ class ProductService {
       _similarProductsCache ??= await getProductsOnce(limit: 200);
       final all = _similarProductsCache!;
       final q = category.toLowerCase().trim();
-      return all.where((p) {
-        if (p.id == excludeId) return false;
-        if (p.image.isEmpty || p.newPrice <= 0) return false;
-        if (q.isEmpty || q == 'general') return p.id != excludeId;
-        final hay =
-            '${p.category} ${p.categoryGroup} ${p.name}'.toLowerCase();
-        return hay.contains(q) ||
-            q.contains(p.category.toLowerCase().trim());
-      }).take(limit).toList();
+      return all
+          .where((p) {
+            if (p.id == excludeId) return false;
+            if (p.image.isEmpty || p.newPrice <= 0) return false;
+            if (q.isEmpty || q == 'general') return p.id != excludeId;
+            final hay = '${p.category} ${p.categoryGroup} ${p.name}'
+                .toLowerCase();
+            return hay.contains(q) ||
+                q.contains(p.category.toLowerCase().trim());
+          })
+          .take(limit)
+          .toList();
     } catch (_) {
       _similarProductsCache = null;
       return [];
