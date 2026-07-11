@@ -18,6 +18,7 @@ class HomeProvider extends ChangeNotifier {
   List<Product> products = [];
   List<Product> hotProducts = [];
   List<Product> featuredProducts = [];
+  List<Product> globalOnlineProducts = [];
   List<Product> nearbyProducts = [];
   List<LocalStoreModel> localStores = [];
   // Discovery sections (Batch 14A)
@@ -43,8 +44,7 @@ class HomeProvider extends ChangeNotifier {
 
     await _loadUserLocation();
 
-    final country =
-        countryCode ?? await SettingsService.instance.getCountry();
+    final country = countryCode ?? await SettingsService.instance.getCountry();
 
     try {
       homeFeed = await _homeFeedService.getHomeFeed(countryCode: country);
@@ -61,14 +61,9 @@ class HomeProvider extends ChangeNotifier {
         ...homeFeed.recommended,
         ...homeFeed.products,
       ]);
-      hotProducts = homeFeed.hotDeals;
-      featuredProducts = [...homeFeed.topRated, ...homeFeed.bestSellers];
+      _buildDisplaySections();
       nearbyProducts = _filterNearbyProducts(products);
       localStores = await _loadLocalStores(country);
-      // Discovery
-      forYouToday = homeFeed.forYouToday;
-      verifiedDeals = homeFeed.verifiedDeals;
-      freshArrivals = homeFeed.freshArrivals;
       // Mark top visible products as seen so next refresh demotes them
       for (final p in [...homeFeed.heroDeals, ...homeFeed.forYouToday]) {
         _homeFeedService.markSeen(p.id);
@@ -79,13 +74,9 @@ class HomeProvider extends ChangeNotifier {
           .getProducts(countryCode: country)
           .first;
       products = fallback;
-      hotProducts = fallback.where((p) => p.isHot || p.isTrending).toList();
-      featuredProducts = fallback.where((p) => p.featured).toList();
+      _buildFallbackDisplaySections(fallback);
       nearbyProducts = _filterNearbyProducts(fallback);
       localStores = await _loadLocalStores(country);
-      forYouToday = [];
-      verifiedDeals = [];
-      freshArrivals = [];
     }
 
     isLoading = false;
@@ -155,9 +146,7 @@ class HomeProvider extends ChangeNotifier {
     return meters / 1000;
   }
 
-  List<Product> get onlineProducts => homeFeed.globalOnline.isNotEmpty
-      ? homeFeed.globalOnline
-      : products.where((product) => product.isOnline).toList();
+  List<Product> get onlineProducts => globalOnlineProducts;
   List<Product> get localProducts =>
       products.where((product) => !product.isOnline).toList();
   List<HomeFacet> get stores => homeFeed.stores;
@@ -172,4 +161,111 @@ class HomeProvider extends ChangeNotifier {
     }
     return out;
   }
+
+  void _buildDisplaySections() {
+    final used = <String>{};
+    hotProducts = _takeUnique(
+      homeFeed.hotDeals.isNotEmpty
+          ? homeFeed.hotDeals
+          : products.where((p) => p.isHot || p.isTrending),
+      used,
+      8,
+    );
+    forYouToday = _takeUnique(homeFeed.forYouToday, used, 8);
+    verifiedDeals = _takeUnique(homeFeed.verifiedDeals, used, 8);
+    freshArrivals = _takeUnique(homeFeed.freshArrivals, used, 8);
+    globalOnlineProducts = _takeUnique(
+      homeFeed.globalOnline.isNotEmpty
+          ? homeFeed.globalOnline
+          : products.where((product) => product.isOnline),
+      used,
+      8,
+    );
+    featuredProducts = _takeUnique(
+      [...homeFeed.topRated, ...homeFeed.bestSellers, ...homeFeed.trendingNow],
+      used,
+      8,
+    );
+    if (featuredProducts.isEmpty) {
+      featuredProducts = _takeUnique(
+        products.where((p) => p.featured || p.sponsored),
+        used,
+        8,
+      );
+    }
+  }
+
+  void _buildFallbackDisplaySections(List<Product> fallback) {
+    final used = <String>{};
+    hotProducts = _takeUnique(
+      fallback.where((p) => p.isHot || p.isTrending),
+      used,
+      8,
+    );
+    forYouToday = [];
+    verifiedDeals = [];
+    freshArrivals = [];
+    globalOnlineProducts = _takeUnique(
+      fallback.where((product) => product.isOnline),
+      used,
+      8,
+    );
+    featuredProducts = _takeUnique(
+      fallback.where((p) => p.featured || p.sponsored),
+      used,
+      8,
+    );
+  }
+
+  List<Product> _takeUnique(
+    Iterable<Product> items,
+    Set<String> used,
+    int limit,
+  ) {
+    final out = <Product>[];
+    for (final item in items) {
+      final keys = _identityKeys(item);
+      if (keys.any(used.contains)) continue;
+      used.addAll(keys);
+      out.add(item);
+      if (out.length >= limit) break;
+    }
+    return out;
+  }
+
+  List<String> _identityKeys(Product item) {
+    final keys = <String>[];
+    void add(String prefix, String value) {
+      final text = value.trim().toLowerCase();
+      if (text.isNotEmpty) keys.add('$prefix:$text');
+    }
+
+    add('id', item.id);
+    add('url', _canonicalUrl(item.affiliateUrl));
+    add('fp', item.fingerprint);
+    return keys.toSet().toList();
+  }
+
+  String _canonicalUrl(String raw) {
+    final text = raw.trim();
+    if (text.isEmpty) return '';
+    final uri = Uri.tryParse(text);
+    if (uri == null || !uri.hasScheme || uri.host.isEmpty) {
+      return text.toLowerCase();
+    }
+    final cleanQuery = Map<String, String>.from(uri.queryParameters)
+      ..removeWhere((key, _) => key.toLowerCase().startsWith('utm_'));
+    return uri
+        .replace(
+          scheme: uri.scheme.toLowerCase(),
+          host: uri.host.toLowerCase(),
+          query: cleanQuery.isEmpty
+              ? ''
+              : Uri(queryParameters: cleanQuery).query,
+          fragment: '',
+        )
+        .toString()
+        .replaceFirst(RegExp(r'/$'), '');
+  }
+
 }

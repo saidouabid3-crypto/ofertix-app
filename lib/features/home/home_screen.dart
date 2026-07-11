@@ -66,20 +66,11 @@ class _HomeScreenState extends State<HomeScreen> {
         builder: (context, provider, child) {
           final products = provider.products;
 
-          final hotProducts = provider.hotProducts.isNotEmpty
-              ? provider.hotProducts.take(8).toList()
-              : products.where((p) => p.isHot || p.isTrending).take(8).toList();
+          final hotProducts = provider.hotProducts.take(8).toList();
 
-          final onlineProducts = provider.onlineProducts.isNotEmpty
-              ? provider.onlineProducts.take(8).toList()
-              : products.take(8).toList();
+          final onlineProducts = provider.onlineProducts.take(8).toList();
 
-          final trendingProducts = provider.featuredProducts.isNotEmpty
-              ? provider.featuredProducts.take(8).toList()
-              : products
-                    .where((p) => p.featured || p.sponsored)
-                    .take(8)
-                    .toList();
+          final trendingProducts = provider.featuredProducts.take(8).toList();
 
           return Scaffold(
             backgroundColor: Color(0xFFF8F9FA),
@@ -1065,15 +1056,12 @@ class _DiscoveryBadge extends StatelessWidget {
           decoration: BoxDecoration(
             color: AppColors.orange.withValues(alpha: 0.10),
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: AppColors.orange.withValues(alpha: 0.25),
-            ),
+            border: Border.all(color: AppColors.orange.withValues(alpha: 0.25)),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.refresh_rounded,
-                  color: AppColors.orange, size: 11),
+              Icon(Icons.refresh_rounded, color: AppColors.orange, size: 11),
               SizedBox(width: 4),
               Text(
                 label,
