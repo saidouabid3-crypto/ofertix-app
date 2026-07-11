@@ -34,25 +34,25 @@ class BottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final pillBg = isDark ? AppColors.card2 : Colors.white;
-    final shadowColor = isDark
-        ? Colors.black.withValues(alpha: 0.35)
-        : Colors.black.withValues(alpha: 0.10);
-
     return SafeArea(
       top: false,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+        padding: const EdgeInsets.fromLTRB(18, 0, 18, 12),
         child: Container(
-          height: 68,
+          height: 70,
           decoration: BoxDecoration(
-            color: pillBg,
-            borderRadius: BorderRadius.circular(26),
+            color: Colors.white.withValues(alpha: 0.96),
+            borderRadius: BorderRadius.circular(28),
+            border: Border.all(color: const Color(0xFFE6EAEE)),
             boxShadow: [
               BoxShadow(
-                color: shadowColor,
-                blurRadius: 20,
+                color: AppColors.orange.withValues(alpha: 0.10),
+                blurRadius: 24,
+                offset: const Offset(0, 10),
+              ),
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.06),
+                blurRadius: 18,
                 offset: const Offset(0, 4),
               ),
             ],
@@ -75,16 +75,14 @@ class BottomNav extends StatelessWidget {
                         ),
                         decoration: BoxDecoration(
                           color: selected
-                              ? AppColors.orange.withValues(alpha: 0.14)
+                              ? AppColors.orange.withValues(alpha: 0.12)
                               : Colors.transparent,
-                          borderRadius: BorderRadius.circular(14),
+                          borderRadius: BorderRadius.circular(18),
                         ),
                         child: Icon(
                           selected ? _activeIcons[i] : _icons[i],
                           color: selected
                               ? AppColors.orange
-                              : isDark
-                              ? AppColors.gray
                               : const Color(0xFF7C848E),
                           size: 22,
                         ),
@@ -97,8 +95,6 @@ class BottomNav extends StatelessWidget {
                         style: TextStyle(
                           color: selected
                               ? AppColors.orange
-                              : isDark
-                              ? AppColors.gray
                               : const Color(0xFF7C848E),
                           fontSize: 9.5,
                           fontWeight: selected
