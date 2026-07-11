@@ -10,15 +10,26 @@ class ProductCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final text = AppThemeColors.text(context);
+    final muted = AppThemeColors.muted(context);
     return GestureDetector(
       onTap: onTap,
       child: Container(
         width: 170,
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: AppColors.card,
+          color: AppThemeColors.surface(context),
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+          border: Border.all(color: AppThemeColors.border(context)),
+          boxShadow: [
+            if (!isDark)
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.045),
+                blurRadius: 14,
+                offset: const Offset(0, 7),
+              ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -40,8 +51,8 @@ class ProductCard extends StatelessWidget {
               product.name,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: text,
                 fontSize: 14,
                 fontWeight: FontWeight.w800,
               ),
@@ -49,10 +60,7 @@ class ProductCard extends StatelessWidget {
 
             const SizedBox(height: 6),
 
-            Text(
-              product.store,
-              style: const TextStyle(color: AppColors.gray, fontSize: 11),
-            ),
+            Text(product.store, style: TextStyle(color: muted, fontSize: 11)),
 
             const SizedBox(height: 12),
 

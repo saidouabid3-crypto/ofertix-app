@@ -21,7 +21,7 @@ class HomeSurfaceVisibility {
 }
 
 class HomeScreen extends StatefulWidget {
-  HomeScreen({super.key});
+  const HomeScreen({super.key});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -72,6 +72,7 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Consumer<HomeProvider>(
         builder: (context, provider, child) {
           final products = provider.products;
+          final background = AppThemeColors.background(context);
 
           final hotProducts = provider.hotProducts.take(8).toList();
 
@@ -80,7 +81,7 @@ class _HomeScreenState extends State<HomeScreen> {
           final trendingProducts = provider.featuredProducts.take(8).toList();
 
           return Scaffold(
-            backgroundColor: Color(0xFFF8F9FA),
+            backgroundColor: background,
             body: SafeArea(
               child: RefreshIndicator(
                 color: AppColors.orange,
@@ -291,10 +292,12 @@ class _Header extends StatelessWidget {
   final VoidCallback onAlerts;
   final VoidCallback onProfile;
 
-  _Header({required this.onAlerts, required this.onProfile});
+  const _Header({required this.onAlerts, required this.onProfile});
 
   @override
   Widget build(BuildContext context) {
+    final text = AppThemeColors.text(context);
+    final muted = AppThemeColors.muted(context);
     return Row(
       children: [
         Container(
@@ -323,7 +326,7 @@ class _Header extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  color: Color(0xFF1E2022),
+                  color: text,
                   fontSize: 27,
                   height: 1,
                   fontWeight: FontWeight.w900,
@@ -336,7 +339,7 @@ class _Header extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  color: Color(0xFF7C848E),
+                  color: muted,
                   fontSize: 11.5,
                   fontWeight: FontWeight.w800,
                 ),
@@ -356,9 +359,15 @@ class _Header extends StatelessWidget {
             height: 42,
             padding: EdgeInsets.symmetric(horizontal: 10),
             decoration: BoxDecoration(
-              color: Color(0xFFFFF3E6),
+              color: AppColors.orange.withValues(
+                alpha: AppThemeColors.isDark(context) ? 0.16 : 0.10,
+              ),
               borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: Color(0xFFFFD6A8)),
+              border: Border.all(
+                color: AppColors.orange.withValues(
+                  alpha: AppThemeColors.isDark(context) ? 0.35 : 0.24,
+                ),
+              ),
               boxShadow: [
                 BoxShadow(
                   color: AppColors.orange.withValues(alpha: 0.12),
@@ -379,7 +388,7 @@ class _Header extends StatelessWidget {
                 Text(
                   'common.profile'.tr(),
                   style: TextStyle(
-                    color: Color(0xFF9A4A00),
+                    color: AppColors.orange,
                     fontSize: 12,
                     fontWeight: FontWeight.w900,
                   ),
@@ -398,7 +407,7 @@ class _HeaderIconButton extends StatelessWidget {
   final VoidCallback onTap;
   final bool showDot;
 
-  _HeaderIconButton({
+  const _HeaderIconButton({
     required this.icon,
     required this.onTap,
     this.showDot = false,
@@ -406,6 +415,10 @@ class _HeaderIconButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final surface = AppThemeColors.surface(context);
+    final border = AppThemeColors.border(context);
+    final iconColor = AppThemeColors.text(context);
     return GestureDetector(
       onTap: onTap,
       child: Stack(
@@ -415,18 +428,18 @@ class _HeaderIconButton extends StatelessWidget {
             width: 42,
             height: 42,
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: surface,
               shape: BoxShape.circle,
-              border: Border.all(color: Color(0xFFE7EBEF)),
+              border: Border.all(color: border),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
+                  color: Colors.black.withValues(alpha: isDark ? 0.22 : 0.05),
                   blurRadius: 10,
                   offset: Offset(0, 4),
                 ),
               ],
             ),
-            child: Icon(icon, color: Color(0xFF1E2022), size: 22),
+            child: Icon(icon, color: iconColor, size: 22),
           ),
           if (showDot)
             Positioned(
@@ -438,7 +451,7 @@ class _HeaderIconButton extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: AppColors.orange,
                   shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 1.5),
+                  border: Border.all(color: surface, width: 1.5),
                 ),
               ),
             ),
@@ -456,7 +469,7 @@ class _CleanSearchBar extends StatelessWidget {
   final VoidCallback onTap;
   final ValueChanged<String> onSubmitted;
 
-  _CleanSearchBar({
+  const _CleanSearchBar({
     required this.controller,
     required this.onTap,
     required this.onSubmitted,
@@ -464,15 +477,18 @@ class _CleanSearchBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final surface = AppThemeColors.surface(context);
+    final muted = AppThemeColors.muted(context);
     return Container(
       height: 56,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: surface,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Color(0xFFE6EAEE)),
+        border: Border.all(color: AppThemeColors.border(context)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: Colors.black.withValues(alpha: isDark ? 0.22 : 0.04),
             blurRadius: 12,
             offset: Offset(0, 4),
           ),
@@ -481,7 +497,7 @@ class _CleanSearchBar extends StatelessWidget {
       child: Row(
         children: [
           SizedBox(width: 14),
-          Icon(Icons.search_rounded, color: Color(0xFF9AA1AA), size: 22),
+          Icon(Icons.search_rounded, color: muted, size: 22),
           SizedBox(width: 10),
           Expanded(
             child: GestureDetector(
@@ -489,7 +505,7 @@ class _CleanSearchBar extends StatelessWidget {
               child: Text(
                 'home.searchHint'.tr(),
                 style: TextStyle(
-                  color: Color(0xFF9AA1AA),
+                  color: muted,
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                 ),
@@ -543,6 +559,8 @@ class _HomeQuickActionsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final text = AppThemeColors.text(context);
     return Row(
       children: [
         for (final action in actions) ...[
@@ -552,12 +570,14 @@ class _HomeQuickActionsRow extends StatelessWidget {
               child: Container(
                 height: 70,
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: AppThemeColors.surface(context),
                   borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: Color(0xFFE6EAEE)),
+                  border: Border.all(color: AppThemeColors.border(context)),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.035),
+                      color: Colors.black.withValues(
+                        alpha: isDark ? 0.20 : 0.035,
+                      ),
                       blurRadius: 12,
                       offset: Offset(0, 5),
                     ),
@@ -584,7 +604,7 @@ class _HomeQuickActionsRow extends StatelessWidget {
                           action.label,
                           maxLines: 1,
                           style: TextStyle(
-                            color: Color(0xFF1E2022),
+                            color: text,
                             fontSize: 11,
                             fontWeight: FontWeight.w900,
                           ),
@@ -803,6 +823,8 @@ class _CategoryCirclesRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final text = AppThemeColors.text(context);
+    final isDark = AppThemeColors.isDark(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -812,7 +834,7 @@ class _CategoryCirclesRow extends StatelessWidget {
               child: Text(
                 'categories.title'.tr(),
                 style: TextStyle(
-                  color: Color(0xFF1E2022),
+                  color: text,
                   fontSize: 16,
                   fontWeight: FontWeight.w900,
                 ),
@@ -848,7 +870,7 @@ class _CategoryCirclesRow extends StatelessWidget {
                         width: 58,
                         height: 58,
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: AppThemeColors.surface(context),
                           shape: BoxShape.circle,
                           border: Border.all(
                             color: category.color.withValues(alpha: 0.28),
@@ -856,7 +878,9 @@ class _CategoryCirclesRow extends StatelessWidget {
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: category.color.withValues(alpha: 0.12),
+                              color: category.color.withValues(
+                                alpha: isDark ? 0.22 : 0.12,
+                              ),
                               blurRadius: 12,
                               offset: Offset(0, 5),
                             ),
@@ -875,7 +899,7 @@ class _CategoryCirclesRow extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                          color: Color(0xFF1E2022),
+                          color: text,
                           fontSize: 10.5,
                           fontWeight: FontWeight.w800,
                         ),
@@ -900,7 +924,7 @@ class _HeroBanner extends StatelessWidget {
   final int productCount;
   final VoidCallback onViewDeals;
 
-  _HeroBanner({
+  const _HeroBanner({
     required this.isLoading,
     required this.productCount,
     required this.onViewDeals,
@@ -1052,18 +1076,25 @@ class _HeroBanner extends StatelessWidget {
 class _CashbackBanner extends StatelessWidget {
   final VoidCallback onTap;
 
-  _CashbackBanner({required this.onTap});
+  const _CashbackBanner({required this.onTap});
 
   @override
   Widget build(BuildContext context) {
+    final isDark = AppThemeColors.isDark(context);
+    final text = AppThemeColors.text(context);
+    final muted = AppThemeColors.muted(context);
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Color(0xFFFFF8F0),
+          color: isDark
+              ? AppColors.orange.withValues(alpha: 0.10)
+              : const Color(0xFFFFF8F0),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Color(0xFFFFE0B2)),
+          border: Border.all(
+            color: AppColors.orange.withValues(alpha: isDark ? 0.28 : 0.22),
+          ),
         ),
         child: Row(
           children: [
@@ -1088,7 +1119,7 @@ class _CashbackBanner extends StatelessWidget {
                   Text(
                     'home.extraSavingsTitle'.tr(),
                     style: TextStyle(
-                      color: Color(0xFF1E2022),
+                      color: text,
                       fontSize: 14,
                       fontWeight: FontWeight.w900,
                       height: 1.3,
@@ -1098,7 +1129,7 @@ class _CashbackBanner extends StatelessWidget {
                   Text(
                     'home.extraSavingsSubtitle'.tr(),
                     style: TextStyle(
-                      color: Color(0xFF7C848E),
+                      color: muted,
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
                     ),
@@ -1138,20 +1169,21 @@ class _CashbackBanner extends StatelessWidget {
 class _AdSlot extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final muted = AppThemeColors.muted(context);
     return Container(
       height: 44,
       padding: EdgeInsets.symmetric(horizontal: 14),
       decoration: BoxDecoration(
-        color: Color(0xFFF0F2F4),
+        color: AppThemeColors.surfaceSoft(context),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Color(0xFFDCE1E6)),
+        border: Border.all(color: AppThemeColors.border(context)),
       ),
       child: Row(
         children: [
           Text(
             'common.sponsored'.tr().toUpperCase(),
             style: TextStyle(
-              color: Color(0xFF9AA1AA),
+              color: muted,
               fontSize: 9,
               fontWeight: FontWeight.w900,
               letterSpacing: 0.7,
@@ -1161,13 +1193,13 @@ class _AdSlot extends StatelessWidget {
           Text(
             'home.yourAdHere'.tr(),
             style: TextStyle(
-              color: Color(0xFF6E7580),
+              color: muted,
               fontSize: 10.5,
               fontWeight: FontWeight.w700,
             ),
           ),
           SizedBox(width: 6),
-          Icon(Icons.open_in_new_rounded, color: Color(0xFF9AA1AA), size: 14),
+          Icon(Icons.open_in_new_rounded, color: muted, size: 14),
         ],
       ),
     );
@@ -1218,7 +1250,7 @@ class _SectionHeader extends StatelessWidget {
   final String action;
   final VoidCallback onTap;
 
-  _SectionHeader({
+  const _SectionHeader({
     required this.icon,
     required this.iconColor,
     required this.title,
@@ -1228,6 +1260,7 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final text = AppThemeColors.text(context);
     return Row(
       children: [
         Icon(icon, color: iconColor, size: 20),
@@ -1236,7 +1269,7 @@ class _SectionHeader extends StatelessWidget {
           child: Text(
             title,
             style: TextStyle(
-              color: Color(0xFF1E2022),
+              color: text,
               fontSize: 17,
               fontWeight: FontWeight.w900,
             ),
@@ -1275,7 +1308,7 @@ class _HorizontalProducts extends StatelessWidget {
   final String emptyText;
   final ValueChanged<Product> onProductTap;
 
-  _HorizontalProducts({
+  const _HorizontalProducts({
     required this.products,
     required this.userPosition,
     required this.emptyText,
@@ -1312,7 +1345,7 @@ class _ProductGrid extends StatelessWidget {
   final dynamic userPosition;
   final ValueChanged<Product> onProductTap;
 
-  _ProductGrid({
+  const _ProductGrid({
     required this.products,
     required this.userPosition,
     required this.onProductTap,
@@ -1382,9 +1415,9 @@ class _LoadingCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppThemeColors.surface(context),
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: Color(0xFFE8ECEF)),
+        border: Border.all(color: AppThemeColors.border(context)),
       ),
       child: Center(
         child: SizedBox(
@@ -1403,22 +1436,23 @@ class _LoadingCard extends StatelessWidget {
 class _EmptyBox extends StatelessWidget {
   final String text;
 
-  _EmptyBox({required this.text});
+  const _EmptyBox({required this.text});
 
   @override
   Widget build(BuildContext context) {
+    final muted = AppThemeColors.muted(context);
     return Container(
       height: 70,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppThemeColors.surface(context),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Color(0xFFE8ECEF)),
+        border: Border.all(color: AppThemeColors.border(context)),
       ),
       child: Text(
         text,
         style: TextStyle(
-          color: Color(0xFF7C848E),
+          color: muted,
           fontSize: 12,
           fontWeight: FontWeight.w800,
         ),

@@ -65,6 +65,37 @@ class AppColors {
   );
 }
 
+class AppThemeColors {
+  AppThemeColors._();
+
+  static bool isDark(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark;
+
+  static Color background(BuildContext context) =>
+      isDark(context) ? AppColors.background : AppColors.lightBackground;
+
+  static Color surface(BuildContext context) =>
+      isDark(context) ? AppColors.card : AppColors.lightCard;
+
+  static Color surfaceSoft(BuildContext context) =>
+      isDark(context) ? AppColors.card2 : AppColors.lightCard2;
+
+  static Color text(BuildContext context) =>
+      isDark(context) ? AppColors.text : AppColors.lightText;
+
+  static Color muted(BuildContext context) =>
+      isDark(context) ? AppColors.gray : AppColors.lightGray;
+
+  static Color border(BuildContext context) =>
+      isDark(context) ? AppColors.border : AppColors.lightBorder;
+
+  static Color shadow(BuildContext context) =>
+      Colors.black.withValues(alpha: isDark(context) ? 0.32 : 0.06);
+
+  static LinearGradient pageGradient(BuildContext context) =>
+      isDark(context) ? AppColors.darkGradient : AppColors.lightGradient;
+}
+
 class AppTheme {
   static ThemeData darkTheme = ThemeData.dark().copyWith(
     scaffoldBackgroundColor: AppColors.background,
@@ -87,10 +118,19 @@ class AppTheme {
   );
 
   static ThemeData lightTheme = ThemeData.light().copyWith(
+    scaffoldBackgroundColor: AppColors.lightBackground,
+    appBarTheme: const AppBarTheme(
+      backgroundColor: Colors.transparent,
+      foregroundColor: AppColors.lightText,
+      elevation: 0,
+      centerTitle: true,
+    ),
     colorScheme: const ColorScheme.light(
       primary: AppColors.orange,
 
       secondary: AppColors.orange,
+
+      surface: AppColors.lightCard,
     ),
   );
 }

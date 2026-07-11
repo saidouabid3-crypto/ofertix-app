@@ -252,300 +252,335 @@ class _ProductGridCardState extends State<ProductGridCard> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final card = AppThemeColors.surface(context);
+    final text = AppThemeColors.text(context);
+    final muted = AppThemeColors.muted(context);
+    final border = AppThemeColors.border(context);
+    final imageFallback = isDark ? AppColors.card2 : const Color(0xFFF3F5F7);
+
     return VisibilityDetector(
       key: ValueKey('ai-badge-${product.id}'),
       onVisibilityChanged: (info) {
         if (info.visibleFraction >= 0.35) _onVisible();
       },
-      child: GestureDetector(
-          onTap: widget.onTap,
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final compact = constraints.maxWidth <= 155;
-              final imageHeight = compact ? 116.0 : 124.0;
+      child:
+          GestureDetector(
+                onTap: widget.onTap,
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final compact = constraints.maxWidth <= 155;
+                    final imageHeight = compact ? 116.0 : 124.0;
 
-              return Container(
-                clipBehavior: Clip.antiAlias,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(22),
-                  border: Border.all(color: const Color(0xFFE8ECEF)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.045),
-                      blurRadius: 14,
-                      offset: const Offset(0, 7),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(
-                      height: imageHeight,
-                      width: double.infinity,
-                      child: Stack(
-                        children: [
-                          Positioned.fill(
-                            child: CachedNetworkImage(
-                              imageUrl: product.image,
-                              fit: BoxFit.cover,
-                              placeholder: (_, __) => Container(
-                                color: const Color(0xFFF3F5F7),
-                                child: const Center(
-                                  child: SizedBox(
-                                    width: 18,
-                                    height: 18,
-                                    child: CircularProgressIndicator(
-                                      color: AppColors.orange,
-                                      strokeWidth: 2,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              errorWidget: (_, __, ___) => Container(
-                                color: const Color(0xFFF3F5F7),
-                                child: const Icon(
-                                  Icons.image_not_supported_rounded,
-                                  color: Color(0xFF9AA1AA),
-                                  size: 30,
-                                ),
-                              ),
+                    return Container(
+                      clipBehavior: Clip.antiAlias,
+                      decoration: BoxDecoration(
+                        color: card,
+                        borderRadius: BorderRadius.circular(22),
+                        border: Border.all(color: border),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(
+                              alpha: isDark ? 0.24 : 0.045,
                             ),
+                            blurRadius: 14,
+                            offset: const Offset(0, 7),
                           ),
-
-                          Positioned.fill(
-                            child: DecoratedBox(
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.topCenter,
-                                  end: Alignment.bottomCenter,
-                                  colors: [
-                                    Colors.black.withValues(alpha: 0.02),
-                                    Colors.black.withValues(alpha: 0.14),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-
-                          if (hasDiscount)
-                            Positioned(
-                              top: 8,
-                              left: 8,
-                              child: _Badge(
-                                text: '-${product.discount}%',
-                                background: AppColors.orange,
-                                foreground: Colors.white,
-                              ),
-                            ),
-
-                          Positioned(
-                            top: 8,
-                            right: 8,
-                            child: Column(
-                              children: [
-                                // Favorite heart
-                                GestureDetector(
-                                  onTap: toggleFavorite,
-                                  child: Container(
-                                    width: 31,
-                                    height: 31,
-                                    decoration: BoxDecoration(
-                                      color: Colors.black.withValues(alpha: 0.35),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: favoriteLoading
-                                        ? const Padding(
-                                            padding: EdgeInsets.all(9),
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                              color: Colors.white,
-                                            ),
-                                          )
-                                        : Icon(
-                                            isFavorite
-                                                ? Icons.favorite_rounded
-                                                : Icons.favorite_border_rounded,
-                                            color: isFavorite
-                                                ? AppColors.red
-                                                : Colors.white,
-                                            size: 18,
-                                          ),
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                // Watchlist bookmark
-                                GestureDetector(
-                                  onTap: _toggleWatch,
-                                  child: Container(
-                                    width: 31,
-                                    height: 31,
-                                    decoration: BoxDecoration(
-                                      color: Colors.black.withValues(alpha: 0.35),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: _watchLoading
-                                        ? const Padding(
-                                            padding: EdgeInsets.all(9),
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                              color: Colors.white,
-                                            ),
-                                          )
-                                        : Icon(
-                                            _isWatching
-                                                ? Icons.bookmark_rounded
-                                                : Icons.bookmark_border_rounded,
-                                            color: _isWatching
-                                                ? AppColors.orange
-                                                : Colors.white,
-                                            size: 18,
-                                          ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-
-                          // source pill removed — added clutter without value
-
-                          if (_aiResult != null)
-                            Positioned(
-                              right: 7,
-                              bottom: 7,
-                              child: ProductAIBadge(result: _aiResult),
-                            ),
                         ],
                       ),
-                    ),
-
-                    Expanded(
-                      child: Padding(
-                        padding: EdgeInsets.fromLTRB(
-                          compact ? 9 : 10,
-                          8,
-                          compact ? 9 : 10,
-                          9,
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Single verdict pill — clean, no clutter
-                            _SoftPill(
-                              text: verdictLabel,
-                              icon: Icons.auto_awesome_rounded,
-                              color: verdictColor,
-                            ),
-                            const SizedBox(height: 6),
-
-                            Text(
-                              product.name,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                color: const Color(0xFF1E2022),
-                                fontSize: compact ? 12.1 : 12.6,
-                                height: 1.10,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: -0.2,
-                              ),
-                            ),
-
-                            const SizedBox(height: 5),
-
-                            Text(
-                              storeLabel,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: Color(0xFF7B838C),
-                                fontSize: 9.3,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: 0.7,
-                              ),
-                            ),
-
-                            const SizedBox(height: 3),
-
-                            Text(
-                              product.reviewCount > 0 || product.soldCount > 0
-                                  ? '${product.reviewLabel} reviews · ${product.soldLabel} sold'
-                                  : product.priceLabel.tr(),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: Color(0xFF9AA1AA),
-                                fontSize: 8.8,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-
-                            const Spacer(),
-
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.end,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SizedBox(
+                            height: imageHeight,
+                            width: double.infinity,
+                            child: Stack(
                               children: [
-                                Expanded(
-                                  child: FittedBox(
-                                    fit: BoxFit.scaleDown,
-                                    alignment: Alignment.centerLeft,
-                                    child: product.newPrice > 0
-                                        ? Text(
-                                            PriceUtils.formatPrice(product.newPrice, product.currency),
-                                            maxLines: 1,
-                                            style: TextStyle(
-                                              color: AppColors.orange,
-                                              fontSize: compact ? 19 : 20,
-                                              height: 1,
-                                              fontWeight: FontWeight.w900,
-                                              letterSpacing: -0.7,
-                                            ),
-                                          )
-                                        : Text(
-                                            'productTrust.priceNeedsReviewShort'.tr(),
-                                            maxLines: 1,
-                                            style: TextStyle(
-                                              color: const Color(0xFFFF9800),
-                                              fontSize: compact ? 11 : 11.5,
-                                              height: 1,
-                                              fontWeight: FontWeight.w800,
-                                            ),
+                                Positioned.fill(
+                                  child: CachedNetworkImage(
+                                    imageUrl: product.image,
+                                    fit: BoxFit.cover,
+                                    placeholder: (_, __) => Container(
+                                      color: imageFallback,
+                                      child: const Center(
+                                        child: SizedBox(
+                                          width: 18,
+                                          height: 18,
+                                          child: CircularProgressIndicator(
+                                            color: AppColors.orange,
+                                            strokeWidth: 2,
                                           ),
-                                  ),
-                                ),
-                                if (hasDiscount) ...[
-                                  const SizedBox(width: 5),
-                                  Flexible(
-                                    child: Text(
-                                      PriceUtils.formatPrice(product.oldPrice, product.currency),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        color: Color(0xFF9AA1AA),
-                                        fontSize: 9.5,
-                                        height: 1.1,
-                                        fontWeight: FontWeight.w800,
-                                        decoration: TextDecoration.lineThrough,
+                                        ),
+                                      ),
+                                    ),
+                                    errorWidget: (_, __, ___) => Container(
+                                      color: imageFallback,
+                                      child: Icon(
+                                        Icons.image_not_supported_rounded,
+                                        color: muted,
+                                        size: 30,
                                       ),
                                     ),
                                   ),
-                                ],
+                                ),
+
+                                Positioned.fill(
+                                  child: DecoratedBox(
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        begin: Alignment.topCenter,
+                                        end: Alignment.bottomCenter,
+                                        colors: [
+                                          Colors.black.withValues(alpha: 0.02),
+                                          Colors.black.withValues(alpha: 0.14),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+
+                                if (hasDiscount)
+                                  Positioned(
+                                    top: 8,
+                                    left: 8,
+                                    child: _Badge(
+                                      text: '-${product.discount}%',
+                                      background: AppColors.orange,
+                                      foreground: Colors.white,
+                                    ),
+                                  ),
+
+                                Positioned(
+                                  top: 8,
+                                  right: 8,
+                                  child: Column(
+                                    children: [
+                                      // Favorite heart
+                                      GestureDetector(
+                                        onTap: toggleFavorite,
+                                        child: Container(
+                                          width: 31,
+                                          height: 31,
+                                          decoration: BoxDecoration(
+                                            color: Colors.black.withValues(
+                                              alpha: 0.35,
+                                            ),
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: favoriteLoading
+                                              ? const Padding(
+                                                  padding: EdgeInsets.all(9),
+                                                  child:
+                                                      CircularProgressIndicator(
+                                                        strokeWidth: 2,
+                                                        color: Colors.white,
+                                                      ),
+                                                )
+                                              : Icon(
+                                                  isFavorite
+                                                      ? Icons.favorite_rounded
+                                                      : Icons
+                                                            .favorite_border_rounded,
+                                                  color: isFavorite
+                                                      ? AppColors.red
+                                                      : Colors.white,
+                                                  size: 18,
+                                                ),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      // Watchlist bookmark
+                                      GestureDetector(
+                                        onTap: _toggleWatch,
+                                        child: Container(
+                                          width: 31,
+                                          height: 31,
+                                          decoration: BoxDecoration(
+                                            color: Colors.black.withValues(
+                                              alpha: 0.35,
+                                            ),
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: _watchLoading
+                                              ? const Padding(
+                                                  padding: EdgeInsets.all(9),
+                                                  child:
+                                                      CircularProgressIndicator(
+                                                        strokeWidth: 2,
+                                                        color: Colors.white,
+                                                      ),
+                                                )
+                                              : Icon(
+                                                  _isWatching
+                                                      ? Icons.bookmark_rounded
+                                                      : Icons
+                                                            .bookmark_border_rounded,
+                                                  color: _isWatching
+                                                      ? AppColors.orange
+                                                      : Colors.white,
+                                                  size: 18,
+                                                ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+
+                                // source pill removed — added clutter without value
+                                if (_aiResult != null)
+                                  Positioned(
+                                    right: 7,
+                                    bottom: 7,
+                                    child: ProductAIBadge(result: _aiResult),
+                                  ),
                               ],
                             ),
-                          ],
-                        ),
+                          ),
+
+                          Expanded(
+                            child: Padding(
+                              padding: EdgeInsets.fromLTRB(
+                                compact ? 9 : 10,
+                                8,
+                                compact ? 9 : 10,
+                                9,
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Single verdict pill — clean, no clutter
+                                  _SoftPill(
+                                    text: verdictLabel,
+                                    icon: Icons.auto_awesome_rounded,
+                                    color: verdictColor,
+                                  ),
+                                  const SizedBox(height: 6),
+
+                                  Text(
+                                    product.name,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      color: text,
+                                      fontSize: compact ? 12.1 : 12.6,
+                                      height: 1.10,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: -0.2,
+                                    ),
+                                  ),
+
+                                  const SizedBox(height: 5),
+
+                                  Text(
+                                    storeLabel,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      color: muted,
+                                      fontSize: 9.3,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: 0.7,
+                                    ),
+                                  ),
+
+                                  const SizedBox(height: 3),
+
+                                  Text(
+                                    product.reviewCount > 0 ||
+                                            product.soldCount > 0
+                                        ? '${product.reviewLabel} reviews · ${product.soldLabel} sold'
+                                        : product.priceLabel.tr(),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      color: muted,
+                                      fontSize: 8.8,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+
+                                  const Spacer(),
+
+                                  Row(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      Expanded(
+                                        child: FittedBox(
+                                          fit: BoxFit.scaleDown,
+                                          alignment: Alignment.centerLeft,
+                                          child: product.newPrice > 0
+                                              ? Text(
+                                                  PriceUtils.formatPrice(
+                                                    product.newPrice,
+                                                    product.currency,
+                                                  ),
+                                                  maxLines: 1,
+                                                  style: TextStyle(
+                                                    color: AppColors.orange,
+                                                    fontSize: compact ? 19 : 20,
+                                                    height: 1,
+                                                    fontWeight: FontWeight.w900,
+                                                    letterSpacing: -0.7,
+                                                  ),
+                                                )
+                                              : Text(
+                                                  'productTrust.priceNeedsReviewShort'
+                                                      .tr(),
+                                                  maxLines: 1,
+                                                  style: TextStyle(
+                                                    color: const Color(
+                                                      0xFFFF9800,
+                                                    ),
+                                                    fontSize: compact
+                                                        ? 11
+                                                        : 11.5,
+                                                    height: 1,
+                                                    fontWeight: FontWeight.w800,
+                                                  ),
+                                                ),
+                                        ),
+                                      ),
+                                      if (hasDiscount) ...[
+                                        const SizedBox(width: 5),
+                                        Flexible(
+                                          child: Text(
+                                            PriceUtils.formatPrice(
+                                              product.oldPrice,
+                                              product.currency,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              color: muted,
+                                              fontSize: 9.5,
+                                              height: 1.1,
+                                              fontWeight: FontWeight.w800,
+                                              decoration:
+                                                  TextDecoration.lineThrough,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
+                    );
+                  },
                 ),
-              );
-            },
-          ),
-        )
-        .animate()
-        .fade(duration: 160.ms)
-        .slideY(begin: 0.02, end: 0, duration: 160.ms, curve: Curves.easeOut),
+              )
+              .animate()
+              .fade(duration: 160.ms)
+              .slideY(
+                begin: 0.02,
+                end: 0,
+                duration: 160.ms,
+                curve: Curves.easeOut,
+              ),
     );
   }
 }

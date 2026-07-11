@@ -34,6 +34,13 @@ class BottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final surface = isDark
+        ? AppColors.card.withValues(alpha: 0.96)
+        : Colors.white.withValues(alpha: 0.96);
+    final border = isDark ? Colors.white10 : const Color(0xFFE6EAEE);
+    final inactive = isDark ? AppColors.gray : const Color(0xFF7C848E);
+
     return SafeArea(
       top: false,
       child: Padding(
@@ -41,17 +48,17 @@ class BottomNav extends StatelessWidget {
         child: Container(
           height: 70,
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.96),
+            color: surface,
             borderRadius: BorderRadius.circular(28),
-            border: Border.all(color: const Color(0xFFE6EAEE)),
+            border: Border.all(color: border),
             boxShadow: [
               BoxShadow(
-                color: AppColors.orange.withValues(alpha: 0.10),
+                color: AppColors.orange.withValues(alpha: isDark ? 0.14 : 0.10),
                 blurRadius: 24,
                 offset: const Offset(0, 10),
               ),
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.06),
+                color: Colors.black.withValues(alpha: isDark ? 0.22 : 0.06),
                 blurRadius: 18,
                 offset: const Offset(0, 4),
               ),
@@ -81,9 +88,7 @@ class BottomNav extends StatelessWidget {
                         ),
                         child: Icon(
                           selected ? _activeIcons[i] : _icons[i],
-                          color: selected
-                              ? AppColors.orange
-                              : const Color(0xFF7C848E),
+                          color: selected ? AppColors.orange : inactive,
                           size: 22,
                         ),
                       ),
@@ -93,9 +98,7 @@ class BottomNav extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          color: selected
-                              ? AppColors.orange
-                              : const Color(0xFF7C848E),
+                          color: selected ? AppColors.orange : inactive,
                           fontSize: 9.5,
                           fontWeight: selected
                               ? FontWeight.w800

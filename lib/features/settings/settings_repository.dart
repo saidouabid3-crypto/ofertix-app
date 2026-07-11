@@ -13,6 +13,10 @@ class SettingsRepository {
     return SettingsService.currency();
   }
 
+  Future<bool> getTheme() {
+    return SettingsService.instance.isDarkMode();
+  }
+
   Future<void> saveLanguage(String language) {
     return SettingsService.saveLanguage(language);
   }

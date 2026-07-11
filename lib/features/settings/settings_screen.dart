@@ -5,6 +5,7 @@ import 'package:easy_localization/easy_localization.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/constants/app_languages.dart';
 import '../../core/constants/app_countries.dart';
+import '../../providers/theme_provider.dart';
 
 import '../cashback/cashback_screen.dart';
 import '../admin/admin_command_center_screen.dart';
@@ -20,19 +21,23 @@ class SettingsScreen extends StatelessWidget {
       create: (_) => SettingsProvider()..initialize(),
       child: Consumer<SettingsProvider>(
         builder: (context, provider, child) {
+          final isDark = Theme.of(context).brightness == Brightness.dark;
+          final background = AppThemeColors.background(context);
+          final text = AppThemeColors.text(context);
           if (provider.isLoading) {
-            return const Scaffold(
-              backgroundColor: AppColors.background,
-              body: Center(
+            return Scaffold(
+              backgroundColor: background,
+              body: const Center(
                 child: CircularProgressIndicator(color: AppColors.orange),
               ),
             );
           }
 
           return Scaffold(
-            backgroundColor: AppColors.background,
+            backgroundColor: background,
             appBar: AppBar(
               backgroundColor: Colors.transparent,
+              foregroundColor: text,
               title: const Text('Settings'),
             ),
             body: ListView(
@@ -94,9 +99,12 @@ class SettingsScreen extends StatelessWidget {
                 _SwitchTile(
                   title: 'Dark Mode',
                   subtitle: 'Use premium dark theme',
-                  value: provider.darkMode,
+                  value: isDark,
                   icon: Icons.dark_mode_rounded,
-                  onChanged: provider.changeTheme,
+                  onChanged: (value) async {
+                    await context.read<ThemeProvider>().toggleTheme(value);
+                    await provider.changeTheme(value);
+                  },
                 ),
 
                 _SwitchTile(
@@ -232,12 +240,13 @@ class _SectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final text = AppThemeColors.text(context);
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
       child: Text(
         title,
-        style: const TextStyle(
-          color: Colors.white,
+        style: TextStyle(
+          color: text,
           fontSize: 25,
           fontWeight: FontWeight.w900,
         ),
@@ -263,26 +272,39 @@ class _OptionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final surface = selected
+        ? AppColors.orange
+        : AppThemeColors.surface(context);
+    final titleColor = selected ? Colors.white : AppThemeColors.text(context);
+    final subtitleColor = selected
+        ? Colors.white70
+        : AppThemeColors.muted(context);
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: selected ? AppColors.orange : AppColors.card,
+        color: surface,
         borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: selected ? AppColors.orange : AppThemeColors.border(context),
+        ),
+        boxShadow: [
+          if (!isDark)
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 12,
+              offset: const Offset(0, 5),
+            ),
+        ],
       ),
       child: ListTile(
         onTap: onTap,
-        leading: Icon(icon, color: Colors.white),
+        leading: Icon(icon, color: selected ? Colors.white : AppColors.orange),
         title: Text(
           title,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w900,
-          ),
+          style: TextStyle(color: titleColor, fontWeight: FontWeight.w900),
         ),
-        subtitle: Text(
-          subtitle,
-          style: TextStyle(color: selected ? Colors.white70 : AppColors.gray),
-        ),
+        subtitle: Text(subtitle, style: TextStyle(color: subtitleColor)),
         trailing: selected
             ? const Icon(Icons.check_circle, color: Colors.white)
             : null,
@@ -308,11 +330,23 @@ class _SwitchTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final text = AppThemeColors.text(context);
+    final muted = AppThemeColors.muted(context);
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: AppColors.card,
+        color: AppThemeColors.surface(context),
         borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: AppThemeColors.border(context)),
+        boxShadow: [
+          if (!isDark)
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 12,
+              offset: const Offset(0, 5),
+            ),
+        ],
       ),
       child: SwitchListTile(
         value: value,
@@ -321,12 +355,9 @@ class _SwitchTile extends StatelessWidget {
         secondary: Icon(icon, color: AppColors.orange),
         title: Text(
           title,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w900,
-          ),
+          style: TextStyle(color: text, fontWeight: FontWeight.w900),
         ),
-        subtitle: Text(subtitle, style: const TextStyle(color: AppColors.gray)),
+        subtitle: Text(subtitle, style: TextStyle(color: muted)),
       ),
     );
   }
@@ -347,24 +378,36 @@ class _ActionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final text = AppThemeColors.text(context);
+    final muted = AppThemeColors.muted(context);
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: AppColors.card,
+        color: AppThemeColors.surface(context),
         borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: AppThemeColors.border(context)),
+        boxShadow: [
+          if (!isDark)
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 12,
+              offset: const Offset(0, 5),
+            ),
+        ],
       ),
       child: ListTile(
         onTap: onTap,
         leading: Icon(icon, color: AppColors.orange),
         title: Text(
           title,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w900,
-          ),
+          style: TextStyle(color: text, fontWeight: FontWeight.w900),
         ),
-        subtitle: Text(subtitle, style: const TextStyle(color: AppColors.gray)),
-        trailing: const Icon(Icons.chevron_right, color: Colors.white54),
+        subtitle: Text(subtitle, style: TextStyle(color: muted)),
+        trailing: Icon(
+          Icons.chevron_right,
+          color: isDark ? Colors.white54 : AppColors.lightGray,
+        ),
       ),
     );
   }

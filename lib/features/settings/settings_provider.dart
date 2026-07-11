@@ -27,6 +27,7 @@ class SettingsProvider extends ChangeNotifier {
     }
     country = await _repository.getCountry();
     currency = await _repository.getCurrency();
+    darkMode = await _repository.getTheme();
 
     isLoading = false;
     notifyListeners();
