@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:easy_localization/easy_localization.dart';
 
+import '../../core/navigation/app_routes.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/product.dart';
 import '../../models/ofertix_ad_model.dart';
@@ -12,6 +13,12 @@ import '../../widgets/ofertix_ad_slot.dart';
 import '../product_details/product_details_screen.dart';
 import '../search/search_screen.dart';
 import 'home_provider.dart';
+
+class HomeSurfaceVisibility {
+  HomeSurfaceVisibility._();
+
+  static const bool showTopCategoryRail = false;
+}
 
 class HomeScreen extends StatefulWidget {
   HomeScreen({super.key});
@@ -103,12 +110,56 @@ class _HomeScreenState extends State<HomeScreen> {
 
                           SizedBox(height: 14),
 
-                          _CategoryCirclesRow(
-                            onCategoryTap: (category) =>
-                                openCategory(category, products),
+                          _HomeQuickActionsRow(
+                            actions: [
+                              _HomeQuickAction(
+                                icon: Icons.auto_awesome_rounded,
+                                label: 'IA',
+                                color: AppColors.orange,
+                                onTap: () => Navigator.pushNamed(
+                                  context,
+                                  AppRoutes.aiAssistant,
+                                ),
+                              ),
+                              _HomeQuickAction(
+                                icon: Icons.qr_code_scanner_rounded,
+                                label: 'Escanear',
+                                color: Color(0xFF2563EB),
+                                onTap: () => Navigator.pushNamed(
+                                  context,
+                                  AppRoutes.scan,
+                                ),
+                              ),
+                              _HomeQuickAction(
+                                icon: Icons.local_fire_department_rounded,
+                                label: 'Ofertas',
+                                color: AppColors.redOrange,
+                                onTap: () => Navigator.pushNamed(
+                                  context,
+                                  AppRoutes.deals,
+                                ),
+                              ),
+                              _HomeQuickAction(
+                                icon: Icons.savings_rounded,
+                                label: 'Cashback',
+                                color: Color(0xFF16A34A),
+                                onTap: () => Navigator.pushNamed(
+                                  context,
+                                  AppRoutes.cashback,
+                                ),
+                              ),
+                            ],
                           ),
 
                           SizedBox(height: 14),
+
+                          if (HomeSurfaceVisibility.showTopCategoryRail) ...[
+                            _CategoryCirclesRow(
+                              onCategoryTap: (category) =>
+                                  openCategory(category, products),
+                            ),
+                            SizedBox(height: 14),
+                          ],
 
                           _HeroBanner(
                             isLoading: provider.isLoading,
@@ -471,6 +522,87 @@ class _CleanSearchBar extends StatelessWidget {
 // ============================================================
 // ✅ PRODUCT CATEGORIES ROW - linked to product.category/categoryGroup
 // ============================================================
+class _HomeQuickAction {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _HomeQuickAction({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+}
+
+class _HomeQuickActionsRow extends StatelessWidget {
+  final List<_HomeQuickAction> actions;
+
+  const _HomeQuickActionsRow({required this.actions});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        for (final action in actions) ...[
+          Expanded(
+            child: GestureDetector(
+              onTap: action.onTap,
+              child: Container(
+                height: 70,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: Color(0xFFE6EAEE)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.035),
+                      blurRadius: 12,
+                      offset: Offset(0, 5),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: 34,
+                      height: 34,
+                      decoration: BoxDecoration(
+                        color: action.color.withValues(alpha: 0.10),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(action.icon, color: action.color, size: 18),
+                    ),
+                    SizedBox(height: 6),
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 4),
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          action.label,
+                          maxLines: 1,
+                          style: TextStyle(
+                            color: Color(0xFF1E2022),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          if (action != actions.last) SizedBox(width: 10),
+        ],
+      ],
+    );
+  }
+}
+
 class HomeCategory {
   final String key;
   final String labelKey;

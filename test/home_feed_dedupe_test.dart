@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ofertix/features/home/home_screen.dart';
 import 'package:ofertix/models/home_feed.dart';
 
 Map<String, dynamic> _product(
@@ -99,4 +100,11 @@ void main() {
     expect(_ids(feed.hotDeals), ['safe']);
     expect(_ids(feed.products), ['flat-safe']);
   });
+
+  test(
+    'top Home category rail is hidden by client surface visibility helper',
+    () {
+      expect(HomeSurfaceVisibility.showTopCategoryRail, isFalse);
+    },
+  );
 }
